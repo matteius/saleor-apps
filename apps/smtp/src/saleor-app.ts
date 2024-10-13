@@ -1,10 +1,11 @@
-import { RedisAPL } from "./apl";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
+
+import { RedisAPL } from "./apl";
 
 export let apl: RedisAPL;
 
 apl = new RedisAPL({
-  url: process.env.REDIS_URL,
+  url: process.env.REDIS_URL || "redis://localhost:6379",
 });
 
 export const saleorApp = new SaleorApp({
