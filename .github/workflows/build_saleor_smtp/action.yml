@@ -55,10 +55,8 @@ runs:
 
     - name: Login to registry
       shell: bash
-      if: github.ref == 'refs/heads/main'
       run: doctl registry login --expiry-seconds 600
 
     - name: Upload image to registry
       shell: bash
-      if: github.ref == 'refs/heads/main'
       run: docker push -a ${{ steps.image_url.outputs.value }}
