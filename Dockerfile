@@ -56,9 +56,6 @@ COPY --from=deps /app/apps/smtp/package.json /app/apps/smtp/package.json
 # Get PNPM version from package.json
 RUN npm i -g pnpm@9.11.0
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
 # Set the correct permission for prerender cache
 RUN chown -R nextjs:nodejs .next
 
