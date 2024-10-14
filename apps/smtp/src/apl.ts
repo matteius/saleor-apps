@@ -1,8 +1,8 @@
 import {
   type APL,
-  type AuthData,
-  type AplReadyResult,
   type AplConfiguredResult,
+  type AplReadyResult,
+  type AuthData,
 } from "@saleor/app-sdk/APL";
 import { createClient, type RedisClientType } from "redis";
 
@@ -40,13 +40,14 @@ export class RedisAPL implements APL {
   }
 
   private prepareAuthDataKey(apiUrl: string): string {
-    return `APP_ID:${apiUrl}`; // Replace APP_ID with actual app ID or make it configurable
+    return `APP_SMTP:${apiUrl}`;
   }
 
   async get(saleorApiUrl: string): Promise<AuthData | undefined> {
     await this.connectionPromise;
     try {
       const response = await this.client.get(this.prepareAuthDataKey(saleorApiUrl));
+
       if (response) {
         return JSON.parse(response) as AuthData;
       }
@@ -95,8 +96,10 @@ export class RedisAPL implements APL {
   }
 
   async isConfigured(): Promise<AplConfiguredResult> {
-    // This method should be implemented based on your configuration logic
-    // For now, we'll assume it's always configured if we can create a client
+    /*
+     * This method should be implemented based on your configuration logic
+     * For now, we'll assume it's always configured if we can create a client
+     */
     return { configured: true };
   }
 
