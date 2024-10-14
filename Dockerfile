@@ -49,9 +49,15 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy built assets from builder stage
-COPY --from=deps /app/apps/smtp/.next ./.next
-COPY --from=deps /app/apps/smtp/node_modules ./node_modules
-COPY --from=deps /app/apps/smtp/package.json ./package.json
+COPY --from=deps /app/apps/smtp/.next /app/apps/smtp/.next
+COPY --from=deps /app/apps/smtp/node_modules /app/apps/smtp/node_modules
+COPY --from=deps /app/apps/smtp/package.json /app/apps/smtp/package.json
+
+# Get PNPM version from package.json
+RUN npm i -g pnpm@9.11.0
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
 # Set the correct permission for prerender cache
 RUN chown -R nextjs:nodejs .next
