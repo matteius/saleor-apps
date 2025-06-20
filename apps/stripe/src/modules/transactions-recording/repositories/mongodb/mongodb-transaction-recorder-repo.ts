@@ -6,6 +6,7 @@ import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { ResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 import { SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-flow";
+import { createSaleorTransactionId } from "@/modules/saleor/saleor-transaction-id";
 import { PaymentMethod } from "@/modules/stripe/payment-methods/types";
 import {
   createStripePaymentIntentId,
@@ -153,7 +154,7 @@ export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
 
       const recordedTransaction = new RecordedTransaction({
         stripePaymentIntentId: createStripePaymentIntentId(mongoTransaction.stripePaymentIntentId),
-        saleorTransactionId: mongoTransaction.saleorTransactionId,
+        saleorTransactionId: createSaleorTransactionId(mongoTransaction.saleorTransactionId),
         saleorTransactionFlow: mongoTransaction.saleorTransactionFlow as SaleorTransationFlow,
         resolvedTransactionFlow:
           mongoTransaction.resolvedTransactionFlow as ResolvedTransactionFlow,
