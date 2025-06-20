@@ -50,8 +50,12 @@ ENV NEXT_PUBLIC_STOREFRONT_URL=${NEXT_PUBLIC_STOREFRONT_URL:-https://www.opensen
 ARG APL
 ENV APL=${APL:-file}
 
-# Build the specified app
-RUN pnpm --filter=saleor-app-${APP_NAME} build
+# Build the specified app - map directory names to package names
+RUN if [ "$APP_NAME" = "stripe" ]; then \
+      pnpm --filter=saleor-app-payment-stripe build; \
+    else \
+      pnpm --filter=saleor-app-${APP_NAME} build; \
+    fi
 
 # Production image, copy all the files and run next
 FROM base AS runner
