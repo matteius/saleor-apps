@@ -21,6 +21,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-22.04
+    # Temporarily disabled until 1Password secrets are configured
+    if: false
 
     steps:
       - uses: actions/checkout@v4

@@ -5,6 +5,7 @@ import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 import { dynamoDbAplEntity } from "@/modules/apl/apl-db-model";
 import { DynamoAPLRepository } from "@/modules/apl/dynamo-apl-repository";
 import { DynamoAPL } from "@/modules/apl/dynamodb-apl";
+import { MongoAPL } from "@/modules/apl/mongodb-apl";
 
 import { env } from "./env";
 
@@ -16,6 +17,11 @@ switch (env.APL) {
     });
 
     apl = new DynamoAPL({ repository });
+    break;
+  }
+
+  case "mongodb": {
+    apl = new MongoAPL();
     break;
   }
 
