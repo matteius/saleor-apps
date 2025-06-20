@@ -1,12 +1,14 @@
-import { APL } from "@saleor/app-sdk/APL";
 import { FileAPL } from "@saleor/app-sdk/APL/file";
 import { SaleorCloudAPL } from "@saleor/app-sdk/APL/saleor-cloud";
 import { UpstashAPL } from "@saleor/app-sdk/APL/upstash";
+import { RedisAPL } from "./apl";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 
-const aplType = process.env.APL ?? "file";
+export let apl: RedisAPL;
 
-export let apl: APL;
+apl = new RedisAPL({
+  url: process.env.REDIS_URL,
+});
 
 switch (aplType) {
   case "upstash":
@@ -36,6 +38,7 @@ switch (aplType) {
     throw new Error("Invalid APL config, ");
   }
 }
+
 export const saleorApp = new SaleorApp({
   apl,
 });
