@@ -138,7 +138,7 @@ export class MongoAPL implements APL {
   }
 
   private envVariablesRequiredByMongoDBExist() {
-    return typeof process.env.MONGODB_URL === "string" && process.env.MONGODB_URL.length > 0;
+    return isMongoDBConfigured();
   }
 
   async close(): Promise<void> {
