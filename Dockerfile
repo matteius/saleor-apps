@@ -95,9 +95,6 @@ COPY --from=builder /app/apps/${APP_NAME} ./apps/${APP_NAME}
 # Copy the entire node_modules to ensure all dependencies are available
 COPY --from=builder /app/node_modules ./node_modules
 
-# Install production dependencies only for the workspace
-RUN pnpm install --prod --frozen-lockfile
-
 # Set the correct permission for prerender cache
 RUN chown -R nextjs:nodejs apps/${APP_NAME}/.next
 
