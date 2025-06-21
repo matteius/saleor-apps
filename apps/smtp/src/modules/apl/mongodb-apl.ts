@@ -4,6 +4,7 @@ import { Collection, Db, MongoClient } from "mongodb";
 import { env } from "@/lib/env";
 import { BaseError, ValueError } from "@/lib/errors";
 import { appInternalTracer } from "@/lib/tracing";
+import { createLogger } from "@/logger";
 import { createSaleorApiUrl, SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 interface MongoAuthData extends AuthData {
@@ -24,6 +25,7 @@ export class MongoAPL implements APL {
   private connectionPromise: Promise<void> | null = null;
 
   private tracer = appInternalTracer;
+  private logger = createLogger("MongoAPL");
 
   constructor() {
     // Don't connect immediately - wait until first use
@@ -36,15 +38,31 @@ export class MongoAPL implements APL {
         throw new MongoAPL.MissingEnvVariablesError("MONGODB_URL is required");
       }
 
+      this.logger.info("Attempting to connect to MongoDB...");
       this.client = new MongoClient(env.MONGODB_URL);
       await this.client.connect();
+      this.logger.info("Successfully connected to MongoDB");
 
       this.db = this.client.db(env.MONGODB_DATABASE || "saleor_smtp");
       this.collection = this.db.collection<MongoAuthData>("apl_auth_data");
 
       // Create index on saleorApiUrl for faster queries
       await this.collection.createIndex({ saleorApiUrl: 1 }, { unique: true });
+      this.logger.info("Index created successfully");
     } catch (error) {
+      this.logger.error("Connection failed:", error);
+      // Clean up on connection failure
+      if (this.client) {
+        try {
+          await this.client.close();
+        } catch (closeError) {
+          this.logger.error("Error closing client after connection failure:", closeError);
+        }
+        this.client = null;
+      }
+      this.db = null;
+      this.collection = null;
+      this.connectionPromise = null; // Reset connection promise to allow retry
       throw new MongoAPL.ConnectionError("Failed to connect to MongoDB", {
         cause: error,
       });
@@ -99,14 +117,30 @@ export class MongoAPL implements APL {
   async set(authData: AuthData): Promise<void> {
     return this.tracer.startActiveSpan("MongoAPL.set", async (span) => {
       try {
+        this.logger.info("Attempting to set auth data for:", {
+          saleorApiUrl: authData.saleorApiUrl,
+        });
         await this.ensureConnection();
 
-        await this.collection!.replaceOne({ saleorApiUrl: authData.saleorApiUrl }, authData, {
-          upsert: true,
+        const result = await this.collection!.replaceOne(
+          { saleorApiUrl: authData.saleorApiUrl },
+          authData,
+          {
+            upsert: true,
+          },
+        );
+
+        this.logger.info("Set operation result:", {
+          acknowledged: result.acknowledged,
+          matchedCount: result.matchedCount,
+          modifiedCount: result.modifiedCount,
+          upsertedCount: result.upsertedCount,
+          upsertedId: result.upsertedId,
         });
 
         span.end();
       } catch (error) {
+        this.logger.error("Failed to set auth data:", error);
         span.end();
         throw new MongoAPL.SetAuthDataError("Failed to set APL entry", {
           cause: error,
