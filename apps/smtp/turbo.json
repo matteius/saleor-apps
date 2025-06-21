@@ -11,11 +11,14 @@
         "MONGODB_DATABASE",
         "MONGODB_URL",
         "NEXT_PUBLIC_SENTRY_DSN",
+        "REDIS_URL",
         "REST_APL_ENDPOINT",
         "REST_APL_TOKEN",
         "SECRET_KEY",
         "SENTRY_AUTH_TOKEN",
-        "SENTRY_PROJECT"
+        "SENTRY_PROJECT",
+        "UPSTASH_TOKEN",
+        "UPSTASH_URL"
       ]
     }
   }
