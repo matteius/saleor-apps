@@ -80,12 +80,23 @@ RUN adduser --system --uid 1001 nextjs
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 
-# Copy built assets from builder stage
-COPY --from=builder /app/apps/${APP_NAME}/.next ./apps/${APP_NAME}/.next
-COPY --from=builder /app/apps/${APP_NAME}/package.json ./apps/${APP_NAME}/package.json
-COPY --from=builder /app/node_modules ./node_modules
+# Copy workspace configuration
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/.npmrc ./.npmrc
+
+# Copy all packages (needed for workspace dependencies)
+COPY --from=builder /app/packages ./packages
+
+# Copy the specific app
+COPY --from=builder /app/apps/${APP_NAME} ./apps/${APP_NAME}
+
+# Copy the entire node_modules to ensure all dependencies are available
+COPY --from=builder /app/node_modules ./node_modules
+
+# Install production dependencies only for the workspace
+RUN pnpm install --prod --frozen-lockfile
 
 # Set the correct permission for prerender cache
 RUN chown -R nextjs:nodejs apps/${APP_NAME}/.next
