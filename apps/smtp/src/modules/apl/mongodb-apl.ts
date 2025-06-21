@@ -1,6 +1,8 @@
 import { APL, AplConfiguredResult, AplReadyResult, AuthData } from "@saleor/app-sdk/APL";
 import { Collection, Db, MongoClient } from "mongodb";
 
+import { env, isMongoDBConfigured } from "../../lib/env";
+
 interface MongoAuthData extends AuthData {
   _id?: string;
 }
@@ -18,7 +20,7 @@ export class MongoAPL implements APL {
 
   private async connect(): Promise<void> {
     try {
-      const mongoUrl = process.env.MONGODB_URL;
+      const mongoUrl = env.MONGODB_URL;
 
       if (!mongoUrl) {
         throw new Error("MONGODB_URL is required");
@@ -27,7 +29,7 @@ export class MongoAPL implements APL {
       this.client = new MongoClient(mongoUrl);
       await this.client.connect();
 
-      this.db = this.client.db(process.env.MONGODB_DATABASE || "saleor_smtp");
+      this.db = this.client.db(env.MONGODB_DATABASE || "saleor_smtp");
       this.collection = this.db.collection<MongoAuthData>("apl_auth_data");
 
       // Create index on saleorApiUrl for faster queries
