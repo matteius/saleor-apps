@@ -4,6 +4,8 @@ import { SaleorCloudAPL } from "@saleor/app-sdk/APL/saleor-cloud";
 import { UpstashAPL } from "@saleor/app-sdk/APL/upstash";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 
+import { MongoAPL } from "./modules/apl/mongodb-apl";
+
 const aplType = process.env.APL || "file";
 
 export let apl: APL;
@@ -18,6 +20,11 @@ switch (aplType) {
     apl = new FileAPL();
 
     break;
+
+  case "mongodb": {
+    apl = new MongoAPL();
+    break;
+  }
 
   case "saleor-cloud": {
     if (!process.env.REST_APL_ENDPOINT || !process.env.REST_APL_TOKEN) {

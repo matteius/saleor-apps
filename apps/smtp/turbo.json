@@ -8,6 +8,8 @@
         "APL",
         "APP_API_BASE_URL",
         "APP_IFRAME_BASE_URL",
+        "MONGODB_DATABASE",
+        "MONGODB_URL",
         "NEXT_PUBLIC_SENTRY_DSN",
         "REST_APL_ENDPOINT",
         "REST_APL_TOKEN",

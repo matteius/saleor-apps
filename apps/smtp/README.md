@@ -85,6 +85,8 @@ The choice of the APL is done using the `APL` environment variable. If the value
 
 - `file`: no additional setup is required. Good choice for local development. Can't be used for multi tenant-apps or be deployed (not intended for production)
 - `upstash`: use [Upstash](https://upstash.com/) Redis as storage method. Free account required. Can be used for development and production and supports multi-tenancy. Requires `UPSTASH_URL` and `UPSTASH_TOKEN` environment variables to be set
+- `mongodb`: use MongoDB as storage method. Can be used for development and production and supports multi-tenancy. Requires `MONGODB_URL` environment variable to be set. Optionally, `MONGODB_DATABASE` can be set to specify the database name (defaults to `saleor_smtp`)
+- `saleor-cloud`: use Saleor Cloud's APL. Requires `REST_APL_ENDPOINT` and `REST_APL_TOKEN` environment variables to be set
 
 If you want to use your own database, you can implement your own APL. [Check the documentation to read more.](https://docs.saleor.io/developer/extending/apps/developing-apps/app-sdk/apl)
 
