@@ -8,6 +8,16 @@ import { MongoAPL } from "./modules/apl/mongodb-apl";
 
 const aplType = process.env.APL || "file";
 
+// Debug logging - only in development
+if (process.env.NODE_ENV === "development") {
+  // eslint-disable-next-line no-console
+  console.log("SMTP App APL Configuration:");
+  // eslint-disable-next-line no-console
+  console.log("APL environment variable:", process.env.APL);
+  // eslint-disable-next-line no-console
+  console.log("Selected APL type:", aplType);
+}
+
 export let apl: APL;
 
 switch (aplType) {
