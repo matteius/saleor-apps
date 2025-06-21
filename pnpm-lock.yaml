@@ -1460,6 +1460,9 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.21.4
+      zod-validation-error:
+        specifier: 3.4.0
+        version: 3.4.0(zod@3.21.4)
     devDependencies:
       '@graphql-codegen/cli':
         specifier: 5.0.2
