@@ -21,20 +21,32 @@ export class MongoAPL implements APL {
   private async connect(): Promise<void> {
     try {
       const mongoUrl = env.MONGODB_URL;
+      const mongoDatabase = env.MONGODB_DATABASE || "saleor_smtp";
 
       if (!mongoUrl) {
         throw new Error("MONGODB_URL is required");
       }
 
+      // Debug logging
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("MongoDB APL connecting to database:", mongoDatabase);
+      }
+
       this.client = new MongoClient(mongoUrl);
       await this.client.connect();
 
-      this.db = this.client.db(env.MONGODB_DATABASE || "saleor_smtp");
+      this.db = this.client.db(mongoDatabase);
       this.collection = this.db.collection<MongoAuthData>("apl_auth_data");
 
       // Create index on saleorApiUrl for faster queries
       await this.collection.createIndex({ saleorApiUrl: 1 }, { unique: true });
+
+      // eslint-disable-next-line no-console
+      console.log("MongoDB APL connected successfully to database:", mongoDatabase);
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to connect to MongoDB:", error);
       throw new Error(`Failed to connect to MongoDB: ${error}`);
     }
   }
@@ -74,10 +86,26 @@ export class MongoAPL implements APL {
     try {
       await this.ensureConnection();
 
-      await this.collection!.replaceOne({ saleorApiUrl: authData.saleorApiUrl }, authData, {
-        upsert: true,
-      });
+      const result = await this.collection!.replaceOne(
+        { saleorApiUrl: authData.saleorApiUrl },
+        authData,
+        { upsert: true },
+      );
+
+      // Log the result for debugging
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("MongoDB APL set result:", {
+          acknowledged: result.acknowledged,
+          matchedCount: result.matchedCount,
+          modifiedCount: result.modifiedCount,
+          upsertedCount: result.upsertedCount,
+          upsertedId: result.upsertedId,
+        });
+      }
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to set APL entry:", error);
       throw new Error(`Failed to set APL entry: ${error}`);
     }
   }
