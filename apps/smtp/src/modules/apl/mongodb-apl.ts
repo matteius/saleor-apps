@@ -1,17 +1,29 @@
 import { APL, AplConfiguredResult, AplReadyResult, AuthData } from "@saleor/app-sdk/APL";
 import { Collection, Db, MongoClient } from "mongodb";
 
-import { env, isMongoDBConfigured } from "../../lib/env";
+import { env } from "@/lib/env";
+import { BaseError, ValueError } from "@/lib/errors";
+import { appInternalTracer } from "@/lib/tracing";
+import { createSaleorApiUrl, SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 interface MongoAuthData extends AuthData {
   _id?: string;
 }
 
 export class MongoAPL implements APL {
+  static GetAuthDataError = BaseError.subclass("GetAuthDataError");
+  static SetAuthDataError = BaseError.subclass("SetAuthDataError");
+  static DeleteAuthDataError = BaseError.subclass("DeleteAuthDataError");
+  static GetAllAuthDataError = BaseError.subclass("GetAllAuthDataError");
+  static MissingEnvVariablesError = BaseError.subclass("MissingEnvVariablesError");
+  static ConnectionError = BaseError.subclass("ConnectionError");
+
   private client: MongoClient | null = null;
   private db: Db | null = null;
   private collection: Collection<MongoAuthData> | null = null;
   private connectionPromise: Promise<void> | null = null;
+
+  private tracer = appInternalTracer;
 
   constructor() {
     // Don't connect immediately - wait until first use
@@ -20,34 +32,22 @@ export class MongoAPL implements APL {
 
   private async connect(): Promise<void> {
     try {
-      const mongoUrl = env.MONGODB_URL;
-      const mongoDatabase = env.MONGODB_DATABASE || "saleor_smtp";
-
-      if (!mongoUrl) {
-        throw new Error("MONGODB_URL is required");
+      if (!env.MONGODB_URL) {
+        throw new MongoAPL.MissingEnvVariablesError("MONGODB_URL is required");
       }
 
-      // Debug logging
-      if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.log("MongoDB APL connecting to database:", mongoDatabase);
-      }
-
-      this.client = new MongoClient(mongoUrl);
+      this.client = new MongoClient(env.MONGODB_URL);
       await this.client.connect();
 
-      this.db = this.client.db(mongoDatabase);
+      this.db = this.client.db(env.MONGODB_DATABASE || "saleor_smtp");
       this.collection = this.db.collection<MongoAuthData>("apl_auth_data");
 
       // Create index on saleorApiUrl for faster queries
       await this.collection.createIndex({ saleorApiUrl: 1 }, { unique: true });
-
-      // eslint-disable-next-line no-console
-      console.log("MongoDB APL connected successfully to database:", mongoDatabase);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to connect to MongoDB:", error);
-      throw new Error(`Failed to connect to MongoDB: ${error}`);
+      throw new MongoAPL.ConnectionError("Failed to connect to MongoDB", {
+        cause: error,
+      });
     }
   }
 
@@ -57,82 +57,107 @@ export class MongoAPL implements APL {
     }
     await this.connectionPromise;
     if (!this.collection) {
-      throw new Error("MongoDB connection not established");
+      throw new MongoAPL.ConnectionError("MongoDB connection not established");
     }
   }
 
-  async get(saleorApiUrl: string): Promise<AuthData | undefined> {
-    try {
-      await this.ensureConnection();
+  async get(saleorApiUrl: SaleorApiUrl | string): Promise<AuthData | undefined> {
+    const saleorApiUrlParsed = createSaleorApiUrl(saleorApiUrl);
 
-      const result = await this.collection!.findOne({
-        saleorApiUrl: saleorApiUrl,
-      });
-
-      if (!result) {
-        return undefined;
-      }
-
-      // Remove MongoDB _id field from the result
-      const { _id, ...authData } = result;
-
-      return authData;
-    } catch (error) {
-      throw new Error(`Failed to get APL entry: ${error}`);
+    if (saleorApiUrlParsed.isErr()) {
+      throw new ValueError("Value Error: Provided saleorApiUrl is invalid.");
     }
+
+    return this.tracer.startActiveSpan("MongoAPL.get", async (span) => {
+      try {
+        await this.ensureConnection();
+
+        const result = await this.collection!.findOne({
+          saleorApiUrl: saleorApiUrlParsed.value,
+        });
+
+        span.end();
+
+        if (!result) {
+          return undefined;
+        }
+
+        // Remove MongoDB _id field from the result
+        const { _id, ...authData } = result;
+
+        return authData;
+      } catch (error) {
+        span.end();
+
+        throw new MongoAPL.GetAuthDataError("Failed to get APL entry", {
+          cause: error,
+        });
+      }
+    });
   }
 
   async set(authData: AuthData): Promise<void> {
-    try {
-      await this.ensureConnection();
+    return this.tracer.startActiveSpan("MongoAPL.set", async (span) => {
+      try {
+        await this.ensureConnection();
 
-      const result = await this.collection!.replaceOne(
-        { saleorApiUrl: authData.saleorApiUrl },
-        authData,
-        { upsert: true },
-      );
+        await this.collection!.replaceOne({ saleorApiUrl: authData.saleorApiUrl }, authData, {
+          upsert: true,
+        });
 
-      // Log the result for debugging
-      if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.log("MongoDB APL set result:", {
-          acknowledged: result.acknowledged,
-          matchedCount: result.matchedCount,
-          modifiedCount: result.modifiedCount,
-          upsertedCount: result.upsertedCount,
-          upsertedId: result.upsertedId,
+        span.end();
+      } catch (error) {
+        span.end();
+        throw new MongoAPL.SetAuthDataError("Failed to set APL entry", {
+          cause: error,
         });
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to set APL entry:", error);
-      throw new Error(`Failed to set APL entry: ${error}`);
-    }
+    });
   }
 
   async delete(saleorApiUrl: string): Promise<void> {
-    try {
-      await this.ensureConnection();
+    const saleorApiUrlParsed = createSaleorApiUrl(saleorApiUrl);
 
-      await this.collection!.deleteOne({
-        saleorApiUrl: saleorApiUrl,
-      });
-    } catch (error) {
-      throw new Error(`Failed to delete APL entry: ${error}`);
+    if (saleorApiUrlParsed.isErr()) {
+      throw new ValueError("Value Error: Provided saleorApiUrl is invalid.");
     }
+
+    return this.tracer.startActiveSpan("MongoAPL.delete", async (span) => {
+      try {
+        await this.ensureConnection();
+
+        await this.collection!.deleteOne({
+          saleorApiUrl: saleorApiUrlParsed.value,
+        });
+
+        span.end();
+      } catch (error) {
+        span.end();
+        throw new MongoAPL.DeleteAuthDataError("Failed to delete APL entry", {
+          cause: error,
+        });
+      }
+    });
   }
 
   async getAll(): Promise<AuthData[]> {
-    try {
-      await this.ensureConnection();
+    return this.tracer.startActiveSpan("MongoAPL.getAll", async (span) => {
+      try {
+        await this.ensureConnection();
 
-      const results = await this.collection!.find({}).toArray();
+        const results = await this.collection!.find({}).toArray();
 
-      // Remove MongoDB _id field from all results
-      return results.map(({ _id, ...authData }) => authData);
-    } catch (error) {
-      throw new Error(`Failed to get all APL entries: ${error}`);
-    }
+        span.end();
+
+        // Remove MongoDB _id field from all results
+        return results.map(({ _id, ...authData }) => authData);
+      } catch (error) {
+        span.end();
+        throw new MongoAPL.GetAllAuthDataError("Failed to get all APL entries", {
+          cause: error,
+        });
+      }
+    });
   }
 
   async isReady(): Promise<AplReadyResult> {
@@ -147,7 +172,7 @@ export class MongoAPL implements APL {
     } catch (error) {
       return {
         ready: false,
-        error: error instanceof Error ? error : new Error("Unknown error"),
+        error: error instanceof Error ? error : new MongoAPL.ConnectionError("Unknown error"),
       };
     }
   }
@@ -161,12 +186,12 @@ export class MongoAPL implements APL {
         }
       : {
           configured: false,
-          error: new Error("Missing MongoDB env variables"),
+          error: new MongoAPL.MissingEnvVariablesError("Missing MongoDB env variables"),
         };
   }
 
   private envVariablesRequiredByMongoDBExist() {
-    return isMongoDBConfigured();
+    return typeof env.MONGODB_URL === "string" && env.MONGODB_URL.length > 0;
   }
 
   async close(): Promise<void> {
