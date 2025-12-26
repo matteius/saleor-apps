@@ -16,7 +16,9 @@ export const env = createEnv({
   },
   server: {
     ALLOWED_DOMAIN_PATTERN: z.string().optional(),
-    APL: z.enum(["saleor-cloud", "file", "dynamodb"]).optional().default("file"),
+    APL: z.enum(["saleor-cloud", "file", "dynamodb", "mongodb"]).optional().default("file"),
+    MONGODB_URL: z.string().optional(),
+    MONGODB_DATABASE: z.string().optional().default("saleor_stripe"),
     APP_API_BASE_URL: z.string().optional(),
     APP_IFRAME_BASE_URL: z.string().optional(),
     APP_LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -67,6 +69,8 @@ export const env = createEnv({
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     APPSTORE_URL: process.env.APPSTORE_URL,
     APP_NAME: process.env.APP_NAME,
+    MONGODB_URL: process.env.MONGODB_URL,
+    MONGODB_DATABASE: process.env.MONGODB_DATABASE,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
   onValidationError(issues) {

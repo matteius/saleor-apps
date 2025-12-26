@@ -1,0 +1,73 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build Saleor API
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build_stripe_app:
+    runs-on: ubuntu-latest
+    environment: DigitalOcean-PROD
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Get python path
+        id: python-path
+        run: |
+          echo "path=$(python -c "import sys; print(sys.executable)")" >> $GITHUB_OUTPUT
+      - name: Sync the submodules
+        run: |
+          git submodule update --init
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Build saleor Stripe app; Publishes Image to Container Registry
+        uses: ./.github/workflows/build_saleor_app
+        with:
+          app_name: stripe
+          dockerfile: Dockerfile
+          image_path: whitewhale/saleor-stripe-app
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          APP_LOG_LEVEL: debug
+
+  build_smtp_app:
+    runs-on: ubuntu-latest
+    environment: DigitalOcean-PROD
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Get python path
+        id: python-path
+        run: |
+          echo "path=$(python -c "import sys; print(sys.executable)")" >> $GITHUB_OUTPUT
+      - name: Sync the submodules
+        run: |
+          git submodule update --init
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Build saleor SMTP app; Publishes Image to Container Registry
+        uses: ./.github/workflows/build_saleor_app
+        with:
+          app_name: smtp
+          dockerfile: Dockerfile
+          image_path: whitewhale/saleor-smtp-app
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          APP_LOG_LEVEL: debug
