@@ -40,22 +40,40 @@ type ConstructorParams = {
 export class DynamodbAppConfigRepo implements AppConfigRepo {
   private logger = createLogger("DynamodbAppConfigRepo");
 
-  stripeConfigEntity: DynamoDbStripeConfigEntity;
-  channelConfigMappingEntity: DynamoDbChannelConfigMappingEntity;
-  encryptor: Encryptor;
+  private _stripeConfigEntity: DynamoDbStripeConfigEntity | null = null;
+  private _channelConfigMappingEntity: DynamoDbChannelConfigMappingEntity | null = null;
+  private _encryptor: Encryptor | null = null;
 
-  constructor(
-    config: ConstructorParams = {
-      entities: {
-        stripeConfig: DynamoDbStripeConfig.entity,
-        channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-      },
-      encryptor: new Encryptor(env.SECRET_KEY),
-    },
-  ) {
-    this.channelConfigMappingEntity = config.entities.channelConfigMapping;
-    this.stripeConfigEntity = config.entities.stripeConfig;
-    this.encryptor = config.encryptor;
+  constructor(config?: ConstructorParams) {
+    if (config) {
+      this._channelConfigMappingEntity = config.entities.channelConfigMapping;
+      this._stripeConfigEntity = config.entities.stripeConfig;
+      this._encryptor = config.encryptor;
+    }
+  }
+
+  private get stripeConfigEntity(): DynamoDbStripeConfigEntity {
+    if (!this._stripeConfigEntity) {
+      this._stripeConfigEntity = DynamoDbStripeConfig.entity;
+    }
+
+    return this._stripeConfigEntity;
+  }
+
+  private get channelConfigMappingEntity(): DynamoDbChannelConfigMappingEntity {
+    if (!this._channelConfigMappingEntity) {
+      this._channelConfigMappingEntity = DynamoDbChannelConfigMapping.entity;
+    }
+
+    return this._channelConfigMappingEntity;
+  }
+
+  private get encryptor(): Encryptor {
+    if (!this._encryptor) {
+      this._encryptor = new Encryptor(env.SECRET_KEY);
+    }
+
+    return this._encryptor;
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Entity, item, string } from "dynamodb-toolbox";
 
-import { DynamoMainTable, dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
+import { DynamoMainTable, getDynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 class DynamoDbChannelConfigMappingAccessPattern {
@@ -42,9 +42,21 @@ const createChannelConfigMappingEntity = (table: DynamoMainTable) => {
   });
 };
 
-const dynamoDbChannelConfigMappingEntity = createChannelConfigMappingEntity(dynamoMainTable);
+let _dynamoDbChannelConfigMappingEntity: ReturnType<
+  typeof createChannelConfigMappingEntity
+> | null = null;
 
-export type DynamoDbChannelConfigMappingEntity = typeof dynamoDbChannelConfigMappingEntity;
+const getEntity = () => {
+  if (!_dynamoDbChannelConfigMappingEntity) {
+    _dynamoDbChannelConfigMappingEntity = createChannelConfigMappingEntity(getDynamoMainTable());
+  }
+
+  return _dynamoDbChannelConfigMappingEntity;
+};
+
+export type DynamoDbChannelConfigMappingEntity = ReturnType<
+  typeof createChannelConfigMappingEntity
+>;
 
 export const DynamoDbChannelConfigMapping = {
   accessPattern: {
@@ -54,5 +66,7 @@ export const DynamoDbChannelConfigMapping = {
   },
   entitySchema: DynamoDbChannelConfigMappingEntrySchema,
   createEntity: createChannelConfigMappingEntity,
-  entity: dynamoDbChannelConfigMappingEntity,
+  get entity() {
+    return getEntity();
+  },
 };

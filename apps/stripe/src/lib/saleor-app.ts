@@ -4,7 +4,7 @@ import { FileAPL } from "@saleor/app-sdk/APL/file";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 
 import { MongoAPL } from "@/modules/apl/mongodb-apl";
-import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
+import { getDynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 
 import { env } from "./env";
 
@@ -12,7 +12,7 @@ export let apl: APL;
 switch (env.APL) {
   case "dynamodb": {
     apl = DynamoAPL.create({
-      table: dynamoMainTable,
+      table: getDynamoMainTable(),
     });
 
     break;

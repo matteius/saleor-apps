@@ -24,16 +24,22 @@ import {
 } from "@/modules/transactions-recording/repositories/transaction-recorder-repo";
 
 export class DynamoDBTransactionRecorderRepo implements TransactionRecorderRepo {
-  private entity: DynamoDbRecordedTransactionEntity;
+  private _entity: DynamoDbRecordedTransactionEntity | null = null;
 
   private logger = createLogger("DynamoDBTransactionRecorderRepo");
 
-  constructor(
-    params = {
-      entity: DynamoDbRecordedTransaction.entity,
-    },
-  ) {
-    this.entity = params.entity;
+  constructor(params?: { entity: DynamoDbRecordedTransactionEntity }) {
+    if (params?.entity) {
+      this._entity = params.entity;
+    }
+  }
+
+  private get entity(): DynamoDbRecordedTransactionEntity {
+    if (!this._entity) {
+      this._entity = DynamoDbRecordedTransaction.entity;
+    }
+
+    return this._entity;
   }
 
   async recordTransaction(

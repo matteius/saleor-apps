@@ -1,7 +1,7 @@
 import { Entity, map, number, string } from "dynamodb-toolbox";
 import { item } from "dynamodb-toolbox/schema/item";
 
-import { DynamoMainTable, dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
+import { DynamoMainTable, getDynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { StripePaymentIntentId } from "@/modules/stripe/stripe-payment-intent-id";
 
@@ -48,9 +48,17 @@ const createEntity = (table: DynamoMainTable) => {
   });
 };
 
-const entity = createEntity(dynamoMainTable);
+let _entity: ReturnType<typeof createEntity> | null = null;
 
-export type DynamoDbRecordedTransactionEntity = typeof entity;
+const getEntity = () => {
+  if (!_entity) {
+    _entity = createEntity(getDynamoMainTable());
+  }
+
+  return _entity;
+};
+
+export type DynamoDbRecordedTransactionEntity = ReturnType<typeof createEntity>;
 
 export const DynamoDbRecordedTransaction = {
   accessPattern: {
@@ -59,5 +67,7 @@ export const DynamoDbRecordedTransaction = {
   },
   entitySchema: Schema,
   createEntity,
-  entity: entity,
+  get entity() {
+    return getEntity();
+  },
 };

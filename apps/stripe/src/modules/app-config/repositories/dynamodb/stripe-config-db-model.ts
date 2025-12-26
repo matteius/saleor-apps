@@ -1,7 +1,7 @@
 import { Entity, string } from "dynamodb-toolbox";
 import { item } from "dynamodb-toolbox/schema/item";
 
-import { DynamoMainTable, dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
+import { DynamoMainTable, getDynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 class StripeConfigAccessPattern {
@@ -47,9 +47,17 @@ const createStripeConfigEntity = (table: DynamoMainTable) => {
   });
 };
 
-const dynamoDbStripeConfigEntity = createStripeConfigEntity(dynamoMainTable);
+let _dynamoDbStripeConfigEntity: ReturnType<typeof createStripeConfigEntity> | null = null;
 
-export type DynamoDbStripeConfigEntity = typeof dynamoDbStripeConfigEntity;
+const getEntity = () => {
+  if (!_dynamoDbStripeConfigEntity) {
+    _dynamoDbStripeConfigEntity = createStripeConfigEntity(getDynamoMainTable());
+  }
+
+  return _dynamoDbStripeConfigEntity;
+};
+
+export type DynamoDbStripeConfigEntity = ReturnType<typeof createStripeConfigEntity>;
 
 export const DynamoDbStripeConfig = {
   accessPattern: {
@@ -59,5 +67,7 @@ export const DynamoDbStripeConfig = {
   },
   entitySchema: DynamoDbStripeConfigSchema,
   createEntity: createStripeConfigEntity,
-  entity: dynamoDbStripeConfigEntity,
+  get entity() {
+    return getEntity();
+  },
 };
