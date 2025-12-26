@@ -850,7 +850,7 @@ importers:
         version: 8.4.14
       pretty-quick:
         specifier: ^3.1.3
-        version: 3.1.3(prettier@3.0.3)
+        version: 3.1.3(prettier@3.5.3)
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -1840,7 +1840,7 @@ importers:
         specifier: 'catalog:'
         version: 6.1.0(modern-errors@7.0.1)
       mongodb:
-        specifier: 7.0.0
+        specifier: ^7.0.0
         version: 7.0.0
       neverthrow:
         specifier: 'catalog:'
@@ -2045,7 +2045,7 @@ importers:
         specifier: 'catalog:'
         version: 6.1.0(modern-errors@7.0.1)
       mongodb:
-        specifier: 7.0.0
+        specifier: ^7.0.0
         version: 7.0.0
       neverthrow:
         specifier: 'catalog:'
@@ -21987,7 +21987,7 @@ snapshots:
     dependencies:
       parse-ms: 4.0.0
 
-  pretty-quick@3.1.3(prettier@3.0.3):
+  pretty-quick@3.1.3(prettier@3.5.3):
     dependencies:
       chalk: 3.0.0
       execa: 4.1.0
@@ -21995,7 +21995,7 @@ snapshots:
       ignore: 5.2.4
       mri: 1.2.0
       multimatch: 4.0.0
-      prettier: 3.0.3
+      prettier: 3.5.3
 
   process-nextick-args@2.0.1: {}
 
