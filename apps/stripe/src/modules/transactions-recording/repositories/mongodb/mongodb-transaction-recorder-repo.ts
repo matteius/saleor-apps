@@ -1,3 +1,4 @@
+import { SaleorSchemaVersion } from "@saleor/app-sdk/types";
 import { Collection, Db, MongoClient } from "mongodb";
 import { err, ok, Result } from "neverthrow";
 
@@ -28,6 +29,7 @@ interface MongoRecordedTransaction {
   saleorTransactionFlow: string;
   resolvedTransactionFlow: string;
   selectedPaymentMethod: string | number;
+  saleorSchemaVersion: SaleorSchemaVersion;
 }
 
 export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
@@ -95,6 +97,7 @@ export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
         saleorTransactionFlow: transaction.saleorTransactionFlow,
         resolvedTransactionFlow: transaction.resolvedTransactionFlow,
         selectedPaymentMethod: transaction.selectedPaymentMethod,
+        saleorSchemaVersion: transaction.saleorSchemaVersion,
       };
 
       await this.collection!.replaceOne(
@@ -159,6 +162,7 @@ export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
         resolvedTransactionFlow:
           mongoTransaction.resolvedTransactionFlow as ResolvedTransactionFlow,
         selectedPaymentMethod: mongoTransaction.selectedPaymentMethod as PaymentMethod["type"],
+        saleorSchemaVersion: mongoTransaction.saleorSchemaVersion,
       });
 
       return ok(recordedTransaction);
