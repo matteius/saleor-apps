@@ -63,10 +63,30 @@ export class DynamoMainTable extends Table<PartitionKey, SortKey> {
   }
 }
 
-const client = createDynamoDBClient();
-const documentClient = createDynamoDBDocumentClient(client);
+let _dynamoMainTable: DynamoMainTable | null = null;
 
-export const dynamoMainTable = DynamoMainTable.create({
-  documentClient: documentClient,
-  tableName: env.DYNAMODB_MAIN_TABLE_NAME,
+export const getDynamoMainTable = (): DynamoMainTable => {
+  if (!_dynamoMainTable) {
+    if (!env.DYNAMODB_MAIN_TABLE_NAME) {
+      throw new Error("DYNAMODB_MAIN_TABLE_NAME is required when using DynamoDB");
+    }
+    const client = createDynamoDBClient();
+    const documentClient = createDynamoDBDocumentClient(client);
+
+    _dynamoMainTable = DynamoMainTable.create({
+      documentClient: documentClient,
+      tableName: env.DYNAMODB_MAIN_TABLE_NAME,
+    });
+  }
+
+  return _dynamoMainTable;
+};
+
+/**
+ * @deprecated Use getDynamoMainTable() instead - this will be removed in a future version
+ */
+export const dynamoMainTable = new Proxy({} as DynamoMainTable, {
+  get(_target, prop) {
+    return (getDynamoMainTable() as unknown as Record<string | symbol, unknown>)[prop];
+  },
 });

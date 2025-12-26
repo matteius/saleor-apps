@@ -12,6 +12,11 @@ import { env } from "@/lib/env";
 
 const stripeMainTableName = env.DYNAMODB_MAIN_TABLE_NAME;
 
+if (!stripeMainTableName) {
+  console.error("DYNAMODB_MAIN_TABLE_NAME is required for DynamoDB setup");
+  process.exit(1);
+}
+
 try {
   const {
     values: { "endpoint-url": endpointUrl },
