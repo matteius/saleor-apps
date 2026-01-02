@@ -1,0 +1,21 @@
+{
+  "$schema": "https://turbo.build/schema.v2.json",
+  "extends": ["//"],
+  "tasks": {
+    "deploy": {
+      "env": [
+        "APL",
+        "APP_API_BASE_URL",
+        "APP_IFRAME_BASE_URL",
+        "DEMETERED_ADMIN_API_KEY",
+        "DEMETERED_API_URL",
+        "DEMETERED_TENANT_ID",
+        "FILE_APL_PATH",
+        "MANIFEST_APP_ID",
+        "REST_APL_ENDPOINT",
+        "REST_APL_TOKEN"
+      ]
+    }
+  }
+}
+

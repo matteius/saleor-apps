@@ -1,0 +1,43 @@
+fragment OrderLineDetails on OrderLine {
+  id
+  productName
+  variantName
+  productSku
+  quantity
+  unitPrice {
+    gross {
+      amount
+      currency
+    }
+  }
+  totalPrice {
+    gross {
+      amount
+      currency
+    }
+  }
+}
+
+fragment OrderDetails on Order {
+  id
+  number
+  userEmail
+  channel {
+    id
+    slug
+  }
+  user {
+    id
+    email
+  }
+  lines {
+    ...OrderLineDetails
+  }
+  total {
+    gross {
+      amount
+      currency
+    }
+  }
+}
+

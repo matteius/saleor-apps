@@ -71,3 +71,29 @@ jobs:
           image_path: whitewhale/saleor-smtp-app
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           APP_LOG_LEVEL: debug
+
+  build_ocr_credits_app:
+    runs-on: ubuntu-latest
+    environment: DigitalOcean-PROD
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get python path
+        id: python-path
+        run: |
+          echo "path=$(python -c "import sys; print(sys.executable)")" >> $GITHUB_OUTPUT
+      - name: Sync the submodules
+        run: |
+          git submodule update --init
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Build saleor OCR Credits app; Publishes Image to Container Registry
+        uses: ./.github/workflows/build_saleor_app
+        with:
+          app_name: ocr-credits
+          dockerfile: Dockerfile
+          image_path: whitewhale/saleor-ocr-credits-app
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          APP_LOG_LEVEL: debug

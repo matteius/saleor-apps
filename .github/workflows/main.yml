@@ -92,6 +92,8 @@ jobs:
             path: apps/smtp
           - name: stripe
             path: apps/stripe
+          - name: ocr-credits
+            path: apps/ocr-credits
           - name: np-atobarai
             path: apps/np-atobarai
           - name: logger

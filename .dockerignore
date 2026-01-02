@@ -1,0 +1,39 @@
+# Dependencies - these are installed fresh in Docker
+node_modules
+**/node_modules
+
+# Build outputs - these are generated in Docker
+.next
+**/.next
+.turbo
+**/.turbo
+dist
+**/dist
+
+# Development files
+.git
+.gitignore
+*.md
+!README.md
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Test files
+coverage
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# OS files
+.DS_Store
+Thumbs.db
+

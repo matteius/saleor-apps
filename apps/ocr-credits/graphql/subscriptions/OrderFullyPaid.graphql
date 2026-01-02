@@ -1,0 +1,10 @@
+subscription OrderFullyPaid {
+  event {
+    ... on OrderFullyPaid {
+      order {
+        ...OrderDetails
+      }
+    }
+  }
+}
+
