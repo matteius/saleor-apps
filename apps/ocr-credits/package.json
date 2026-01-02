@@ -37,6 +37,7 @@
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "redis": "5.10.0",
     "urql": "catalog:",
     "zod": "catalog:"
   },

@@ -214,7 +214,7 @@ importers:
         version: 8.17.5
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.3.0(graphql@16.11.0)(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.3.0(graphql@16.11.0)(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(redis@5.10.0)
       cspell:
         specifier: 8.17.5
         version: 8.17.5
@@ -1134,6 +1134,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 18.2.0(react@18.2.0)
+      redis:
+        specifier: 5.10.0
+        version: 5.10.0
       urql:
         specifier: 'catalog:'
         version: 4.0.4(graphql@16.7.1)(react@18.2.0)
@@ -5703,6 +5706,34 @@ packages:
   '@radix-ui/rect@1.0.1':
     resolution: {integrity: sha512-fyrgCaedtvMg9NK3en0pnOYJdtfwxUcNolezkNPUsoX57X8oQk+NkqcvzHXD2uKNij6GXmWU9NDru2IWjrO4BQ==}
 
+  '@redis/bloom@5.10.0':
+    resolution: {integrity: sha512-doIF37ob+l47n0rkpRNgU8n4iacBlKM9xLiP1LtTZTvz8TloJB8qx/MgvhMhKdYG+CvCY2aPBnN2706izFn/4A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/client@5.10.0':
+    resolution: {integrity: sha512-JXmM4XCoso6C75Mr3lhKA3eNxSzkYi3nCzxDIKY+YOszYsJjuKbFgVtguVPbLMOttN4iu2fXoc2BGhdnYhIOxA==}
+    engines: {node: '>= 18'}
+
+  '@redis/json@5.10.0':
+    resolution: {integrity: sha512-B2G8XlOmTPUuZtD44EMGbtoepQG34RCDXLZbjrtON1Djet0t5Ri7/YPXvL9aomXqP8lLTreaprtyLKF4tmXEEA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/search@5.10.0':
+    resolution: {integrity: sha512-3SVcPswoSfp2HnmWbAGUzlbUPn7fOohVu2weUQ0S+EMiQi8jwjL+aN2p6V3TI65eNfVsJ8vyPvqWklm6H6esmg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/time-series@5.10.0':
+    resolution: {integrity: sha512-cPkpddXH5kc/SdRhF0YG0qtjL+noqFT0AcHbQ6axhsPsO7iqPi1cjxgdkE9TNeKiBUUdCaU1DbqkR/LzbzPBhg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
   '@repeaterjs/repeater@3.0.5':
     resolution: {integrity: sha512-l3YHBLAol6d/IKnB9LhpD0cEZWAoe3eFKUyTYWmFmCO2Q/WOckxLQAUyMZWwZV2M/m3+4vgRoaolFqaII82/TA==}
 
@@ -7349,6 +7380,10 @@ packages:
   clsx@1.2.1:
     resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
     engines: {node: '>=6'}
+
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
 
   collection-visit@1.0.0:
     resolution: {integrity: sha512-lNkKvzEeMBBjUGHZ+q6z9pSJla0KWAQPvtzhEV9+iGyQYG+pBpl7xKDhxoNSOZH2hhv0v5k0y2yAM4o4SjoSkw==}
@@ -10611,6 +10646,10 @@ packages:
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
+
+  redis@5.10.0:
+    resolution: {integrity: sha512-0/Y+7IEiTgVGPrLFKy8oAEArSyEJkU0zvgV5xyi9NzNQ+SLZmyFbUsWIbgPcd4UdUh00opXGKlXJwMmsis5Byw==}
+    engines: {node: '>= 18'}
 
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
@@ -16397,6 +16436,26 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.25.6
 
+  '@redis/bloom@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/client@5.10.0':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/search@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/time-series@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
   '@repeaterjs/repeater@3.0.5': {}
 
   '@rollup/plugin-commonjs@28.0.1(rollup@4.35.0)':
@@ -16478,7 +16537,7 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@saleor/app-sdk@1.3.0(graphql@16.11.0)(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@saleor/app-sdk@1.3.0(graphql@16.11.0)(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(redis@5.10.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.30.0
@@ -16489,6 +16548,8 @@ snapshots:
       raw-body: 3.0.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
+    optionalDependencies:
+      redis: 5.10.0
     transitivePeerDependencies:
       - supports-color
 
@@ -18527,6 +18588,8 @@ snapshots:
   clone@1.0.4: {}
 
   clsx@1.2.1: {}
+
+  cluster-key-slot@1.1.2: {}
 
   collection-visit@1.0.0:
     dependencies:
@@ -22308,6 +22371,14 @@ snapshots:
     dependencies:
       indent-string: 4.0.0
       strip-indent: 3.0.0
+
+  redis@5.10.0:
+    dependencies:
+      '@redis/bloom': 5.10.0(@redis/client@5.10.0)
+      '@redis/client': 5.10.0
+      '@redis/json': 5.10.0(@redis/client@5.10.0)
+      '@redis/search': 5.10.0(@redis/client@5.10.0)
+      '@redis/time-series': 5.10.0(@redis/client@5.10.0)
 
   reflect.getprototypeof@1.0.10:
     dependencies:
