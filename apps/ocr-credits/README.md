@@ -13,10 +13,11 @@ A Saleor app that automatically provisions OCR page credits to the Demetered met
 
 | SKU | Pages | Price |
 |-----|-------|-------|
-| OCR-2000 | 2,000 | $20 |
-| OCR-5000 | 5,000 | $45 |
-| OCR-10000 | 10,000 | $80 |
-| OCR-25000 | 25,000 | $175 |
+| OCR-1000 | 1,000 | $20 |
+| OCR-2000 | 2,000 | $40 |
+| OCR-5000 | 5,000 | $90 |
+| OCR-10000 | 10,000 | $160 |
+| OCR-25000 | 25,000 | $350 |
 
 ## Configuration
 

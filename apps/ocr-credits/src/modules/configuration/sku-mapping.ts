@@ -5,6 +5,7 @@
  * opensensor-ocr channel.
  */
 export const SKU_TO_PAGES: Record<string, number> = {
+  "OCR-1000": 1000,
   "OCR-2000": 2000,
   "OCR-5000": 5000,
   "OCR-10000": 10000,
