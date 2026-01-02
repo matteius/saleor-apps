@@ -33,6 +33,7 @@
     "@t3-oss/env-nextjs": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
+    "mongodb": "^7.0.0",
     "neverthrow": "catalog:",
     "next": "catalog:",
     "react": "catalog:",

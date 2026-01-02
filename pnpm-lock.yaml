@@ -1122,6 +1122,9 @@ importers:
       modern-errors-serialize:
         specifier: 'catalog:'
         version: 6.1.0(modern-errors@7.0.1)
+      mongodb:
+        specifier: ^7.0.0
+        version: 7.0.0
       neverthrow:
         specifier: 'catalog:'
         version: 6.2.1

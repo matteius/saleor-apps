@@ -4,10 +4,11 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-    APL: z.enum(["file", "redis", "saleor-cloud"]).default("file"),
+    APL: z.enum(["file", "mongodb", "saleor-cloud"]).default("file"),
     FILE_APL_PATH: z.string().optional().default(".auth-data.json"),
-    // Redis APL configuration
-    REDIS_URL: z.string().optional(),
+    // MongoDB APL configuration
+    MONGODB_URL: z.string().optional(),
+    MONGODB_DATABASE: z.string().optional().default("saleor_ocr_credits"),
     // Saleor Cloud APL configuration
     REST_APL_ENDPOINT: z.string().optional(),
     REST_APL_TOKEN: z.string().optional(),
@@ -25,7 +26,8 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     APL: process.env.APL,
     FILE_APL_PATH: process.env.FILE_APL_PATH,
-    REDIS_URL: process.env.REDIS_URL,
+    MONGODB_URL: process.env.MONGODB_URL,
+    MONGODB_DATABASE: process.env.MONGODB_DATABASE,
     REST_APL_ENDPOINT: process.env.REST_APL_ENDPOINT,
     REST_APL_TOKEN: process.env.REST_APL_TOKEN,
     MANIFEST_APP_ID: process.env.MANIFEST_APP_ID,

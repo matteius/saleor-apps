@@ -1,32 +1,23 @@
 import { APL } from "@saleor/app-sdk/APL";
 import { FileAPL } from "@saleor/app-sdk/APL/file";
-import { RedisAPL } from "@saleor/app-sdk/APL/redis";
 import { SaleorCloudAPL } from "@saleor/app-sdk/APL/saleor-cloud";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
-import { createClient } from "redis";
 
 import { env } from "./env";
 import { BaseError } from "./errors";
+import { MongoAPL } from "./mongodb-apl";
 
 export let apl: APL;
 
 const MisconfiguredAPLError = BaseError.subclass("MisconfiguredAPLError");
 
 switch (env.APL) {
-  case "redis": {
-    if (!env.REDIS_URL) {
-      throw new MisconfiguredAPLError("Redis APL is not configured - missing REDIS_URL env variable");
+  case "mongodb": {
+    if (!env.MONGODB_URL) {
+      throw new MisconfiguredAPLError("MongoDB APL is not configured - missing MONGODB_URL env variable");
     }
 
-    const redisClient = createClient({
-      url: env.REDIS_URL,
-    });
-
-    apl = new RedisAPL({
-      client: redisClient,
-      hashCollectionKey: "saleor_ocr_credits_auth",
-    });
-
+    apl = new MongoAPL();
     break;
   }
 
