@@ -850,7 +850,7 @@ importers:
         version: 8.4.14
       pretty-quick:
         specifier: ^3.1.3
-        version: 3.1.3(prettier@3.5.3)
+        version: 3.1.3(prettier@3.0.3)
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -1067,7 +1067,7 @@ importers:
         version: 15.0.4
       next-test-api-route-handler:
         specifier: 'catalog:'
-        version: 4.0.16(next@15.2.8(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
+        version: 4.0.16(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@22.13.10)(typescript@5.8.2)
@@ -1089,6 +1089,9 @@ importers:
 
   apps/ocr-credits:
     dependencies:
+      '@opentelemetry/api':
+        specifier: 'catalog:'
+        version: 1.9.0
       '@saleor/app-sdk':
         specifier: link:../../node_modules/@saleor/app-sdk
         version: link:../../node_modules/@saleor/app-sdk
@@ -1107,18 +1110,12 @@ importers:
       '@saleor/macaw-ui':
         specifier: 'catalog:'
         version: 1.3.1(@types/react-dom@18.2.5)(@types/react@18.2.5)(@vanilla-extract/css@1.14.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      '@saleor/sentry-utils':
-        specifier: workspace:*
-        version: link:../../packages/sentry-utils
+      '@sentry/nextjs':
+        specifier: 'catalog:'
+        version: 9.8.0(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.82.1)
       '@t3-oss/env-nextjs':
         specifier: 'catalog:'
         version: 0.11.1(typescript@5.8.2)(zod@3.21.4)
-      graphql:
-        specifier: 'catalog:'
-        version: 16.7.1
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.7.1)
       modern-errors:
         specifier: 'catalog:'
         version: 7.0.1
@@ -1137,6 +1134,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 18.2.0(react@18.2.0)
+      urql:
+        specifier: 'catalog:'
+        version: 4.0.4(graphql@16.7.1)(react@18.2.0)
       zod:
         specifier: 'catalog:'
         version: 3.21.4
@@ -1144,9 +1144,6 @@ importers:
       '@graphql-codegen/cli':
         specifier: 'catalog:'
         version: 5.0.2(@types/node@22.13.10)(enquirer@2.4.1)(graphql@16.7.1)(typescript@5.8.2)
-      '@graphql-codegen/introspection':
-        specifier: 'catalog:'
-        version: 4.0.3(graphql@16.7.1)
       '@graphql-codegen/typed-document-node':
         specifier: 'catalog:'
         version: 5.0.5(graphql@16.7.1)
@@ -1156,21 +1153,24 @@ importers:
       '@graphql-codegen/typescript-operations':
         specifier: 'catalog:'
         version: 4.1.3(graphql@16.7.1)
-      '@graphql-codegen/typescript-urql':
-        specifier: 'catalog:'
-        version: 4.0.0(graphql-tag@2.12.6(graphql@16.7.1))(graphql@16.7.1)
       '@graphql-typed-document-node/core':
         specifier: 'catalog:'
         version: 3.2.0(graphql@16.7.1)
       '@saleor/eslint-config-apps':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@saleor/sentry-utils':
+        specifier: workspace:*
+        version: link:../../packages/sentry-utils
       '@saleor/typescript-config-apps':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@total-typescript/ts-reset':
         specifier: 0.6.1
         version: 0.6.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.13.10
       '@types/react':
         specifier: 18.2.5
         version: 18.2.5
@@ -1186,18 +1186,18 @@ importers:
       eslint-plugin-n:
         specifier: 'catalog:'
         version: 17.16.2(eslint@9.23.0(jiti@2.4.2))
+      graphql:
+        specifier: 'catalog:'
+        version: 16.7.1
       graphql-config:
         specifier: 5.0.3
         version: 5.0.3(@types/node@22.13.10)(graphql@16.7.1)(typescript@5.8.2)
-      tsx:
+      graphql-tag:
         specifier: 'catalog:'
-        version: 4.19.3
+        version: 2.12.6(graphql@16.7.1)
       typescript:
         specifier: 'catalog:'
         version: 5.8.2
-      vite:
-        specifier: 'catalog:'
-        version: 6.2.4(@types/node@22.13.10)(jiti@2.4.2)(terser@5.18.0)(tsx@4.19.3)(yaml@2.7.0)
       vitest:
         specifier: 'catalog:'
         version: 3.1.1(@types/node@22.13.10)(jiti@2.4.2)(jsdom@20.0.3)(msw@2.10.2(@types/node@22.13.10)(typescript@5.8.2))(terser@5.18.0)(tsx@4.19.3)(yaml@2.7.0)
@@ -2279,7 +2279,7 @@ importers:
         version: 2.10.2(@types/node@22.13.10)(typescript@5.8.2)
       next-test-api-route-handler:
         specifier: 'catalog:'
-        version: 4.0.16(next@15.2.8(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
+        version: 4.0.16(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -21590,7 +21590,7 @@ snapshots:
 
   neverthrow@6.2.1: {}
 
-  next-test-api-route-handler@4.0.16(next@15.2.8(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)):
+  next-test-api-route-handler@4.0.16(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)):
     dependencies:
       '@whatwg-node/server': 0.10.3
       cookie: 1.0.2
@@ -22102,7 +22102,7 @@ snapshots:
     dependencies:
       parse-ms: 4.0.0
 
-  pretty-quick@3.1.3(prettier@3.5.3):
+  pretty-quick@3.1.3(prettier@3.0.3):
     dependencies:
       chalk: 3.0.0
       execa: 4.1.0
@@ -22110,7 +22110,7 @@ snapshots:
       ignore: 5.2.4
       mri: 1.2.0
       multimatch: 4.0.0
-      prettier: 3.5.3
+      prettier: 3.0.3
 
   process-nextick-args@2.0.1: {}
 
