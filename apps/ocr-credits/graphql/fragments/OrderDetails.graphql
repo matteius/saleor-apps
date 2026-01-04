@@ -4,6 +4,11 @@ fragment OrderLineDetails on OrderLine {
   variantName
   productSku
   quantity
+  quantityFulfilled
+  quantityToFulfill
+  variant {
+    id
+  }
   unitPrice {
     gross {
       amount
