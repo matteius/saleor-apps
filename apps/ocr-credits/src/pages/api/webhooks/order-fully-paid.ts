@@ -56,6 +56,16 @@ const handler: NextJsWebhookHandler<OrderFullyPaidPayload> = async (_req, res, c
     return res.status(400).json({ error: "No customer email in order" });
   }
 
+  // Use externalReference (Fief ID) as the Demetered account ID, fall back to email
+  const demeteredAccountId = order.user?.externalReference || customerEmail;
+
+  logger.info("Resolved Demetered account ID", {
+    orderId: order.id,
+    demeteredAccountId,
+    hasExternalReference: !!order.user?.externalReference,
+    customerEmail,
+  });
+
   // Create GraphQL client for Saleor API
   const client = createGraphQLClient({
     saleorApiUrl: authData.saleorApiUrl,
@@ -95,9 +105,9 @@ const handler: NextJsWebhookHandler<OrderFullyPaidPayload> = async (_req, res, c
       totalCredits: creditsToAdd,
     });
 
-    // Use email as account ID (Demetered will create/get account)
+    // Use externalReference (Fief ID) or email as account ID
     const result = await demeteredClient.addCredits({
-      accountId: customerEmail,
+      accountId: demeteredAccountId,
       pages: creditsToAdd,
       orderId: order.id,
       source: "saleor-ocr-credits",
@@ -107,7 +117,7 @@ const handler: NextJsWebhookHandler<OrderFullyPaidPayload> = async (_req, res, c
       logger.error("Failed to add credits", {
         error: result.error.message,
         sku,
-        accountId: customerEmail,
+        accountId: demeteredAccountId,
       });
 
       return res.status(500).json({ error: "Failed to provision credits" });
@@ -116,7 +126,7 @@ const handler: NextJsWebhookHandler<OrderFullyPaidPayload> = async (_req, res, c
     const creditResult = result.value;
 
     logger.info("Successfully added credits", {
-      accountId: customerEmail,
+      accountId: demeteredAccountId,
       pagesAdded: creditResult.pages_added,
       newBalance: creditResult.new_credit_balance,
     });
@@ -190,7 +200,7 @@ const handler: NextJsWebhookHandler<OrderFullyPaidPayload> = async (_req, res, c
   return res.status(200).json({
     success: true,
     creditsAdded: totalCreditsAdded,
-    accountId: customerEmail,
+    accountId: demeteredAccountId,
     fulfilled: linesToFulfill.length > 0,
   });
 };
