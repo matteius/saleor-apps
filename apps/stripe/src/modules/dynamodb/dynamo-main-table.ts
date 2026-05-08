@@ -71,5 +71,9 @@ const documentClient = createDynamoDBDocumentClient(client);
 
 export const dynamoMainTable = DynamoMainTable.create({
   documentClient: documentClient,
-  tableName: env.DYNAMODB_MAIN_TABLE_NAME,
+  /*
+   * Optional in env so APL=mongodb deployments don't need DynamoDB; fall back to a placeholder
+   * since the table is constructed at module load but only used when APL=dynamodb.
+   */
+  tableName: env.DYNAMODB_MAIN_TABLE_NAME ?? "",
 });

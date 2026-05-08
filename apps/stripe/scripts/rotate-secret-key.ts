@@ -42,6 +42,10 @@ const documentClient = createDynamoDBDocumentClient(
   createDynamoDBClient({ requestTimeout: 30_000, connectionTimeout: 10_000 }),
 );
 
+if (!env.DYNAMODB_MAIN_TABLE_NAME) {
+  throw new Error("DYNAMODB_MAIN_TABLE_NAME is required to run rotate-secret-key");
+}
+
 const runner = createDynamoDBSecretKeyRotationRunner({
   secretKey: resolveRotationTargetKey(env),
   fallbackKeys: resolveRotationSourceKeys(env),

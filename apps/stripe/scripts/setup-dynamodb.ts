@@ -10,6 +10,9 @@ import {
 
 import { env } from "@/lib/env";
 
+if (!env.DYNAMODB_MAIN_TABLE_NAME) {
+  throw new Error("DYNAMODB_MAIN_TABLE_NAME is required to run setup-dynamodb");
+}
 const stripeMainTableName = env.DYNAMODB_MAIN_TABLE_NAME;
 
 try {

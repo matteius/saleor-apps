@@ -1,0 +1,84 @@
+name: Build saleor app
+description: Build saleor Docker Image and Publish to DigitalOcean Container Registry
+branding:
+  icon: "upload-cloud"
+  color: "blue"
+
+inputs:
+  app_name:
+    description: Name of the app to build (e.g., stripe, smtp)
+    required: true
+  image_path:
+    description: Image path in the format registry-name/image-name
+    required: true
+  sha_size:
+    description: Number of characters from the commit SHA
+    required: false
+    default: "8"
+  dockerfile:
+    description: The path + name of the Dockerfile you want to build (-f flag)
+    required: false
+    default: "Dockerfile"
+  docker_build_context:
+    description: The docker build context (usually '.')
+    required: false
+    default: "."
+  SECRET_KEY:
+    description: The secret key
+    required: true
+    default: ""
+  REDIS_URL:
+    description: The Redis URL
+    required: false
+    default: ""
+  APP_LOG_LEVEL:
+    description: The log level
+    required: false
+    default: "info"
+
+outputs:
+  image_url:
+    description: "Url of the uploaded image with the SHA tag"
+    value: ${{ steps.image_tags.outputs.sha }}
+  image_latest_url:
+    description: "Url of the uploaded image with the latest tag"
+    value: ${{ steps.image_tags.outputs.latest }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate Image Url
+      id: image_url
+      shell: bash
+      run: echo "value=registry.digitalocean.com/${{ inputs.image_path }}" >> $GITHUB_OUTPUT
+
+    - name: Generate Tagged Urls
+      id: image_tags
+      shell: bash
+      run: |
+        SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-${{ inputs.sha_size }})
+        echo "sha=${{ steps.image_url.outputs.value }}:$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "latest=${{ steps.image_url.outputs.value }}:latest" >> $GITHUB_OUTPUT
+        
+    - name: Build image
+      shell: bash
+      working-directory: .
+      run: |
+        docker build ${{ inputs.docker_build_context }} \
+          -f ${{ inputs.dockerfile }} \
+          --build-arg APP_NAME=${{ inputs.app_name }} \
+          --build-arg SECRET_KEY=${{ inputs.SECRET_KEY }} \
+          --build-arg REDIS_URL=${{ inputs.REDIS_URL }} \
+          --build-arg APP_LOG_LEVEL=${{ inputs.APP_LOG_LEVEL }} \
+          -t ${{ steps.image_tags.outputs.sha }} \
+          -t ${{ steps.image_tags.outputs.latest }}
+
+    - name: Login to registry
+      shell: bash
+      if: github.ref == 'refs/heads/main'
+      run: doctl registry login --expiry-seconds 600
+
+    - name: Upload image to registry
+      shell: bash
+      if: github.ref == 'refs/heads/main'
+      run: docker push -a ${{ steps.image_url.outputs.value }}

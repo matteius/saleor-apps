@@ -70,6 +70,7 @@
     "dynamodb-toolbox": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
+    "mongodb": "^6.3.0",
     "neverthrow": "catalog:",
     "next": "catalog:",
     "react": "catalog:",

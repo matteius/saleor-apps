@@ -4,6 +4,7 @@ import { FileAPL } from "@saleor/app-sdk/APL/file";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 
 import { createLogger } from "@/lib/logger";
+import { MongoAPL } from "@/modules/apl/mongodb-apl";
 import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 
 import { env } from "./env";
@@ -24,6 +25,11 @@ switch (env.APL) {
       },
     });
 
+    break;
+  }
+
+  case "mongodb": {
+    apl = new MongoAPL();
     break;
   }
 
