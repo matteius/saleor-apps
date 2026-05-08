@@ -1847,6 +1847,9 @@ importers:
       '@saleor/app-sdk':
         specifier: link:../../node_modules/@saleor/app-sdk
         version: link:../../node_modules/@saleor/app-sdk
+      '@saleor/apps-domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -1940,6 +1943,9 @@ importers:
       modern-errors-serialize:
         specifier: 'catalog:'
         version: 6.1.0(modern-errors@7.0.1)
+      mongodb:
+        specifier: ^6.3.0
+        version: 6.21.0
       neverthrow:
         specifier: 'catalog:'
         version: 6.2.1
@@ -23171,7 +23177,7 @@ snapshots:
 
   tr46@3.0.0:
     dependencies:
-      punycode: 2.3.0
+      punycode: 2.3.1
 
   tr46@5.1.1:
     dependencies:
@@ -23418,7 +23424,7 @@ snapshots:
 
   uri-js@4.4.1:
     dependencies:
-      punycode: 2.3.0
+      punycode: 2.3.1
 
   urix@0.1.0: {}
 

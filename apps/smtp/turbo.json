@@ -31,7 +31,9 @@
         "DYNAMODB_REQUEST_TIMEOUT_MS",
         "DYNAMODB_CONNECTION_TIMEOUT_MS",
         "FILE_APL_PATH",
-        "MANIFEST_APP_ID"
+        "MANIFEST_APP_ID",
+        "MONGODB_URL",
+        "MONGODB_DATABASE"
       ]
     }
   }

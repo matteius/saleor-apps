@@ -12,7 +12,7 @@ export const env = createEnv({
   },
   server: {
     ALLOWED_DOMAIN_PATTERN: z.string().optional(),
-    APL: z.enum(["saleor-cloud", "file", "dynamodb", "upstash"]).default("file"),
+    APL: z.enum(["saleor-cloud", "file", "dynamodb", "upstash", "mongodb"]).default("file"),
     APP_API_BASE_URL: z.string().optional(),
     APP_IFRAME_BASE_URL: z.string().optional(),
     APP_LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -43,6 +43,8 @@ export const env = createEnv({
     FALLBACK_SMTP_SENDER_DOMAIN: z.string().min(1).optional(),
     FALLBACK_SMTP_EMAIL_REDIRECT_ENDPOINT: z.string().url().optional(),
     FALLBACK_SMTP_EMAIL_REDIRECT_TOKEN: z.string().min(1).optional(),
+    MONGODB_URL: z.string().optional(),
+    MONGODB_DATABASE: z.string().optional(),
     ...newSecretKeyServerSchema,
   },
   shared: {
@@ -81,6 +83,8 @@ export const env = createEnv({
     FALLBACK_SMTP_SENDER_DOMAIN: process.env.FALLBACK_SMTP_SENDER_DOMAIN,
     FALLBACK_SMTP_EMAIL_REDIRECT_ENDPOINT: process.env.FALLBACK_SMTP_EMAIL_REDIRECT_ENDPOINT,
     FALLBACK_SMTP_EMAIL_REDIRECT_TOKEN: process.env.FALLBACK_SMTP_EMAIL_REDIRECT_TOKEN,
+    MONGODB_URL: process.env.MONGODB_URL,
+    MONGODB_DATABASE: process.env.MONGODB_DATABASE,
     ...newSecretKeyRuntimeEnv,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",

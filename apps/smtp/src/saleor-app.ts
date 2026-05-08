@@ -7,6 +7,7 @@ import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 import { env } from "./env";
 import { getDynamoEnv } from "./env-dynamodb";
 import { createLogger } from "./logger";
+import { MongoAPL } from "./modules/apl/mongodb-apl";
 import { createDynamoMainTable } from "./modules/dynamodb/dynamo-main-table";
 
 const logger = createLogger("saleor-app");
@@ -36,6 +37,11 @@ switch (aplType) {
 
   case "upstash":
     apl = new UpstashAPL();
+
+    break;
+
+  case "mongodb":
+    apl = new MongoAPL();
 
     break;
 
