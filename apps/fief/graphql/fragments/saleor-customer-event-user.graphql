@@ -1,0 +1,29 @@
+# Customer slice consumed by every Saleor → Fief async customer webhook
+# (T26 CUSTOMER_CREATED, T27 CUSTOMER_UPDATED, T28 CUSTOMER_METADATA_UPDATED,
+# T29 CUSTOMER_DELETED). Kept in one fragment so the per-event subscription
+# documents stay tiny and the use cases all consume the same shape.
+#
+# Note: Saleor's `User` type does NOT carry a channel slug directly. Channel-
+# scoped sync is resolved via per-tenant default (T12) when no slug hint is
+# present in metadata. Operators that need per-channel routing for a specific
+# customer can stamp a `_fief_channel` metadata key — the use case reads it
+# but treats absence as "fall back to default".
+fragment SaleorCustomerEventUser on User {
+  id
+  email
+  firstName
+  lastName
+  isActive
+  isConfirmed
+  languageCode
+  dateJoined
+  updatedAt
+  metadata {
+    key
+    value
+  }
+  privateMetadata {
+    key
+    value
+  }
+}

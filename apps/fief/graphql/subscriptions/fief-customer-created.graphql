@@ -1,0 +1,24 @@
+# T26 — `CUSTOMER_CREATED` async subscription document.
+#
+# Consumed by `apps/fief/src/app/api/webhooks/saleor/customer-created/webhook-definition.ts`.
+# The event payload is the bare `User` slice required by the use case
+# (email + claim-derived fields, plus metadata for the loop-guard origin
+# marker). `version` is included so the route handler can stamp it on the
+# observability span.
+#
+# Naming convention (followed by T27/T28/T29): `Fief<Event>` for the
+# subscription operation name; the document export is
+# `Fief<Event>Document`, the per-event fragment is
+# `Fief<Event>EventFragment`.
+fragment FiefCustomerCreatedEvent on CustomerCreated {
+  version
+  user {
+    ...SaleorCustomerEventUser
+  }
+}
+
+subscription FiefCustomerCreated {
+  event {
+    ...FiefCustomerCreatedEvent
+  }
+}
