@@ -44,7 +44,8 @@
  * array from Saleor as a failure to retry. T18's higher-level dispatcher
  * sees the Result and decides whether Stripe should retry the webhook.
  */
-import { captureException } from "@sentry/nextjs";
+import { trace } from "@opentelemetry/api";
+import { addBreadcrumb, captureException } from "@sentry/nextjs";
 import { err, ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 import { type Client } from "urql";
@@ -221,6 +222,12 @@ export interface ChargeRefundHandlerDeps {
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * T34 — shared OTEL tracer. Hoisted to module scope to avoid per-call
+ * `getTracer` work; the global tracer is process-wide cached anyway.
+ */
+const subscriptionsTracer = trace.getTracer("subscriptions");
+
 export class ChargeRefundHandler implements IChargeRefundHandler {
   private readonly deps: ChargeRefundHandlerDeps;
   private readonly logger = createLogger("ChargeRefundHandler");
@@ -230,6 +237,60 @@ export class ChargeRefundHandler implements IChargeRefundHandler {
   }
 
   async handle(
+    event: Stripe.ChargeRefundedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<
+    Result<
+      ChargeRefundHandlerSuccess | PassThroughToOneShotRefundHandlerResponse,
+      ChargeRefundHandlerError
+    >
+  > {
+    return subscriptionsTracer.startActiveSpan(`handle.${event.type}`, async (span) => {
+      const charge = event.data.object;
+
+      span.setAttribute("stripe.event.type", event.type);
+      span.setAttribute("stripe.event.id", event.id);
+      span.setAttribute("stripe.charge_id", charge.id);
+      span.setAttribute("stripe.charge.amount_captured", charge.amount_captured);
+      span.setAttribute("stripe.charge.amount_refunded", charge.amount_refunded);
+
+      addBreadcrumb({
+        category: "subscriptions.webhook",
+        message: `${event.type} for charge ${charge.id}`,
+        level: "info",
+        data: {
+          stripeChargeId: charge.id,
+          stripeEventId: event.id,
+          amountCapturedCents: charge.amount_captured,
+          amountRefundedCents: charge.amount_refunded,
+          currency: charge.currency,
+        },
+      });
+
+      try {
+        const result = await this.handleImpl(event, ctx);
+
+        if (result.isErr()) {
+          addBreadcrumb({
+            category: "subscriptions.webhook",
+            message: `${event.type} FAILED for charge ${charge.id}`,
+            level: "error",
+            data: {
+              stripeChargeId: charge.id,
+              errorClass: result.error?.name ?? "UnknownError",
+              errorMessage: String(result.error?.message ?? result.error),
+            },
+          });
+        }
+
+        return result;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  private async handleImpl(
     event: Stripe.ChargeRefundedEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<
@@ -425,9 +486,13 @@ export class ChargeRefundHandler implements IChargeRefundHandler {
       );
     }
 
-    this.logger.info("Voiding Saleor order due to full refund", {
-      chargeId: charge.id,
+    this.logger.info("Refund auto-voided — voiding Saleor order due to full refund", {
+      stripeEventType: "charge.refunded",
+      stripeChargeId: charge.id,
       saleorOrderId,
+      stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
+      amountRefundedCents: charge.amount_refunded,
+      currency: charge.currency,
     });
 
     const orderVoidResp = await graphqlClient
@@ -520,13 +585,16 @@ export class ChargeRefundHandler implements IChargeRefundHandler {
     const { charge, invoice, subscriptionRecord, ctx } = args;
     const saleorOrderId = subscriptionRecord.lastSaleorOrderId!;
 
-    this.logger.warn(
-      "Partial subscription refund — NOT auto-voiding; alerting Sentry + writing pending-review DLQ",
+    this.logger.info(
+      "Refund flagged for ops review — partial subscription refund; not auto-voiding",
       {
-        chargeId: charge.id,
+        stripeEventType: "charge.refunded",
+        stripeChargeId: charge.id,
         saleorOrderId,
-        amountCaptured: charge.amount_captured,
-        amountRefunded: charge.amount_refunded,
+        stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
+        amountCapturedCents: charge.amount_captured,
+        amountRefundedCents: charge.amount_refunded,
+        currency: charge.currency,
       },
     );
 

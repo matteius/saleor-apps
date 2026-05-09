@@ -48,7 +48,9 @@
  *   money moved. Stripe handles smart-retry; if all retries exhaust,
  *   `customer.subscription.deleted` fires and T15 cancels.
  */
+import { trace } from "@opentelemetry/api";
 import { type APL } from "@saleor/app-sdk/APL";
+import { addBreadcrumb } from "@sentry/nextjs";
 import { err, ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
@@ -228,6 +230,12 @@ export interface InvoiceHandlerDeps {
 const logger = createLogger("InvoiceHandler");
 
 /**
+ * T34 — shared OTEL tracer. Hoisted so each call to `handlePaid` /
+ * `handleFailed` does not pay the lookup cost.
+ */
+const subscriptionsTracer = trace.getTracer("subscriptions");
+
+/**
  * Stripe `Invoice.subscription` may be a string id, a populated `Subscription`
  * object, or null. Normalize to a string id; null/undefined means this is a
  * one-shot invoice (not subscription-billed) and we must NOT route through
@@ -312,6 +320,61 @@ export class InvoiceHandler implements IInvoiceHandler {
   }
 
   async handlePaid(
+    event: Stripe.InvoicePaidEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<InvoiceHandlerSuccess, InvoiceHandlerError>> {
+    return subscriptionsTracer.startActiveSpan(`handle.${event.type}`, async (span) => {
+      const invoice = event.data.object;
+      const subId = extractSubscriptionId(invoice);
+
+      span.setAttribute("stripe.event.type", event.type);
+      span.setAttribute("stripe.event.id", event.id);
+
+      if (subId) {
+        span.setAttribute("event.subscription_id", subId);
+      }
+
+      if (invoice.id) {
+        span.setAttribute("stripe.invoice_id", invoice.id);
+      }
+
+      addBreadcrumb({
+        category: "subscriptions.webhook",
+        message: `${event.type} for ${subId ?? invoice.id ?? "<no-id>"}`,
+        level: "info",
+        data: {
+          stripeInvoiceId: invoice.id ?? null,
+          stripeSubscriptionId: subId,
+          amountPaidCents: invoice.amount_paid,
+          currency: invoice.currency,
+        },
+      });
+
+      try {
+        const result = await this.handlePaidImpl(event, ctx);
+
+        if (result.isErr()) {
+          addBreadcrumb({
+            category: "subscriptions.webhook",
+            message: `${event.type} FAILED`,
+            level: "error",
+            data: {
+              stripeInvoiceId: invoice.id ?? null,
+              stripeSubscriptionId: subId,
+              errorClass: result.error?.name ?? "UnknownError",
+              errorMessage: String(result.error?.message ?? result.error),
+            },
+          });
+        }
+
+        return result;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  private async handlePaidImpl(
     event: Stripe.InvoicePaidEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<Result<InvoiceHandlerSuccess, InvoiceHandlerError>> {
@@ -746,11 +809,26 @@ export class InvoiceHandler implements IInvoiceHandler {
       );
     }
 
-    logger.info("invoice.paid handled — Saleor order minted + cache updated", {
+    /*
+     * T34 — distinct "mint succeeded" structured event so dashboards can
+     * count Saleor order mints without keying off the broader handled-line.
+     */
+    logger.info("Saleor order minted", {
+      stripeEventType: event.type,
       stripeInvoiceId,
       saleorOrderId: minted.saleorOrderId,
+      stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
       amountCents: invoice.amount_paid,
       taxCents,
+      currency: invoice.currency,
+    });
+
+    logger.info("Subscription renewed", {
+      stripeEventType: event.type,
+      stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
+      stripeInvoiceId,
+      stripePriceId: subscriptionRecord.stripePriceId,
+      amountCents: invoice.amount_paid,
       currency: invoice.currency,
     });
 
@@ -762,6 +840,60 @@ export class InvoiceHandler implements IInvoiceHandler {
   }
 
   async handleFailed(
+    event: Stripe.InvoicePaymentFailedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<InvoiceHandlerSuccess, InvoiceHandlerError>> {
+    return subscriptionsTracer.startActiveSpan(`handle.${event.type}`, async (span) => {
+      const invoice = event.data.object;
+      const subId = extractSubscriptionId(invoice);
+
+      span.setAttribute("stripe.event.type", event.type);
+      span.setAttribute("stripe.event.id", event.id);
+
+      if (subId) {
+        span.setAttribute("event.subscription_id", subId);
+      }
+      if (invoice.id) {
+        span.setAttribute("stripe.invoice_id", invoice.id);
+      }
+
+      addBreadcrumb({
+        category: "subscriptions.webhook",
+        message: `${event.type} for ${subId ?? invoice.id ?? "<no-id>"}`,
+        level: "info",
+        data: {
+          stripeInvoiceId: invoice.id ?? null,
+          stripeSubscriptionId: subId,
+          attemptCount: (invoice as Stripe.Invoice & { attempt_count?: number }).attempt_count,
+          currency: invoice.currency,
+        },
+      });
+
+      try {
+        const result = await this.handleFailedImpl(event, ctx);
+
+        if (result.isErr()) {
+          addBreadcrumb({
+            category: "subscriptions.webhook",
+            message: `${event.type} FAILED`,
+            level: "error",
+            data: {
+              stripeInvoiceId: invoice.id ?? null,
+              stripeSubscriptionId: subId,
+              errorClass: result.error?.name ?? "UnknownError",
+              errorMessage: String(result.error?.message ?? result.error),
+            },
+          });
+        }
+
+        return result;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  private async handleFailedImpl(
     event: Stripe.InvoicePaymentFailedEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<Result<InvoiceHandlerSuccess, InvoiceHandlerError>> {
@@ -888,9 +1020,12 @@ export class InvoiceHandler implements IInvoiceHandler {
       );
     }
 
-    logger.info("invoice.payment_failed handled — status → PAST_DUE, no Saleor mint", {
+    logger.info("Subscription payment failed", {
+      stripeEventType: event.type,
       stripeInvoiceId,
-      subscriptionId,
+      stripeSubscriptionId: subscriptionId,
+      owlbooksStatus: "PAST_DUE",
+      currency: invoice.currency,
     });
 
     return ok({

@@ -173,8 +173,10 @@ export class DynamoDbSubscriptionRepo implements SubscriptionRepo {
     subscription: SubscriptionRecord,
   ): Promise<Result<MarkInvoiceProcessedOutcome, SubscriptionRepoError>> {
     if (!subscription.lastInvoiceId) {
-      // Defensive: caller must populate `lastInvoiceId` for the claim to make
-      // any sense. Surface as a write error so on-call sees the misuse.
+      /*
+       * Defensive: caller must populate `lastInvoiceId` for the claim to make
+       * any sense. Surface as a write error so on-call sees the misuse.
+       */
       return err(
         new SubscriptionRepoError.FailedWritingSubscriptionError(
           "markInvoiceProcessed called without lastInvoiceId on the record",

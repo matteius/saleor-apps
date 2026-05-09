@@ -38,12 +38,16 @@
  * subscription model means we may receive types we didn't ask for during
  * Stripe API version drift; logging-and-200ing is the safe default.
  */
+import { trace } from "@opentelemetry/api";
 import { type APL } from "@saleor/app-sdk/APL";
+import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
+import { addBreadcrumb } from "@sentry/nextjs";
 import { ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
+import { loggerContext } from "@/lib/logger-context";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { type StripeEnv } from "@/modules/stripe/stripe-env";
@@ -58,6 +62,7 @@ import { type IStripeCustomerApi } from "../api/stripe-customer-api";
 import { type IStripeSubscriptionsApi } from "../api/stripe-subscriptions-api";
 import { type IStripeSubscriptionsApiFactory } from "../api/stripe-subscriptions-api-factory";
 import { type OwlBooksWebhookNotifier } from "../notifiers/owlbooks-notifier";
+import { type FailedMintDlqRepo } from "../repositories/failed-mint-dlq-repo";
 import { type RefundDlqRepo } from "../repositories/refund-dlq-repo";
 import { type SubscriptionRepo } from "../repositories/subscription-repo";
 import { type IPriceVariantMapRepo } from "../saleor-bridge/price-variant-map";
@@ -168,6 +173,13 @@ export interface SubscriptionWebhookUseCaseDeps {
    */
   refundDlqRepo?: RefundDlqRepo;
   /**
+   * Failed-mint dead-letter queue (T32). Plumbed into the default
+   * `InvoiceHandler` so production `handlePaid` failures persist to DynamoDB
+   * for the cron retry route at `/api/cron/retry-failed-mints` to drain.
+   * Tests injecting a mock `invoiceHandler` can omit this.
+   */
+  failedMintDlqRepo?: FailedMintDlqRepo;
+  /**
    * Saleor GraphQL client factory used by `ChargeRefundHandler.handleFullRefund`
    * to call `orderVoid`. Required for the production wiring; tests typically
    * inject a mock `chargeRefundHandler` instead.
@@ -205,6 +217,59 @@ export function isSubscriptionWebhookEventType(eventType: Stripe.Event["type"]):
 }
 
 /**
+ * Best-effort extraction of the Stripe subscription id from any subscription /
+ * invoice / customer-related event payload — used solely for observability
+ * tagging (logger context + OTEL active span attributes + Sentry breadcrumbs).
+ *
+ * Returns `null` when no subscription is associated with the event (e.g.
+ * one-shot invoice, charge.refunded for a non-subscription charge), which is
+ * fine — the tag is then omitted rather than emitted as an empty string.
+ *
+ * Tolerates Stripe SDK 18+'s shape change (`invoice.parent.subscription_details
+ * .subscription` vs legacy `invoice.subscription`) so it works across versions.
+ */
+function extractStripeSubscriptionId(event: Stripe.Event): string | null {
+  const obj = event.data.object as { object?: string; id?: string } | null;
+
+  if (!obj || typeof obj !== "object") {
+    return null;
+  }
+
+  const objectKind = (obj as { object?: string }).object;
+
+  if (objectKind === "subscription") {
+    return typeof obj.id === "string" ? obj.id : null;
+  }
+
+  if (objectKind === "invoice") {
+    const invoice = obj as Stripe.Invoice & {
+      subscription?: string | Stripe.Subscription | null;
+      parent?: Stripe.Invoice.Parent | null;
+    };
+    const newShape = invoice.parent?.subscription_details?.subscription ?? null;
+
+    if (newShape) {
+      return typeof newShape === "string" ? newShape : newShape.id;
+    }
+
+    const legacy = invoice.subscription;
+
+    if (!legacy) {
+      return null;
+    }
+
+    return typeof legacy === "string" ? legacy : legacy.id;
+  }
+
+  /*
+   * `charge.refunded` carries a Charge whose `invoice` field is a string id
+   * (not yet expanded). We can't resolve the subscription id from the webhook
+   * payload alone — the dedicated handler does the expansion and tags later.
+   */
+  return null;
+}
+
+/**
  * Hidden re-implementation of {@link IStripeSubscriptionsApi} usage —
  * referenced solely so the type import survives `noUnusedLocals` until T13–T17
  * actually consume it through the factory.
@@ -229,7 +294,15 @@ export class SubscriptionWebhookUseCase {
     this.deps = deps;
     this.customerSubscriptionHandler =
       deps.customerSubscriptionHandler ?? new CustomerSubscriptionHandler();
-    this.invoiceHandler = deps.invoiceHandler ?? new InvoiceHandler();
+    this.invoiceHandler =
+      deps.invoiceHandler ??
+      new InvoiceHandler({
+        subscriptionRepo: deps.subscriptionRepo,
+        priceVariantMapRepo: deps.priceVariantMapRepo,
+        owlbooksWebhookNotifier: deps.owlbooksWebhookNotifier,
+        apl: deps.apl,
+        failedMintDlqRepo: deps.failedMintDlqRepo,
+      });
     this.explicitChargeRefundHandler = deps.chargeRefundHandler;
     this.stripeChargesApiFactory = deps.stripeChargesApiFactory ?? new StripeChargesApiFactory();
   }
@@ -282,7 +355,54 @@ export class SubscriptionWebhookUseCase {
   ): Promise<Result<SubscriptionWebhookExecuteSuccess, SubscriptionWebhookExecuteError>> {
     void this._materializeDeps();
 
-    this.logger.debug(`Dispatching subscription webhook for type=${event.type}`);
+    /*
+     * T34 — observability tagging. Stamp logger context + active OTEL span +
+     * Sentry breadcrumb with the Stripe event identifiers so every downstream
+     * log line, span, and (on error) Sentry event carries the linkage.
+     *
+     * `stripeSubscriptionId` is best-effort: subscription/invoice events have
+     * a clear ID; informational types may not. We also reflect it under the
+     * canonical PSP_REFERENCE attribute so Saleor-wide dashboards keyed off
+     * pspReference can find subscription events alongside payment intents.
+     */
+    loggerContext.set("stripeEventType", event.type);
+    loggerContext.set("stripeEventId", event.id);
+
+    const stripeSubscriptionId = extractStripeSubscriptionId(event);
+
+    if (stripeSubscriptionId) {
+      loggerContext.set("stripeSubscriptionId", stripeSubscriptionId);
+      loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, stripeSubscriptionId);
+    }
+
+    const activeSpan = trace.getActiveSpan();
+
+    if (activeSpan) {
+      activeSpan.setAttribute("stripe.event.type", event.type);
+      activeSpan.setAttribute("stripe.event.id", event.id);
+
+      if (stripeSubscriptionId) {
+        activeSpan.setAttribute("event.subscription_id", stripeSubscriptionId);
+        activeSpan.setAttribute(ObservabilityAttributes.PSP_REFERENCE, stripeSubscriptionId);
+      }
+    }
+
+    addBreadcrumb({
+      category: "subscriptions.webhook",
+      message: `dispatch ${event.type}`,
+      level: "info",
+      data: {
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+        stripeSubscriptionId: stripeSubscriptionId ?? null,
+      },
+    });
+
+    this.logger.info("Dispatching subscription webhook", {
+      stripeEventType: event.type,
+      stripeEventId: event.id,
+      stripeSubscriptionId: stripeSubscriptionId ?? null,
+    });
 
     switch (event.type) {
       case "customer.subscription.created":

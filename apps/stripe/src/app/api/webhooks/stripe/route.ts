@@ -22,6 +22,7 @@ import { StripeWebhookSignatureValidator } from "@/modules/stripe/stripe-webhook
 import { StripeChargesApiFactory } from "@/modules/subscriptions/api/stripe-charges-api";
 import { StripeSubscriptionsApiFactory } from "@/modules/subscriptions/api/stripe-subscriptions-api-factory";
 import { HttpOwlBooksWebhookNotifier } from "@/modules/subscriptions/notifiers/owlbooks-notifier";
+import { DynamoDbFailedMintDlqRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-failed-mint-dlq-repo";
 import { DynamoDbPriceVariantMapRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-price-variant-map-repo";
 import { DynamoDbRefundDlqRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-refund-dlq-repo";
 import { DynamoDbSubscriptionRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-subscription-repo";
@@ -67,6 +68,7 @@ const subscriptionWebhookUseCase = new SubscriptionWebhookUseCase({
   stripeSubscriptionsApiFactory: new StripeSubscriptionsApiFactory(),
   stripeChargesApiFactory: new StripeChargesApiFactory(),
   refundDlqRepo: new DynamoDbRefundDlqRepo(),
+  failedMintDlqRepo: new DynamoDbFailedMintDlqRepo(),
   saleorGraphqlClientFactory,
   /*
    * `HttpOwlBooksWebhookNotifier` tolerates undefined env vars at construction

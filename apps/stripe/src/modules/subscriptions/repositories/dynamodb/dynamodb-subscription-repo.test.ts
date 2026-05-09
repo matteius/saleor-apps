@@ -342,22 +342,27 @@ describe("DynamoDbSubscriptionRepo", () => {
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBe("updated");
 
-      // Sanity check: the underlying PutItem carried a ConditionExpression
-      // mentioning attribute_not_exists and OR `<>` over `lastInvoiceId`.
+      /*
+       * Sanity check: the underlying PutItem carried a ConditionExpression
+       * mentioning attribute_not_exists and OR `<>` over `lastInvoiceId`.
+       */
       const putCall = mockDocumentClient.commandCalls(PutCommand)[0];
-      const expr = (putCall.args[0].input as { ConditionExpression?: string })
-        .ConditionExpression;
+      const expr = (putCall.args[0].input as { ConditionExpression?: string }).ConditionExpression;
 
       expect(expr).toBeDefined();
       // dynamodb-toolbox alias-substitutes attr names → assert structure.
       expect(expr).toMatch(/attribute_not_exists/);
       expect(expr).toMatch(/<>/);
-      // The attribute name appears as a placeholder like `#1_1` in the
-      // ConditionExpression with `lastInvoiceId` resolved via
-      // `ExpressionAttributeNames`. Check the names map for the field.
-      const names = (putCall.args[0].input as {
-        ExpressionAttributeNames?: Record<string, string>;
-      }).ExpressionAttributeNames;
+      /*
+       * The attribute name appears as a placeholder like `#1_1` in the
+       * ConditionExpression with `lastInvoiceId` resolved via
+       * `ExpressionAttributeNames`. Check the names map for the field.
+       */
+      const names = (
+        putCall.args[0].input as {
+          ExpressionAttributeNames?: Record<string, string>;
+        }
+      ).ExpressionAttributeNames;
 
       expect(Object.values(names ?? {})).toContain("lastInvoiceId");
     });

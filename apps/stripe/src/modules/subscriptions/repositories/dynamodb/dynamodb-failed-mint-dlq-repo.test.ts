@@ -12,7 +12,7 @@ import { mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { DynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 
-import { type FailedMintRecord, FailedMintDlqRepoError } from "../failed-mint-dlq-repo";
+import { FailedMintDlqRepoError, type FailedMintRecord } from "../failed-mint-dlq-repo";
 import { DynamoDbFailedMintDlqRepo } from "./dynamodb-failed-mint-dlq-repo";
 import { DynamoDbFailedMint } from "./failed-mint-dlq-db-model";
 
@@ -293,12 +293,10 @@ describe("DynamoDbFailedMintDlqRepo", () => {
         $metadata: { httpStatusCode: 200 },
       });
 
-      mockDocumentClient
-        .on(GetCommand, { Key: { PK: PK_VALUE, SK: SK_VALUE } })
-        .resolvesOnce({
-          Item: buildDynamoRow(),
-          $metadata: { httpStatusCode: 200 },
-        });
+      mockDocumentClient.on(GetCommand, { Key: { PK: PK_VALUE, SK: SK_VALUE } }).resolvesOnce({
+        Item: buildDynamoRow(),
+        $metadata: { httpStatusCode: 200 },
+      });
 
       const recorded = await repo.record(
         { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },

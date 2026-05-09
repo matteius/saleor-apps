@@ -227,9 +227,11 @@ export class HttpOwlBooksWebhookNotifier implements OwlBooksWebhookNotifier {
         );
       }
 
-      // T31 Layer B — parse the receiver's `action` field to surface
-      // 'duplicate' to the caller. Body is best-effort: any parse failure or
-      // missing action is treated as 'new'.
+      /*
+       * T31 Layer B — parse the receiver's `action` field to surface
+       * 'duplicate' to the caller. Body is best-effort: any parse failure or
+       * missing action is treated as 'new'.
+       */
       let processed: NotifyResult["processed"] = "new";
 
       try {
@@ -239,9 +241,11 @@ export class HttpOwlBooksWebhookNotifier implements OwlBooksWebhookNotifier {
           processed = "duplicate";
         }
       } catch {
-        // Non-JSON body or empty response — treat as 'new'. This preserves
-        // backward compatibility with any non-T28 receiver that returns 200
-        // with no body.
+        /*
+         * Non-JSON body or empty response — treat as 'new'. This preserves
+         * backward compatibility with any non-T28 receiver that returns 200
+         * with no body.
+         */
       }
 
       return ok({ processed });

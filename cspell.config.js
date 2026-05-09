@@ -87,7 +87,7 @@ export default {
     "owlbooks", "OWLBOOKS",
     "Fief", "fief",
     "tslog",
-    "parameterless", "impls",
+    "parameterless", "impls", "parameterised",
     "ciphertext", "Ciphertext",
     "recognisable"
   ],

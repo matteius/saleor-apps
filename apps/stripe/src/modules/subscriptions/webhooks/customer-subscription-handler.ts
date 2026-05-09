@@ -34,6 +34,8 @@
  * still emit the correct status; runtime gating is handled outside this
  * file.
  */
+import { trace } from "@opentelemetry/api";
+import { addBreadcrumb } from "@sentry/nextjs";
 import { err, ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
@@ -67,6 +69,12 @@ import {
 import { type SubscriptionWebhookContext } from "./subscription-webhook-use-case";
 
 const logger = createLogger("CustomerSubscriptionHandler");
+
+/**
+ * T34 — shared OTEL tracer for subscription handlers. Hoisted module-scope so
+ * each handler method does not call `getTracer` per invocation.
+ */
+const subscriptionsTracer = trace.getTracer("subscriptions");
 
 /*
  * ---------------------------------------------------------------------------
@@ -346,7 +354,7 @@ export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler
     event: Stripe.CustomerSubscriptionCreatedEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
-    return this.process({
+    return this.runHandlerSpan({
       event,
       ctx,
       type: "subscription.created",
@@ -358,7 +366,7 @@ export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler
     event: Stripe.CustomerSubscriptionUpdatedEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
-    return this.process({
+    return this.runHandlerSpan({
       event,
       ctx,
       type: "subscription.updated",
@@ -370,7 +378,7 @@ export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler
     event: Stripe.CustomerSubscriptionDeletedEvent,
     ctx: SubscriptionWebhookContext,
   ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
-    return this.process({
+    return this.runHandlerSpan({
       event,
       ctx,
       type: "subscription.deleted",
@@ -381,6 +389,67 @@ export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler
        * pre-deletion status string still attached to the snapshot.
        */
       statusOverride: "CANCELLED",
+    });
+  }
+
+  /**
+   * T34 — shared observability wrapper around `process`:
+   *   - start an OTEL span tagged with `event.subscription_id`
+   *   - emit a Sentry breadcrumb at start
+   *   - on `Err`, emit a second breadcrumb at `level=error` with the error class
+   *
+   * We deliberately do NOT call `captureException` here — the route handler
+   * already wraps with `captureException` per the existing pattern, and bubbling
+   * the Result lets the caller decide retry semantics.
+   */
+  private async runHandlerSpan(args: {
+    event:
+      | Stripe.CustomerSubscriptionCreatedEvent
+      | Stripe.CustomerSubscriptionUpdatedEvent
+      | Stripe.CustomerSubscriptionDeletedEvent;
+    ctx: SubscriptionWebhookContext;
+    type: OwlBooksWebhookEventType;
+    lookupExisting: boolean;
+    statusOverride?: OwlBooksSubscriptionStatus;
+  }): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
+    const stripeSubscriptionId = args.event.data.object.id;
+
+    return subscriptionsTracer.startActiveSpan(`handle.${args.event.type}`, async (span) => {
+      span.setAttribute("event.subscription_id", stripeSubscriptionId);
+      span.setAttribute("stripe.event.type", args.event.type);
+      span.setAttribute("stripe.event.id", args.event.id);
+
+      addBreadcrumb({
+        category: "subscriptions.webhook",
+        message: `${args.event.type} for ${stripeSubscriptionId}`,
+        level: "info",
+        data: {
+          stripeSubscriptionId,
+          stripeEventId: args.event.id,
+          owlbooksEventType: args.type,
+        },
+      });
+
+      try {
+        const result = await this.process(args);
+
+        if (result.isErr()) {
+          addBreadcrumb({
+            category: "subscriptions.webhook",
+            message: `${args.event.type} FAILED for ${stripeSubscriptionId}`,
+            level: "error",
+            data: {
+              stripeSubscriptionId,
+              errorClass: result.error?.name ?? "UnknownError",
+              errorMessage: String(result.error?.message ?? result.error),
+            },
+          });
+        }
+
+        return result;
+      } finally {
+        span.end();
+      }
     });
   }
 
@@ -486,6 +555,37 @@ export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler
         ),
       );
     }
+
+    /*
+     * T34 — structured info log on every state transition. Promoted from the
+     * implicit `Ok` return so dashboards can count subscriptions_active_total
+     * by scraping `Subscription created/updated/deleted` events with
+     * status=ACTIVE. NO PII (email, name, address) is logged here.
+     */
+    logger.info(
+      type === "subscription.created"
+        ? "Subscription created"
+        : type === "subscription.deleted"
+        ? "Subscription deleted"
+        : "Subscription updated",
+      {
+        stripeEventType: event.type,
+        owlbooksEventType: type,
+        stripeSubscriptionId: parsed.stripeSubscriptionId,
+        stripeCustomerId: parsed.stripeCustomerId,
+        stripePriceId: parsed.stripePriceId,
+        owlbooksStatus: payload.status,
+        cancelAtPeriodEnd: parsed.cancelAtPeriodEnd,
+        saleorChannelSlug: parsed.saleorChannelSlug,
+        /*
+         * Counter signal for `subscriptions_active_total` — emitted as a
+         * boolean field so a log-pipeline rule like
+         * `count(message="Subscription created" AND active=true)` works
+         * without a separate metrics SDK.
+         */
+        active: payload.status === "ACTIVE",
+      },
+    );
 
     return ok({
       _tag: "CustomerSubscriptionHandlerSuccess",

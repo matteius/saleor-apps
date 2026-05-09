@@ -28,8 +28,9 @@
  * Cron retries on 5xx, which would re-enter installations that already
  * succeeded).
  */
+import { type Span, trace } from "@opentelemetry/api";
 import { type APL } from "@saleor/app-sdk/APL";
-import { captureException } from "@sentry/nextjs";
+import { addBreadcrumb, captureException } from "@sentry/nextjs";
 import { ok, type Result } from "neverthrow";
 import { type NextRequest } from "next/server";
 import type Stripe from "stripe";
@@ -56,17 +57,21 @@ import {
 } from "@/modules/subscriptions/repositories/subscription-record";
 import { type SubscriptionRepo } from "@/modules/subscriptions/repositories/subscription-repo";
 import {
-  type MintOrderFromInvoiceArgs,
   mintOrderFromInvoice as defaultMintOrderFromInvoice,
+  type MintOrderFromInvoiceArgs,
   type MintOrderFromInvoiceResult,
   type SaleorOrderFromInvoiceError,
 } from "@/modules/subscriptions/saleor-bridge/saleor-order-from-invoice";
-import {
-  computeNextRetryAt,
-  MAX_DLQ_ATTEMPTS,
-} from "@/modules/subscriptions/webhooks/dlq-backoff";
+import { computeNextRetryAt, MAX_DLQ_ATTEMPTS } from "@/modules/subscriptions/webhooks/dlq-backoff";
 
 const logger = createLogger("RetryFailedMintsCron");
+
+/**
+ * T34 — shared OTEL tracer for the DLQ retry cron. The cron is tagged in its
+ * own root span when run via Vercel Cron; this gives us per-installation child
+ * spans we can drill into.
+ */
+const subscriptionsTracer = trace.getTracer("subscriptions");
 
 export interface RetryCronSummary {
   processed: number;
@@ -86,7 +91,10 @@ export interface RetryCronDeps {
   subscriptionRepo: SubscriptionRepo;
   owlbooksWebhookNotifier: OwlBooksWebhookNotifier;
   mintOrderFromInvoice: MintFn;
-  graphqlClientFactory: (authData: { saleorApiUrl: string; token: string }) => MintOrderFromInvoiceArgs["graphqlClient"];
+  graphqlClientFactory: (authData: {
+    saleorApiUrl: string;
+    token: string;
+  }) => MintOrderFromInvoiceArgs["graphqlClient"];
   nowUnixSeconds: () => number;
   /** Hook for tests; production uses `@sentry/nextjs` `captureException`. */
   captureException: typeof captureException;
@@ -100,6 +108,19 @@ const isoOrUndefined = (d: Date | null | undefined): string | undefined =>
  * routing internals.
  */
 export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSummary> {
+  return subscriptionsTracer.startActiveSpan("cron.retry-failed-mints", async (span) => {
+    try {
+      return await executeRetryCronImpl(deps, span);
+    } finally {
+      span.end();
+    }
+  });
+}
+
+async function executeRetryCronImpl(
+  deps: RetryCronDeps,
+  rootSpan: Span,
+): Promise<RetryCronSummary> {
   const summary: RetryCronSummary = {
     processed: 0,
     succeeded: 0,
@@ -107,6 +128,16 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
     finalFailures: 0,
     totalErrors: 0,
   };
+
+  /*
+   * T34 — gauges aggregated across installations:
+   *   - failed_mints_pending: total rows currently in the DLQ that are
+   *     eligible for retry (nextRetryAt <= now)
+   *   - dlq_age_max: oldest pending entry's firstAttemptAt-to-now age in
+   *     seconds, the SLO-tracking signal for "stuck money"
+   */
+  let pendingTotal = 0;
+  let dlqAgeMaxSeconds = 0;
 
   const installations = await deps.apl.getAll();
 
@@ -137,6 +168,15 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
       continue;
     }
 
+    pendingTotal += pendingResult.value.length;
+    for (const e of pendingResult.value) {
+      const age = Math.max(0, now - e.firstAttemptAt);
+
+      if (age > dlqAgeMaxSeconds) {
+        dlqAgeMaxSeconds = age;
+      }
+    }
+
     for (const entry of pendingResult.value) {
       summary.processed += 1;
 
@@ -157,7 +197,13 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
           error: subResult.isErr() ? subResult.error : "subscription_record_null",
         });
 
-        await escalateOrReschedule(deps, access, entry, now, "subscription_record_missing");
+        await escalateOrReschedule({
+          deps,
+          access,
+          entry,
+          now,
+          reason: "subscription_record_missing",
+        });
         summary.totalErrors += 1;
 
         if (entry.attemptCount + 1 > MAX_DLQ_ATTEMPTS) {
@@ -252,6 +298,28 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
           summary.totalErrors += 1;
         }
 
+        /*
+         * T34 — structured success log so dashboards can count
+         * `dlq_retry_succeeded_total` over time.
+         */
+        logger.info("DLQ retry succeeded", {
+          stripeInvoiceId: entry.stripeInvoiceId,
+          stripeSubscriptionId: entry.stripeSubscriptionId,
+          saleorOrderId: minted.saleorOrderId,
+          attemptCount: entry.attemptCount,
+          dlqAgeSeconds: Math.max(0, now - entry.firstAttemptAt),
+        });
+
+        addBreadcrumb({
+          category: "subscriptions.dlq",
+          message: `DLQ retry succeeded for invoice ${entry.stripeInvoiceId}`,
+          level: "info",
+          data: {
+            stripeInvoiceId: entry.stripeInvoiceId,
+            attemptCount: entry.attemptCount,
+          },
+        });
+
         summary.succeeded += 1;
         continue;
       }
@@ -285,6 +353,30 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
           },
         );
 
+        /*
+         * T34 — distinct "exhausted" structured log so the metrics pipeline
+         * can count `dlq_entries_exhausted_total` separately from earlier
+         * retry failures.
+         */
+        logger.info("DLQ entry exhausted", {
+          stripeInvoiceId: entry.stripeInvoiceId,
+          stripeSubscriptionId: entry.stripeSubscriptionId,
+          attemptCount: MAX_DLQ_ATTEMPTS,
+          errorClass: entry.errorClass,
+          dlqAgeSeconds: Math.max(0, now - entry.firstAttemptAt),
+        });
+
+        addBreadcrumb({
+          category: "subscriptions.dlq",
+          message: `DLQ entry exhausted for invoice ${entry.stripeInvoiceId}`,
+          level: "error",
+          data: {
+            stripeInvoiceId: entry.stripeInvoiceId,
+            attemptCount: MAX_DLQ_ATTEMPTS,
+            errorClass: entry.errorClass,
+          },
+        });
+
         summary.finalFailures += 1;
         summary.totalErrors += 1;
         continue;
@@ -314,18 +406,39 @@ export async function executeRetryCron(deps: RetryCronDeps): Promise<RetryCronSu
     }
   }
 
+  /*
+   * T34 — emit dashboard-card gauges. We log these as a structured info line
+   * (the metrics scraper picks them up by message) AND set them on the active
+   * OTEL span so traces also carry the snapshot.
+   */
+  rootSpan.setAttribute("dlq.pending_total", pendingTotal);
+  rootSpan.setAttribute("dlq.age_max_seconds", dlqAgeMaxSeconds);
+  rootSpan.setAttribute("dlq.summary.processed", summary.processed);
+  rootSpan.setAttribute("dlq.summary.succeeded", summary.succeeded);
+  rootSpan.setAttribute("dlq.summary.final_failures", summary.finalFailures);
+
+  logger.info("DLQ gauges", {
+    failed_mints_pending: pendingTotal,
+    dlq_age_max: dlqAgeMaxSeconds,
+    processed: summary.processed,
+    succeeded: summary.succeeded,
+    failedRetries: summary.failedRetries,
+    finalFailures: summary.finalFailures,
+  });
+
   return summary;
 }
 
 type DlqAccess = Parameters<FailedMintDlqRepo["record"]>[0];
 
-async function escalateOrReschedule(
-  deps: RetryCronDeps,
-  access: DlqAccess,
-  entry: FailedMintRecord,
-  now: number,
-  reason: string,
-) {
+async function escalateOrReschedule(args: {
+  deps: RetryCronDeps;
+  access: DlqAccess;
+  entry: FailedMintRecord;
+  now: number;
+  reason: string;
+}) {
+  const { deps, access, entry, now, reason } = args;
   const nextAttempt = entry.attemptCount + 1;
 
   if (nextAttempt > MAX_DLQ_ATTEMPTS) {
@@ -382,19 +495,19 @@ const verifyCronAuth = (request: Request, expectedSecret: string | undefined): R
   if (!expectedSecret) {
     logger.error("CRON_SECRET is not configured — rejecting all cron invocations");
 
-    return new Response(
-      JSON.stringify({ error: "CRON_SECRET not configured" }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "CRON_SECRET not configured" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const auth = request.headers.get("authorization") ?? request.headers.get("Authorization");
 
   if (auth !== `Bearer ${expectedSecret}`) {
-    return new Response(
-      JSON.stringify({ error: "unauthorized" }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   return null;
@@ -408,7 +521,13 @@ export const POST = async (request: NextRequest): Promise<Response> => {
   try {
     const summary = await executeRetryCron(productionDeps());
 
-    logger.info("retry-failed-mints cron run complete", { summary });
+    logger.info("retry-failed-mints cron run complete", {
+      processed: summary.processed,
+      succeeded: summary.succeeded,
+      failedRetries: summary.failedRetries,
+      finalFailures: summary.finalFailures,
+      totalErrors: summary.totalErrors,
+    });
 
     return new Response(JSON.stringify(summary), {
       status: 200,
@@ -424,10 +543,10 @@ export const POST = async (request: NextRequest): Promise<Response> => {
     logger.error("retry-failed-mints cron run threw unexpectedly", { error: e });
     captureException(e, { level: "error", tags: { route: "retry-failed-mints" } });
 
-    return new Response(
-      JSON.stringify({ error: "internal_error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "internal_error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
 

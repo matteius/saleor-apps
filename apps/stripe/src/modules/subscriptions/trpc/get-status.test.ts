@@ -75,6 +75,9 @@ const buildStubRepo = (overrides?: Partial<SubscriptionRepo>): SubscriptionRepo 
   upsert: vi.fn().mockImplementation(() => {
     throw new Error("upsert should not be called from getStatus handler");
   }),
+  markInvoiceProcessed: vi.fn().mockImplementation(() => {
+    throw new Error("markInvoiceProcessed should not be called from getStatus handler");
+  }),
   ...overrides,
 });
 
