@@ -166,6 +166,13 @@ describe("StripeWebhookManager", () => {
             "payment_intent.succeeded",
             "payment_intent.canceled",
             "charge.refund.updated",
+            "customer.subscription.created",
+            "customer.subscription.updated",
+            "customer.subscription.deleted",
+            "invoice.created",
+            "invoice.finalized",
+            "invoice.paid",
+            "invoice.payment_failed",
           ],
           "metadata": {
             "saleorAppConfigurationId": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
@@ -173,6 +180,50 @@ describe("StripeWebhookManager", () => {
           "url": "http://localhost:3000/api/webhooks/stripe?configurationId=81f323bd-91e2-4838-ab6e-5affd81ffc3b&saleorApiUrl=https%3A%2F%2Ffoo.bar.saleor.cloud%2Fgraphql%2F&appId=saleor-app-id",
         }
       `);
+  });
+
+  describe("T18a: subscription event subscription", () => {
+    /**
+     * Read the supportedStripeEvents constant directly so a subsequent edit
+     * that drops one of these strings will trigger a clear failure pointing
+     * at the missing event, instead of an inline-snapshot diff in the create
+     * test above.
+     */
+    it("includes the subscription billing events required by SubscriptionWebhookUseCase (T18)", async () => {
+      const { supportedStripeEvents } = await import("@/modules/stripe/supported-stripe-events");
+
+      const required = [
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "invoice.created",
+        "invoice.finalized",
+        "invoice.paid",
+        "invoice.payment_failed",
+      ] as const;
+
+      for (const evt of required) {
+        expect(supportedStripeEvents).toContain(evt);
+      }
+    });
+
+    it("preserves the legacy payment_intent.* and charge.refund.updated events", async () => {
+      const { supportedStripeEvents } = await import("@/modules/stripe/supported-stripe-events");
+
+      const legacy = [
+        "payment_intent.amount_capturable_updated",
+        "payment_intent.payment_failed",
+        "payment_intent.processing",
+        "payment_intent.requires_action",
+        "payment_intent.succeeded",
+        "payment_intent.canceled",
+        "charge.refund.updated",
+      ] as const;
+
+      for (const evt of legacy) {
+        expect(supportedStripeEvents).toContain(evt);
+      }
+    });
   });
 
   it("Calls stripe client to remove endpoint based on it's ID", async () => {
