@@ -27,6 +27,7 @@
     "@saleor/apps-ui": "workspace:*",
     "@saleor/macaw-ui": "catalog:",
     "@saleor/react-hook-form-macaw": "workspace:*",
+    "@saleor/webhook-utils": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
