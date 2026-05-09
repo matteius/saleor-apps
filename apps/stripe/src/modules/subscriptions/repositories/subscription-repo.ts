@@ -3,26 +3,26 @@
  *
  * Mirrors `transactions-recording/repositories/transaction-recorder-repo.ts`.
  *
- * To be fully implemented in T8.
+ * Methods return `Result<SubscriptionRecord | null, SubscriptionRepoError>` —
+ * "missing" is a valid (non-error) lookup outcome for cache reads, distinct
+ * from the transaction-recorder's invariant where missing implies an error.
  */
 import { type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
-import { type SubscriptionRecord } from "./subscription-record";
-
-export const TODO_T8_SUBSCRIPTION_REPO = "implement in T8";
+import {
+  type FiefUserId,
+  type StripeCustomerId,
+  type StripeSubscriptionId,
+  type SubscriptionRecord,
+} from "./subscription-record";
 
 export const SubscriptionRepoError = {
   PersistenceNotAvailable: BaseError.subclass("SubscriptionRepo.PersistenceNotAvailableError", {
     props: {
       _internalName: "SubscriptionRepo.PersistenceNotAvailableError",
-    },
-  }),
-  SubscriptionMissingError: BaseError.subclass("SubscriptionRepo.SubscriptionMissingError", {
-    props: {
-      _internalName: "SubscriptionRepo.SubscriptionMissingError",
     },
   }),
   FailedWritingSubscriptionError: BaseError.subclass(
@@ -45,7 +45,6 @@ export const SubscriptionRepoError = {
 
 export type SubscriptionRepoError = InstanceType<
   | typeof SubscriptionRepoError.PersistenceNotAvailable
-  | typeof SubscriptionRepoError.SubscriptionMissingError
   | typeof SubscriptionRepoError.FailedWritingSubscriptionError
   | typeof SubscriptionRepoError.FailedFetchingSubscriptionError
 >;
@@ -63,16 +62,16 @@ export interface SubscriptionRepo {
 
   getBySubscriptionId(
     accessPattern: SubscriptionRepoAccess,
-    stripeSubscriptionId: string,
-  ): Promise<Result<SubscriptionRecord, SubscriptionRepoError>>;
+    stripeSubscriptionId: StripeSubscriptionId,
+  ): Promise<Result<SubscriptionRecord | null, SubscriptionRepoError>>;
 
   getByCustomerId(
     accessPattern: SubscriptionRepoAccess,
-    stripeCustomerId: string,
-  ): Promise<Result<SubscriptionRecord, SubscriptionRepoError>>;
+    stripeCustomerId: StripeCustomerId,
+  ): Promise<Result<SubscriptionRecord | null, SubscriptionRepoError>>;
 
   getByFiefUserId(
     accessPattern: SubscriptionRepoAccess,
-    fiefUserId: string,
-  ): Promise<Result<SubscriptionRecord, SubscriptionRepoError>>;
+    fiefUserId: FiefUserId,
+  ): Promise<Result<SubscriptionRecord | null, SubscriptionRepoError>>;
 }

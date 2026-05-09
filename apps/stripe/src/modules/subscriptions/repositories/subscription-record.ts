@@ -7,57 +7,103 @@
  * of record; this DynamoDB record is a fast-lookup cache scoped to a Saleor
  * installation for webhook routing (avoids cross-system Postgres calls during
  * the webhook hot path).
- *
- * To be fully implemented in T8.
  */
+import type { Stripe } from "stripe";
+import { z } from "zod";
 
-export const TODO_T8_SUBSCRIPTION_RECORD = "implement in T8";
+/**
+ * Branded ID types — mirrors `SaleorTransactionId` / `StripePaymentIntentId` patterns.
+ */
+const stripeSubscriptionIdSchema = z.string().min(1).brand("StripeSubscriptionId");
 
-export type SubscriptionStatus =
-  | "active"
-  | "past_due"
-  | "canceled"
-  | "incomplete"
-  | "incomplete_expired"
-  | "trialing"
-  | "unpaid";
+export const createStripeSubscriptionId = (raw: string) => stripeSubscriptionIdSchema.parse(raw);
+
+export type StripeSubscriptionId = z.infer<typeof stripeSubscriptionIdSchema>;
+
+const stripeCustomerIdSchema = z.string().min(1).brand("StripeCustomerId");
+
+export const createStripeCustomerId = (raw: string) => stripeCustomerIdSchema.parse(raw);
+
+export type StripeCustomerId = z.infer<typeof stripeCustomerIdSchema>;
+
+const stripePriceIdSchema = z.string().min(1).brand("StripePriceId");
+
+export const createStripePriceId = (raw: string) => stripePriceIdSchema.parse(raw);
+
+export type StripePriceId = z.infer<typeof stripePriceIdSchema>;
+
+const fiefUserIdSchema = z.string().min(1).brand("FiefUserId");
+
+export const createFiefUserId = (raw: string) => fiefUserIdSchema.parse(raw);
+
+export type FiefUserId = z.infer<typeof fiefUserIdSchema>;
+
+const saleorChannelSlugSchema = z.string().min(1).brand("SaleorChannelSlug");
+
+export const createSaleorChannelSlug = (raw: string) => saleorChannelSlugSchema.parse(raw);
+
+export type SaleorChannelSlug = z.infer<typeof saleorChannelSlugSchema>;
+
+const saleorEntityIdSchema = z.string().min(1).brand("SaleorEntityId");
+
+export const createSaleorEntityId = (raw: string) => saleorEntityIdSchema.parse(raw);
+
+export type SaleorEntityId = z.infer<typeof saleorEntityIdSchema>;
+
+/**
+ * Use Stripe SDK's authoritative subscription status type. Plan §5.2 specifies
+ * `SubscriptionStatus` from generated Stripe types.
+ */
+export type SubscriptionStatus = Stripe.Subscription.Status;
 
 export class SubscriptionRecord {
-  readonly stripeSubscriptionId: string;
-  readonly stripeCustomerId: string;
-  readonly stripePriceId: string;
-  readonly fiefUserId: string;
-  readonly saleorUserId: string | null;
+  readonly stripeSubscriptionId: StripeSubscriptionId;
+  readonly stripeCustomerId: StripeCustomerId;
+  readonly saleorChannelSlug: SaleorChannelSlug;
+  readonly saleorUserId: string;
+  readonly fiefUserId: FiefUserId;
+  readonly saleorEntityId: SaleorEntityId | null;
+  readonly stripePriceId: StripePriceId;
   readonly status: SubscriptionStatus;
-  readonly currentPeriodStart: Date | null;
-  readonly currentPeriodEnd: Date | null;
+  readonly currentPeriodStart: Date;
+  readonly currentPeriodEnd: Date;
   readonly cancelAtPeriodEnd: boolean;
   readonly lastInvoiceId: string | null;
   readonly lastSaleorOrderId: string | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 
   constructor(args: {
-    stripeSubscriptionId: string;
-    stripeCustomerId: string;
-    stripePriceId: string;
-    fiefUserId: string;
-    saleorUserId: string | null;
+    stripeSubscriptionId: StripeSubscriptionId;
+    stripeCustomerId: StripeCustomerId;
+    saleorChannelSlug: SaleorChannelSlug;
+    saleorUserId: string;
+    fiefUserId: FiefUserId;
+    saleorEntityId?: SaleorEntityId | null;
+    stripePriceId: StripePriceId;
     status: SubscriptionStatus;
-    currentPeriodStart: Date | null;
-    currentPeriodEnd: Date | null;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
-    lastInvoiceId: string | null;
-    lastSaleorOrderId: string | null;
+    lastInvoiceId?: string | null;
+    lastSaleorOrderId?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }) {
     this.stripeSubscriptionId = args.stripeSubscriptionId;
     this.stripeCustomerId = args.stripeCustomerId;
-    this.stripePriceId = args.stripePriceId;
-    this.fiefUserId = args.fiefUserId;
+    this.saleorChannelSlug = args.saleorChannelSlug;
     this.saleorUserId = args.saleorUserId;
+    this.fiefUserId = args.fiefUserId;
+    this.saleorEntityId = args.saleorEntityId ?? null;
+    this.stripePriceId = args.stripePriceId;
     this.status = args.status;
     this.currentPeriodStart = args.currentPeriodStart;
     this.currentPeriodEnd = args.currentPeriodEnd;
     this.cancelAtPeriodEnd = args.cancelAtPeriodEnd;
-    this.lastInvoiceId = args.lastInvoiceId;
-    this.lastSaleorOrderId = args.lastSaleorOrderId;
+    this.lastInvoiceId = args.lastInvoiceId ?? null;
+    this.lastSaleorOrderId = args.lastSaleorOrderId ?? null;
+    this.createdAt = args.createdAt;
+    this.updatedAt = args.updatedAt;
   }
 }
