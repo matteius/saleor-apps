@@ -86,7 +86,9 @@ export default {
     "OIDC", "oidc",
     "owlbooks", "OWLBOOKS",
     "Fief", "fief",
-    "tslog"
+    "tslog",
+    "ciphertext", "Ciphertext",
+    "recognisable"
   ],
   language: "en-US",
   useGitignore: true,
