@@ -26,6 +26,10 @@ import {
   type IStripePaymentIntentsApiFactory,
 } from "@/modules/stripe/types";
 import {
+  type SubscriptionWebhookExecuteError,
+  type SubscriptionWebhookExecuteSuccess,
+} from "@/modules/subscriptions/webhooks/subscription-webhook-use-case";
+import {
   TransactionRecorderError,
   type TransactionRecorderRepo,
 } from "@/modules/transactions-recording/repositories/transaction-recorder-repo";
@@ -54,6 +58,41 @@ type ProblemReporterFactory = (authData: AuthData) => StripeProblemReporter;
 
 const ObjectMetadataMissingError = BaseError.subclass("ObjectMetadataMissingError");
 
+/**
+ * T18 — minimal contract for the subscription dispatcher consumed by
+ * `StripeWebhookUseCase`. The real `SubscriptionWebhookUseCase` satisfies
+ * this structurally; we accept the structural type so unit tests can supply
+ * a tiny mock without instantiating the whole class.
+ */
+export interface ISubscriptionWebhookUseCase {
+  execute(
+    event: Stripe.Event,
+    ctx: {
+      saleorApiUrl: SaleorApiUrl;
+      appId: string;
+      stripeEnv: StripeEnv;
+      restrictedKey: StripeRestrictedKey;
+    },
+  ): Promise<Result<SubscriptionWebhookExecuteSuccess, SubscriptionWebhookExecuteError>>;
+}
+
+/**
+ * T18 — sentinel returned from `processEvent` when the subscription dispatcher
+ * handled the event. `execute()` short-circuits on this so that the existing
+ * one-shot success-path (`reportTransactionEvent` etc.) is skipped.
+ */
+const SUBSCRIPTION_HANDLED_TAG = "SubscriptionHandledByDispatcher" as const;
+
+interface SubscriptionDispatchedSuccess {
+  readonly _tag: typeof SUBSCRIPTION_HANDLED_TAG;
+  readonly response: PossibleStripeWebhookSuccessResponses;
+}
+
+interface SubscriptionDispatchedError {
+  readonly _tag: typeof SUBSCRIPTION_HANDLED_TAG;
+  readonly response: PossibleStripeWebhookErrorResponses;
+}
+
 export class StripeWebhookUseCase {
   private appConfigRepo: AppConfigRepo;
   private webhookEventVerifyFactory: StripeVerifyEventFactory;
@@ -64,6 +103,19 @@ export class StripeWebhookUseCase {
   private problemReporterFactory: ProblemReporterFactory;
   private webhookManager: StripeWebhookManager;
   private stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+  /**
+   * T18 — optional dispatcher for subscription / invoice / charge.refunded
+   * events. When provided, `processEvent` delegates to it for events that
+   * originate from Stripe Billing rather than the existing one-shot Saleor
+   * checkout flow.
+   *
+   * Optional so legacy unit tests / callers that don't care about
+   * subscriptions can construct the use-case without wiring all the
+   * subscription deps. When undefined, subscription-shaped events are treated
+   * as "not from Saleor" (mirrors metadata-missing one-shot behavior →
+   * `ObjectCreatedOutsideOfSaleorResponse` 400).
+   */
+  private subscriptionWebhookUseCase: ISubscriptionWebhookUseCase | undefined;
 
   constructor(deps: {
     appConfigRepo: AppConfigRepo;
@@ -74,6 +126,7 @@ export class StripeWebhookUseCase {
     problemReporterFactory: ProblemReporterFactory;
     webhookManager: StripeWebhookManager;
     stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+    subscriptionWebhookUseCase?: ISubscriptionWebhookUseCase;
   }) {
     this.appConfigRepo = deps.appConfigRepo;
     this.webhookEventVerifyFactory = deps.webhookEventVerifyFactory;
@@ -83,6 +136,64 @@ export class StripeWebhookUseCase {
     this.problemReporterFactory = deps.problemReporterFactory;
     this.webhookManager = deps.webhookManager;
     this.stripePaymentIntentsApiFactory = deps.stripePaymentIntentsApiFactory;
+    this.subscriptionWebhookUseCase = deps.subscriptionWebhookUseCase;
+  }
+
+  /**
+   * T18 — delegate the event to the subscription dispatcher, then translate
+   * its Result into the response shape the outer dispatcher uses.
+   *
+   * Failures from a wired dispatcher are surfaced as a generic 500
+   * server-error response so Stripe retries — handlers that want a different
+   * policy should return Ok with a NoOp response.
+   *
+   * When no dispatcher is wired, returns an `ObjectMetadataMissingError`
+   * which `execute()` translates to a 400
+   * `ObjectCreatedOutsideOfSaleorResponse` (back-compat with the legacy
+   * pre-T18 behavior for non-Saleor events).
+   */
+  private async dispatchToSubscriptionUseCase(args: {
+    event: Stripe.Event;
+    ctx: {
+      saleorApiUrl: SaleorApiUrl;
+      appId: string;
+      stripeEnv: StripeEnv;
+      restrictedKey: StripeRestrictedKey;
+    };
+  }): Promise<
+    Result<
+      SubscriptionDispatchedSuccess,
+      SubscriptionDispatchedError | InstanceType<typeof ObjectMetadataMissingError>
+    >
+  > {
+    if (!this.subscriptionWebhookUseCase) {
+      this.logger.warn(
+        `Received subscription-shaped event ${args.event.type} but no SubscriptionWebhookUseCase is wired; treating as not-from-Saleor.`,
+      );
+
+      return err(
+        new ObjectMetadataMissingError(
+          `No SubscriptionWebhookUseCase wired for event ${args.event.type}; treating as not-from-Saleor`,
+          { props: { eventType: args.event.type } },
+        ),
+      );
+    }
+
+    const result = await this.subscriptionWebhookUseCase.execute(args.event, args.ctx);
+
+    if (result.isErr()) {
+      this.logger.warn("Subscription dispatcher returned Err", { error: result.error });
+
+      return err({
+        _tag: SUBSCRIPTION_HANDLED_TAG,
+        response: new StripeWebhookSeverErrorResponse(),
+      });
+    }
+
+    return ok({
+      _tag: SUBSCRIPTION_HANDLED_TAG,
+      response: new StripeWebhookSuccessResponse(),
+    });
   }
 
   private async removeStripeWebhook({
@@ -118,13 +229,41 @@ export class StripeWebhookUseCase {
     stripeEnv: StripeEnv;
     restrictedKey: StripeRestrictedKey;
   }) {
+    const subscriptionCtx = { saleorApiUrl, appId, stripeEnv, restrictedKey };
+
     switch (event.data.object.object) {
       case "payment_intent": {
         loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, event.data.object.id);
 
         const meta = event.data.object.metadata as AllowedStripeObjectMetadata;
+        /*
+         * Stripe SDK 18 dropped the `invoice` field from the
+         * `Stripe.PaymentIntent` type, but the live API still surfaces it on
+         * subscription cycle-1 PaymentIntents. Cast to read it.
+         */
+        const pi = event.data.object as Stripe.PaymentIntent & {
+          invoice?: string | Stripe.Invoice | null;
+        };
 
         if (!meta?.saleor_transaction_id) {
+          /*
+           * T18 — subscription cycle-1 PI: created by `subscriptions.create`,
+           * carries no Saleor metadata but always has an `invoice` field.
+           * The corresponding `invoice.paid` event mints the Saleor order
+           * — the PI events are redundant, so we no-op here.
+           */
+          if (pi.invoice) {
+            this.logger.debug("Subscription cycle-1 PI received, deferring to invoice.paid", {
+              paymentIntentId: pi.id,
+              invoiceId: pi.invoice,
+            });
+
+            return ok({
+              _tag: SUBSCRIPTION_HANDLED_TAG,
+              response: new StripeWebhookSuccessResponse(),
+            });
+          }
+
           return err(
             new ObjectMetadataMissingError(
               "Missing metadata on object, it was not created by Saleor",
@@ -173,16 +312,13 @@ export class StripeWebhookUseCase {
         const meta = event.data.object.metadata as AllowedStripeObjectMetadata;
 
         if (!meta?.saleor_transaction_id) {
-          return err(
-            new ObjectMetadataMissingError(
-              "Missing metadata on object, it was not created by Saleor",
-              {
-                props: {
-                  meta,
-                },
-              },
-            ),
-          );
+          /*
+           * T18 — subscription-origin refund. Stripe normally surfaces these
+           * as `charge.refunded` (object: "charge"), but the legacy
+           * `refund.*` events without Saleor metadata are also routed
+           * through the subscription dispatcher here.
+           */
+          return this.dispatchToSubscriptionUseCase({ event, ctx: subscriptionCtx });
         }
 
         if (meta.saleor_app_id && meta.saleor_app_id !== appId) {
@@ -205,6 +341,47 @@ export class StripeWebhookUseCase {
           appId,
           saleorApiUrl,
         });
+      }
+
+      case "charge": {
+        loggerContext.set("stripeChargeId", event.data.object.id);
+
+        const meta = event.data.object.metadata as AllowedStripeObjectMetadata;
+
+        /*
+         * T18 — `charge.refunded` is the modern Stripe shape for refund
+         * webhooks. One-shot Saleor checkout flows tag the underlying
+         * PaymentIntent with `saleor_transaction_id` metadata, which Stripe
+         * propagates to the Charge. When metadata is present the legacy
+         * one-shot path already produced the corresponding refund report
+         * via the `refund.*` event, so this `charge.refunded` is treated as
+         * a no-op (200) to avoid double-reporting.
+         */
+        if (meta?.saleor_transaction_id) {
+          if (meta.saleor_app_id && meta.saleor_app_id !== appId) {
+            return err(
+              new ObjectMetadataMissingError("Charge belongs to a different Saleor installation", {
+                props: {
+                  meta,
+                  expectedAppId: appId,
+                },
+              }),
+            );
+          }
+
+          return ok({
+            _tag: SUBSCRIPTION_HANDLED_TAG,
+            response: new StripeWebhookSuccessResponse(),
+          });
+        }
+
+        return this.dispatchToSubscriptionUseCase({ event, ctx: subscriptionCtx });
+      }
+
+      case "subscription":
+      case "invoice":
+      case "customer": {
+        return this.dispatchToSubscriptionUseCase({ event, ctx: subscriptionCtx });
       }
 
       default: {
@@ -384,6 +561,18 @@ export class StripeWebhookUseCase {
 
     if (processingResult.isErr()) {
       /**
+       * T18 — subscription dispatcher already produced a typed response.
+       * Surface it directly without reporting through the transaction-event
+       * pipeline (subscription events have no Saleor transaction to report
+       * against).
+       */
+      const subErr = processingResult.error as { _tag?: string; response?: unknown };
+
+      if (subErr._tag === SUBSCRIPTION_HANDLED_TAG && subErr.response) {
+        return err(subErr.response as PossibleStripeWebhookErrorResponses);
+      }
+
+      /**
        * This is technically not an error, so we catch it here without the error log.
        */
       if (processingResult.error instanceof ObjectMetadataMissingError) {
@@ -401,15 +590,29 @@ export class StripeWebhookUseCase {
       return err(new StripeWebhookSeverErrorResponse());
     }
 
-    loggerContext.set(
-      ObservabilityAttributes.TRANSACTION_ID,
-      processingResult.value.saleorTransactionId,
-    );
-    loggerContext.set("amount", processingResult.value.saleorMoney.amount);
-    loggerContext.set("result", processingResult.value.transactionResult.result);
+    /*
+     * T18 — subscription dispatcher succeeded; short-circuit before the
+     * Saleor transaction-event pipeline. There's nothing to report.
+     */
+    const processingValue = processingResult.value;
+    const maybeSubOk = processingValue as { _tag?: string; response?: unknown };
+
+    if (maybeSubOk._tag === SUBSCRIPTION_HANDLED_TAG && maybeSubOk.response) {
+      return ok(maybeSubOk.response as PossibleStripeWebhookSuccessResponses);
+    }
+
+    /* Narrow back to the legacy event-report-variables resolver. */
+    const oneShotValue = processingValue as Exclude<
+      typeof processingValue,
+      SubscriptionDispatchedSuccess
+    >;
+
+    loggerContext.set(ObservabilityAttributes.TRANSACTION_ID, oneShotValue.saleorTransactionId);
+    loggerContext.set("amount", oneShotValue.saleorMoney.amount);
+    loggerContext.set("result", oneShotValue.transactionResult.result);
 
     const reportResult = await transactionEventReporter.reportTransactionEvent(
-      processingResult.value.resolveEventReportVariables(),
+      oneShotValue.resolveEventReportVariables(),
     );
 
     if (reportResult.isErr()) {
