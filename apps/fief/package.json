@@ -54,6 +54,7 @@
     "eslint": "catalog:",
     "eslint-plugin-n": "catalog:",
     "jose": "5.10.0",
+    "mongodb-memory-server": "10.4.3",
     "next-test-api-route-handler": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
