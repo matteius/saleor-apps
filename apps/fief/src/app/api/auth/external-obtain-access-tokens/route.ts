@@ -687,22 +687,26 @@ const innerHandler = async (req: NextRequest): Promise<Response> => {
  * Top-level guard. Any uncaught throw from `innerHandler` would otherwise
  * surface as Next's default 500 with no body — and the app's tslog is
  * `type: "hidden"` so structured logs aren't visible either. Funnel
- * everything through `console.error` (stderr → kubectl logs) and respond
- * with a 500 envelope that mirrors the controlled error shapes elsewhere
- * in the route so callers can distinguish "we crashed" from a real fail.
+ * everything through a raw `process.stderr.write` (bypassing any console
+ * wrapper Next or Elastic-APM might install) and respond with a 500
+ * envelope that mirrors the controlled error shapes elsewhere in the
+ * route so callers can distinguish "we crashed" from a real fail.
  */
+const writeStderr = (message: string): void => {
+  process.stderr.write(`${message}\n`);
+};
+
 const handler = async (req: NextRequest): Promise<Response> => {
+  writeStderr("[fief] external-obtain-access-tokens: handler invoked");
   try {
     return await innerHandler(req);
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
     const stack = cause instanceof Error ? cause.stack : undefined;
 
-    // eslint-disable-next-line no-console -- tslog is `type: "hidden"`; stderr is the only operator-visible signal for uncaught route throws
-    console.error("external-obtain-access-tokens: uncaught handler error", {
-      message,
-      stack,
-    });
+    writeStderr(
+      `[fief] external-obtain-access-tokens: uncaught handler error: ${message}\n${stack ?? ""}`,
+    );
 
     return new Response(
       JSON.stringify({
