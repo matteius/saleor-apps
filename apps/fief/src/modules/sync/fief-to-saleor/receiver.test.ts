@@ -51,7 +51,7 @@ const mockEnv = (overrides: Partial<EnvShape> = {}) => {
     env: {
       FIEF_SYNC_DISABLED: false,
       FIEF_SALEOR_TO_FIEF_DISABLED: false,
-      SECRET_KEY: "test_secret_key",
+      SECRET_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       ...overrides,
     },
   }));

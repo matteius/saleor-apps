@@ -1,12 +1,23 @@
-import {
-  newSecretKeyRuntimeEnv,
-  newSecretKeyServerSchema,
-} from "@saleor/apps-shared/secret-key-resolution";
+import { newSecretKeyRuntimeEnv } from "@saleor/apps-shared/secret-key-resolution";
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
 
 import { BaseError } from "@/lib/errors";
+
+/**
+ * AES-256-CBC requires a 32-byte key. We hex-encode it on the wire, so the
+ * env value MUST be exactly 64 hex characters. Validating here means the
+ * server fails fast at boot with a clear message rather than blowing up
+ * deep in a save flow with the generic Node "Invalid key length".
+ * Generate with `openssl rand -hex 32`.
+ */
+const aes256HexKey = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{64}$/,
+    "Must be 64 hex characters (32 bytes for AES-256). Generate with `openssl rand -hex 32`.",
+  );
 
 const booleanFromString = z
   .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
@@ -22,15 +33,16 @@ const booleanFromString = z
 export const env = createEnv({
   client: {},
   server: {
-    ...newSecretKeyServerSchema,
-
     /*
      * --- Crypto / secrets ---
-     * AES-256-CBC key, hex-encoded (16 or 32 bytes). Required at runtime
-     * because every cross-side write that lands in the connection repo
-     * (T8) is encrypted with this key. Tests can stub a 32-byte hex string.
+     * AES-256-CBC keys. SECRET_KEY is required; NEW_SECRET_KEY is the
+     * rotation target (when set, new writes use it and SECRET_KEY becomes
+     * decrypt-only). Both must be 64 hex characters (32 bytes for AES-256).
+     * The shared `newSecretKeyServerSchema` only enforces non-empty, so we
+     * tighten both keys here to fail fast at boot instead of at first save.
      */
-    SECRET_KEY: z.string(),
+    SECRET_KEY: aes256HexKey,
+    NEW_SECRET_KEY: aes256HexKey.optional(),
 
     /*
      * --- Saleor app metadata ---
