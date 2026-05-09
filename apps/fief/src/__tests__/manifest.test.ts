@@ -24,7 +24,7 @@ vi.mock("@/lib/env", async () => {
 });
 
 describe("Fief app manifest handler", () => {
-  it("returns a JSON manifest with the expected shape and an empty webhooks list (T1)", async () => {
+  it("returns a JSON manifest with the expected shape and the four T26-T29 customer webhooks aggregated", async () => {
     await testApiHandler({
       pagesHandler: manifestHandler,
       async test({ fetch }) {
@@ -44,9 +44,35 @@ describe("Fief app manifest handler", () => {
           permissions: ["MANAGE_USERS"],
           requiredSaleorVersion: ">=3.21 <4",
           tokenTargetUrl: "https://localhost:3000/api/register",
-          webhooks: [],
         });
         expect(typeof body.version).toBe("string");
+
+        /*
+         * Webhook aggregation (wire-up follow-up): T26-T29's
+         * `customer{Created,Updated,MetadataUpdated,Deleted}WebhookDefinition`
+         * each render via the SDK's `getWebhookManifest(apiBaseUrl)` builder.
+         * Order MUST match the manifest source so install-time replays of
+         * the manifest are byte-stable.
+         */
+        expect(Array.isArray(body.webhooks)).toBe(true);
+        expect(body.webhooks).toHaveLength(4);
+
+        const events = body.webhooks.map(
+          (w: { asyncEvents?: string[] }) => (w.asyncEvents ?? [])[0],
+        );
+
+        expect(events).toStrictEqual([
+          "CUSTOMER_CREATED",
+          "CUSTOMER_UPDATED",
+          "CUSTOMER_METADATA_UPDATED",
+          "CUSTOMER_DELETED",
+        ]);
+
+        for (const wh of body.webhooks) {
+          expect(typeof wh.targetUrl).toBe("string");
+          expect(wh.targetUrl).toContain("https://localhost:3000/api/webhooks/saleor/");
+          expect(wh.isActive).toBe(true);
+        }
       },
     });
   });

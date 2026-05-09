@@ -203,8 +203,20 @@ const buildAdminClient = (connection: ProviderConnection): FiefAdminApiClient =>
  * interface would expose every consumer to cross-tenant foot-guns. The Fief
  * webhook receiver (T22) has a legitimate need for cross-tenant lookup
  * because Fief's webhook URL only carries `connectionId`.
+ *
+ * Soft-delete filter shape note (wire-up follow-up): T8's
+ * `MongodbProviderConnectionRepo.create` persists `softDeletedAt: null` for
+ * non-deleted rows (and `softDelete()` writes a `Date`). The original
+ * `{ $exists: false }` predicate therefore never matched in production —
+ * `null` IS present, just nullable. Match `softDeletedAt: null` directly:
+ * Mongo BSON's nullable-equality semantics ALSO match documents where the
+ * field is missing entirely, so legacy pre-T8 docs round-trip too.
+ *
+ * Exported so the wire-up follow-up's mongodb-memory-server tests can
+ * exercise the actual filter shape end-to-end. Production callers go through
+ * `getProductionDeps()` and never name the symbol.
  */
-const findConnectionById: FindConnectionById = async (connectionId) => {
+export const findConnectionById: FindConnectionById = async (connectionId) => {
   // Hit the underlying Mongo collection directly — bypasses tenant scoping.
   const { getMongoClient, getMongoDatabaseName } = await import("@/modules/db/mongo-client");
   const client = await getMongoClient();
@@ -212,9 +224,17 @@ const findConnectionById: FindConnectionById = async (connectionId) => {
   const collection = db.collection<{ id: string; saleorApiUrl: string }>("provider_connections");
 
   try {
+    /*
+     * Mongo BSON treats `{ field: null }` as matching both explicit `null`
+     * AND missing fields, so this single predicate covers both T8's modern
+     * shape (`softDeletedAt: null`) and any pre-T8 legacy shape that omitted
+     * the field entirely. A non-null `Date` (the soft-deleted state) does
+     * NOT match — which is exactly the orphan-suppression the T22 receiver
+     * needs.
+     */
     const doc = await collection.findOne({
       id: connectionId as unknown as string,
-      softDeletedAt: { $exists: false },
+      softDeletedAt: null,
     });
 
     if (!doc) {

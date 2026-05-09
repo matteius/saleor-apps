@@ -9,6 +9,7 @@
  *   - update         (write; delegates to UpdateConnectionUseCase)
  *   - rotateSecret   (write; delegates to RotateConnectionSecretUseCase.initiateRotation)
  *   - confirmRotation(write; delegates to RotateConnectionSecretUseCase.confirmRotation)
+ *   - cancelRotation (write; delegates to RotateConnectionSecretUseCase.cancelRotation)
  *   - delete         (write; delegates to DeleteConnectionUseCase)
  *   - testConnection (read; exercises FiefOidcClient.prewarm + FiefAdminApiClient.listUsers)
  *
@@ -30,6 +31,7 @@ import {
   type DeleteConnectionUseCaseInput,
 } from "@/modules/provider-connections/use-cases/delete-connection.use-case";
 import {
+  type CancelRotationInput,
   type ConfirmRotationInput,
   type InitiateRotationInput,
   type RotateConnectionSecretUseCase,
@@ -162,7 +164,7 @@ interface UseCaseStubs {
   updateConnection: Pick<UpdateConnectionUseCase, "execute">;
   rotateConnectionSecret: Pick<
     RotateConnectionSecretUseCase,
-    "initiateRotation" | "confirmRotation"
+    "initiateRotation" | "confirmRotation" | "cancelRotation"
   >;
   deleteConnection: Pick<DeleteConnectionUseCase, "execute">;
 }
@@ -212,6 +214,11 @@ const buildRouter = async (deps: BuildRouterDeps = {}) => {
         .mockImplementation(async () =>
           ok(buildConnection()),
         ) as RotateConnectionSecretUseCase["confirmRotation"],
+      cancelRotation: vi
+        .fn()
+        .mockImplementation(async () =>
+          ok(buildConnection()),
+        ) as RotateConnectionSecretUseCase["cancelRotation"],
     },
     deleteConnection: {
       execute: vi
@@ -517,6 +524,7 @@ describe("connections tRPC router (T34)", () => {
           rotateConnectionSecret: {
             initiateRotation: initiateMock,
             confirmRotation: confirmMock,
+            cancelRotation: vi.fn() as RotateConnectionSecretUseCase["cancelRotation"],
           },
         },
       });
@@ -555,6 +563,7 @@ describe("connections tRPC router (T34)", () => {
           rotateConnectionSecret: {
             initiateRotation: initiateMock,
             confirmRotation: vi.fn() as RotateConnectionSecretUseCase["confirmRotation"],
+            cancelRotation: vi.fn() as RotateConnectionSecretUseCase["cancelRotation"],
           },
         },
       });
@@ -587,6 +596,7 @@ describe("connections tRPC router (T34)", () => {
           rotateConnectionSecret: {
             initiateRotation: vi.fn() as RotateConnectionSecretUseCase["initiateRotation"],
             confirmRotation: confirmMock,
+            cancelRotation: vi.fn() as RotateConnectionSecretUseCase["cancelRotation"],
           },
         },
       });
@@ -601,6 +611,73 @@ describe("connections tRPC router (T34)", () => {
       expect(passed.saleorApiUrl).toBe(SALEOR_API_URL);
       expect(passed.id).toBe(FIXED_ID_A);
       expect(JSON.stringify(result)).not.toContain("enc:");
+    });
+  });
+
+  describe("cancelRotation (wire-up follow-up)", () => {
+    it("invokes cancelRotation and returns the redacted connection", async () => {
+      wireAuth();
+
+      const cancelMock = vi
+        .fn()
+        .mockResolvedValue(
+          ok(buildConnection()),
+        ) as RotateConnectionSecretUseCase["cancelRotation"];
+      const { router } = await buildRouter({
+        useCases: {
+          rotateConnectionSecret: {
+            initiateRotation: vi.fn() as RotateConnectionSecretUseCase["initiateRotation"],
+            confirmRotation: vi.fn() as RotateConnectionSecretUseCase["confirmRotation"],
+            cancelRotation: cancelMock,
+          },
+        },
+      });
+      const caller = router.createCaller(buildCtx());
+
+      const result = await caller.cancelRotation({ id: FIXED_ID_A });
+
+      expect(cancelMock).toHaveBeenCalledTimes(1);
+      const passed = (cancelMock as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as CancelRotationInput;
+
+      expect(passed.saleorApiUrl).toBe(SALEOR_API_URL);
+      expect(passed.id).toBe(FIXED_ID_A);
+      /* Redacted shape — no plaintext / ciphertext leaks. */
+      expect(JSON.stringify(result)).not.toContain("enc:");
+    });
+
+    it("maps NoPendingRotation to CONFLICT (categorical mapping shared with confirmRotation)", async () => {
+      wireAuth();
+
+      const { err: nverr } = await import("neverthrow");
+      const { RotateConnectionSecretError } = await import(
+        "@/modules/provider-connections/use-cases/rotate-connection-secret.use-case"
+      );
+
+      const cancelMock = vi
+        .fn()
+        .mockResolvedValue(
+          nverr(
+            new RotateConnectionSecretError.NoPendingRotation(
+              "No pending rotation to cancel; call initiateRotation first",
+            ),
+          ),
+        ) as RotateConnectionSecretUseCase["cancelRotation"];
+
+      const { router } = await buildRouter({
+        useCases: {
+          rotateConnectionSecret: {
+            initiateRotation: vi.fn() as RotateConnectionSecretUseCase["initiateRotation"],
+            confirmRotation: vi.fn() as RotateConnectionSecretUseCase["confirmRotation"],
+            cancelRotation: cancelMock,
+          },
+        },
+      });
+      const caller = router.createCaller(buildCtx());
+
+      await expect(caller.cancelRotation({ id: FIXED_ID_A })).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
     });
   });
 

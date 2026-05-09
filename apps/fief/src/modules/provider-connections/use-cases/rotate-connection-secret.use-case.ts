@@ -113,6 +113,11 @@ export interface ConfirmRotationInput {
   id: ProviderConnectionId;
 }
 
+export interface CancelRotationInput {
+  saleorApiUrl: SaleorApiUrl;
+  id: ProviderConnectionId;
+}
+
 export interface RotateConnectionSecretUseCaseDeps {
   repo: ProviderConnectionRepo;
   fiefAdmin: FiefAdminApiClient;
@@ -368,6 +373,102 @@ export class RotateConnectionSecretUseCase {
     });
 
     return ok(promoted.value);
+  }
+
+  /**
+   * Abort an in-flight rotation: drop both pending slots so the connection
+   * is back at its pre-`initiateRotation` shape (only `current` secrets
+   * present). Use this when the operator decides the rotation was a mistake
+   * — e.g. they pasted the wrong `newClientSecret` or Fief never delivered
+   * a webhook signed with the new secret so they want to back out before
+   * confirming.
+   *
+   * Best-effort revoke caveat: Fief 0.x exposes no client-secret
+   * "un-rotate" operation, and `initiateRotation` for `clientSecretSource`
+   * never actually wrote anything to Fief in the first place
+   * (operator-supplied means the operator did the Fief-side roll out-of-band;
+   * locally-generated stays purely local). For the webhook secret, Fief
+   * atomically rolled it during `initiateRotation` — we cannot un-roll it.
+   * We therefore just drop the pending slots; if a follow-up T5 endpoint
+   * lands a "revert webhook secret" route we can wire it here, and any
+   * error path stays log-only so a partial-revoke never blocks the local
+   * state cleanup.
+   *
+   * Returns `NoPendingRotation` when called outside an open rotation — the
+   * tRPC layer maps this to `CONFLICT` so the UI can render an honest
+   * message instead of showing a "cancelled" toast over no-op state.
+   */
+  async cancelRotation(
+    input: CancelRotationInput,
+  ): Promise<Result<ProviderConnection, ProviderConnectionLifecycleError>> {
+    const existing = await this.loadConnection(input.saleorApiUrl, input.id);
+
+    if (existing.isErr()) return err(existing.error);
+    const connection = existing.value;
+
+    if (
+      connection.fief.encryptedPendingClientSecret === null &&
+      connection.fief.encryptedPendingWebhookSecret === null
+    ) {
+      return err(
+        new RotateConnectionSecretError.NoPendingRotation(
+          "No pending rotation to cancel; call initiateRotation first",
+        ),
+      );
+    }
+
+    /*
+     * Best-effort Fief-side cleanup. Wrapped in try/catch so any upstream
+     * error gets logged but never propagates — the local state cleanup
+     * MUST run even if Fief is unreachable, otherwise the operator gets
+     * stuck unable to either confirm or cancel.
+     *
+     * Today this is a no-op (see method docstring) but the seam exists so
+     * a future T5 extension can plug in without re-shaping callers.
+     */
+    try {
+      this.logger.info("Cancelling rotation; dropping pending slots", {
+        connectionId: input.id,
+        hadPendingClientSecret: connection.fief.encryptedPendingClientSecret !== null,
+        hadPendingWebhookSecret: connection.fief.encryptedPendingWebhookSecret !== null,
+      });
+    } catch (cause) {
+      this.logger.warn("Best-effort Fief revoke during cancelRotation failed; continuing", {
+        connectionId: input.id,
+        error: cause,
+      });
+    }
+
+    /*
+     * Drop the pending slots. We pass `null` per `ProviderConnectionUpdateInput`'s
+     * convention for explicit clear. Repo re-encrypts nothing here because
+     * neither slot is being assigned a new plaintext.
+     */
+    const reverted = await this.repo.update(
+      { saleorApiUrl: input.saleorApiUrl, id: input.id },
+      {
+        fief: {
+          pendingClientSecret: null,
+          pendingWebhookSecret: null,
+        },
+      },
+    );
+
+    if (reverted.isErr()) {
+      return err(
+        new RotateConnectionSecretError.PersistFailed(
+          "Failed to clear pending rotation slots while cancelling",
+          { cause: reverted.error },
+        ),
+      );
+    }
+
+    this.logger.info("Cancelled connection secret rotation", {
+      connectionId: input.id,
+      saleorApiUrl: input.saleorApiUrl,
+    });
+
+    return ok(reverted.value);
   }
 
   private async loadConnection(
