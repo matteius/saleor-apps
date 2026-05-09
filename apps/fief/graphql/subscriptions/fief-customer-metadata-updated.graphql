@@ -1,0 +1,23 @@
+# T28 — `CUSTOMER_METADATA_UPDATED` async subscription document.
+#
+# Consumed by `apps/fief/src/app/api/webhooks/saleor/customer-metadata-updated/webhook-definition.ts`.
+# Mirrors T26/T27 — same `SaleorCustomerEventUser` slice (email +
+# claim-derived fields + metadata for the loop-guard origin marker AND the
+# claim-mapped metadata keys whose changes drive the reverse-sync), same
+# `version` exposure for span attribution.
+#
+# Naming convention (followed across T26/T27/T28/T29): `Fief<Event>` for the
+# subscription operation name; the document export is `Fief<Event>Document`,
+# the per-event fragment is `Fief<Event>EventFragment`.
+fragment FiefCustomerMetadataUpdatedEvent on CustomerMetadataUpdated {
+  version
+  user {
+    ...SaleorCustomerEventUser
+  }
+}
+
+subscription FiefCustomerMetadataUpdated {
+  event {
+    ...FiefCustomerMetadataUpdatedEvent
+  }
+}
