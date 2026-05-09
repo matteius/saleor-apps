@@ -1,0 +1,10 @@
+query SubscriptionFindCustomerByEmail($email: String!) {
+  customers(filter: { search: $email }, first: 1) {
+    edges {
+      node {
+        id
+        email
+      }
+    }
+  }
+}

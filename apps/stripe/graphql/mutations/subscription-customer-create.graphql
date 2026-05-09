@@ -1,0 +1,13 @@
+mutation SubscriptionCustomerCreate($input: UserCreateInput!) {
+  customerCreate(input: $input) {
+    user {
+      id
+      email
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
