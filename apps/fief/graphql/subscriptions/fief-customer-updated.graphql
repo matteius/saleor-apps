@@ -1,0 +1,22 @@
+# T27 — `CUSTOMER_UPDATED` async subscription document.
+#
+# Consumed by `apps/fief/src/app/api/webhooks/saleor/customer-updated/webhook-definition.ts`.
+# Mirrors T26 exactly — same `SaleorCustomerEventUser` slice (email +
+# claim-derived fields + metadata for the loop-guard origin marker), same
+# `version` exposure for span attribution.
+#
+# Naming convention (followed across T26/T27/T28/T29): `Fief<Event>` for the
+# subscription operation name; the document export is `Fief<Event>Document`,
+# the per-event fragment is `Fief<Event>EventFragment`.
+fragment FiefCustomerUpdatedEvent on CustomerUpdated {
+  version
+  user {
+    ...SaleorCustomerEventUser
+  }
+}
+
+subscription FiefCustomerUpdated {
+  event {
+    ...FiefCustomerUpdatedEvent
+  }
+}
