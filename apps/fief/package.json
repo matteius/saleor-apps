@@ -15,6 +15,7 @@
     "start": "next start",
     "test": "pnpm run test:unit",
     "test:ci": "pnpm run test:unit --coverage",
+    "test:integration": "vitest --project=integration run",
     "test:unit": "vitest --project=unit"
   },
   "config": {

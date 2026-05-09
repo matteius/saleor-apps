@@ -1,5 +1,4 @@
-import { createLogger } from "@/lib/logger";
-import { createFiefEncryptor } from "@/modules/crypto/encryptor";
+import { getProductionDeps } from "@/lib/composition-root";
 import { eventRouter } from "@/modules/sync/fief-to-saleor/event-router";
 import { FiefReceiver, type FindConnectionById } from "@/modules/sync/fief-to-saleor/receiver";
 
@@ -11,13 +10,11 @@ import { FiefReceiver, type FindConnectionById } from "@/modules/sync/fief-to-sa
  * exports from `route.ts` and would fail `next build` with
  * "buildReceiver is not a valid Route export field.")
  *
- * The `findConnectionById` placeholder returns "not found" — production
- * deployment (T34 follow-up) will plug in the Mongo lookup. This means
- * the route currently always 410s even with a valid signature; the
- * receiver-level test suite covers the happy path.
+ * Production wiring sources every dependency from `@/lib/composition-root`
+ * (T40), including the cross-tenant `findConnectionById` lookup that walks
+ * `provider_connections` by `id` only (Fief webhook URLs only carry the
+ * connectionId — tenant scope is recovered downstream after lookup).
  */
-
-const logger = createLogger("api.webhooks.fief.build-receiver");
 
 /**
  * Build the production receiver. Exported for tests so they can build
@@ -25,73 +22,16 @@ const logger = createLogger("api.webhooks.fief.build-receiver");
  * route-level translation table without standing up Mongo.
  */
 export const buildReceiver = (overrides?: { findConnectionById?: FindConnectionById }) => {
+  const deps = getProductionDeps();
+
   const findConnectionById: FindConnectionById =
-    overrides?.findConnectionById ??
-    (async () => {
-      logger.error(
-        "FiefReceiver.findConnectionById not wired — every webhook delivery will 410. Wire the Mongo lookup before enabling Fief subscribers in production.",
-      );
-
-      // Lazy-import to avoid pulling repo errors when overridden.
-      const { ProviderConnectionRepoError } = await import(
-        "@/modules/provider-connections/provider-connection-repo"
-      );
-
-      return (await import("neverthrow")).err(
-        new ProviderConnectionRepoError.NotFound(
-          "FiefReceiver.findConnectionById not wired in route handler",
-        ),
-      ) as never;
-    });
-
-  /*
-   * Placeholder webhook log repo + provider-connection repo so the
-   * receiver constructor doesn't blow up at module load. Production
-   * wiring lands when T34 (admin-side wiring) connects the MongoDB
-   * implementations into a central composition root.
-   */
-  const stubWebhookLogRepo = {
-    record: async () => (await import("neverthrow")).ok({} as never),
-    dedupCheck: async () => (await import("neverthrow")).ok(false),
-    recordAttempt: async () => {
-      throw new Error("recordAttempt not used by T22 receiver");
-    },
-    moveToDlq: async () => {
-      throw new Error("moveToDlq not used by T22 receiver");
-    },
-    list: async () => (await import("neverthrow")).ok([]),
-    getById: async () => (await import("neverthrow")).ok(null),
-  };
-
-  const stubProviderConnectionRepo = {
-    create: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    get: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    list: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    update: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    softDelete: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    restore: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-    getDecryptedSecrets: async () => {
-      throw new Error("not used by T22 receiver");
-    },
-  };
+    overrides?.findConnectionById ?? deps.findConnectionById;
 
   return new FiefReceiver({
-    providerConnectionRepo: stubProviderConnectionRepo as never,
+    providerConnectionRepo: deps.connectionRepo,
     findConnectionById,
-    webhookLogRepo: stubWebhookLogRepo as never,
-    encryptor: createFiefEncryptor(),
+    webhookLogRepo: deps.webhookLogRepo,
+    encryptor: deps.encryptor,
     eventRouter,
   });
 };
