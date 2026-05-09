@@ -1,3 +1,5 @@
+// cspell:ignore opensensor kwargs kwarg setattr Pydantic
+
 import { z } from "zod";
 
 /*
@@ -176,10 +178,25 @@ export const FiefUserCreateInputSchema = z.object({
 });
 export type FiefUserCreateInput = z.infer<typeof FiefUserCreateInputSchema>;
 
+/*
+ * `is_active` is accepted by the upstream `set_user_attributes` via
+ * `**kwargs` (`UserManager.update` calls `setattr(user, field, value)` for
+ * each kwarg) and persisted on `User.is_active`. The upstream
+ * `UserUpdateAdmin` Pydantic schema does NOT enumerate `is_active`, so on
+ * older Fief deploys the field would be silently dropped at request
+ * deserialization. T29 (CUSTOMER_DELETED -> deactivate, do NOT hard-delete)
+ * requires this slot, so we expose it here; the upstream schema in
+ * `opensensor-fief` will be extended in lockstep before T29 ships to prod.
+ *
+ * Restricted to T29's deactivate path on the client side too: the broader
+ * "update" flows (T27) deliberately omit it so a partial Saleor update can
+ * never deactivate a Fief account.
+ */
 export const FiefUserUpdateInputSchema = z.object({
   email: z.string().email().optional(),
   email_verified: z.boolean().optional(),
   password: z.string().min(1).optional(),
+  is_active: z.boolean().optional(),
   fields: z.record(z.unknown()).optional(),
 });
 export type FiefUserUpdateInput = z.infer<typeof FiefUserUpdateInputSchema>;
