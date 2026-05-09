@@ -164,7 +164,7 @@ type FiefClaims = z.infer<typeof fiefClaimsSchema>;
 
 // -- Handler ------------------------------------------------------------------
 
-const handler = async (req: NextRequest): Promise<Response> => {
+const innerHandler = async (req: NextRequest): Promise<Response> => {
   /*
    * T58's verifier consumes the body via `req.arrayBuffer()`. Clone first
    * so we can re-read JSON downstream — the cloned request is independent
@@ -681,6 +681,38 @@ const handler = async (req: NextRequest): Promise<Response> => {
     fiefAccessToken: exchangeParsed.data.accessToken,
     fiefRefreshToken: exchangeParsed.data.refreshToken,
   });
+};
+
+/*
+ * Top-level guard. Any uncaught throw from `innerHandler` would otherwise
+ * surface as Next's default 500 with no body — and the app's tslog is
+ * `type: "hidden"` so structured logs aren't visible either. Funnel
+ * everything through `console.error` (stderr → kubectl logs) and respond
+ * with a 500 envelope that mirrors the controlled error shapes elsewhere
+ * in the route so callers can distinguish "we crashed" from a real fail.
+ */
+const handler = async (req: NextRequest): Promise<Response> => {
+  try {
+    return await innerHandler(req);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    const stack = cause instanceof Error ? cause.stack : undefined;
+
+    // eslint-disable-next-line no-console -- tslog is `type: "hidden"`; stderr is the only operator-visible signal for uncaught route throws
+    console.error("external-obtain-access-tokens: uncaught handler error", {
+      message,
+      stack,
+    });
+
+    return new Response(
+      JSON.stringify({
+        error: "Internal Server Error",
+        reason: "uncaught-exception",
+        message,
+      }),
+      { status: 500, headers: { "content-type": "application/json" } },
+    );
+  }
 };
 
 // -- Helpers ------------------------------------------------------------------
