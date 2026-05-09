@@ -5,10 +5,17 @@ import { err, ok, type Result } from "neverthrow";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type ClaimMappingProjectionEntry } from "@/modules/claims-mapping/projector";
+import { type FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
+import { type FiefAdminToken } from "@/modules/fief-client/admin-api-types";
 import { type IdentityMapRepo } from "@/modules/identity-map/identity-map-repo";
+import { type ReconciliationFlagRepo } from "@/modules/reconciliation/reconciliation-flag-repo";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 import { type EventRouter, type WebhookEventPayload } from "./event-router";
+import {
+  PermissionRoleFieldUseCase,
+  type PermissionRoleFieldUseCaseError,
+} from "./permission-role-field.use-case";
 import {
   type SaleorCustomerDeactivateClient,
   UserDeleteUseCase,
@@ -92,10 +99,24 @@ export type RegisterHandlersError =
 /**
  * Resolved connection-context fed to the use case. The minimal shape so
  * tests don't have to construct a full `ProviderConnection` doc.
+ *
+ * `adminToken` was added in T25 — the permission/role/field use case calls
+ * `FiefAdminApiClient.getUser` to re-fetch the affected user and needs a
+ * decrypted admin token. T23/T24 do NOT consume this field (the field is
+ * resolver-supplied and additive — pre-existing resolvers without it
+ * remain valid because TypeScript treats the missing property as
+ * `undefined`, which T23/T24's handlers ignore).
  */
 export interface ResolvedConnectionContext {
   saleorApiUrl: SaleorApiUrl;
   claimMapping: readonly ClaimMappingProjectionEntry[];
+  /**
+   * Plaintext Fief admin token, decrypted by the production resolver via
+   * `ProviderConnectionRepo.getDecryptedSecrets`. Required for T25's
+   * permission/role re-fetch path; absent → T25 surfaces a typed error.
+   * T23/T24 do not consume this field.
+   */
+  adminToken?: FiefAdminToken;
 }
 
 /**
@@ -124,6 +145,20 @@ export interface RegisterFiefToSaleorHandlersDeps {
    * preserve-audit-trail contract).
    */
   saleorDeactivateClient: SaleorCustomerDeactivateClient;
+  /**
+   * T25 — Fief admin API client (subset). Used by the permission/role
+   * handler to re-fetch the affected user via `getUser`. Production wiring
+   * supplies a `FiefAdminApiClient` instance; tests stub the `getUser`
+   * method only.
+   */
+  fiefAdmin: Pick<FiefAdminApiClient, "getUser">;
+  /**
+   * T25 — `reconciliation_flags` storage. The `user_field.updated`
+   * handler raises a flag here instead of fanning out per-user (schema
+   * changes apply to every user; T38's UI surfaces the banner so
+   * operators can run T30/T31 reconciliation on demand).
+   */
+  reconciliationFlagRepo: ReconciliationFlagRepo;
   resolveConnectionForEvent: ResolveConnectionForEvent;
 }
 
@@ -265,8 +300,98 @@ export const registerFiefToSaleorHandlers = (
   deps.eventRouter.registerHandler("user.deleted", userDeleteHandler);
 
   /*
-   * T25 will append further registerHandler calls below this line.
+   * T25 — Permission / Role / UserField handlers. Five Fief webhook event
+   * types collapse into one use case (see `permission-role-field.use-case.ts`
+   * for the rationale): four of them re-fetch + re-project the affected
+   * user's claims; the fifth (`user_field.updated`) raises a
+   * "reconciliation recommended" flag (T38 reads it).
+   *
+   * Like T23/T24, all five share the same connection-resolution closure.
+   * The use case additionally needs a Fief admin token (resolved by the
+   * production resolver via `ProviderConnectionRepo.getDecryptedSecrets`)
+   * and a `ReconciliationFlagRepo`.
+   *
+   * `user_field.updated` deliberately runs through THIS handler (not its
+   * own) so the connection-resolution + loop-prevention surface stays
+   * unified; the use case discriminates internally on `payload.type`.
+   *
+   * Keys MUST exactly match `WebhookEvent.type` from
+   * `opensensor-fief/fief/services/webhooks/models.py`:
+   *   `UserPermissionCreated.key()` = `"user_permission.created"`
+   *   `UserPermissionDeleted.key()` = `"user_permission.deleted"`
+   *   `UserRoleCreated.key()`       = `"user_role.created"`
+   *   `UserRoleDeleted.key()`       = `"user_role.deleted"`
+   *   `UserFieldUpdated.key()`      = `"user_field.updated"`
    */
+  const permissionRoleFieldUseCase = new PermissionRoleFieldUseCase({
+    identityMapRepo: deps.identityMapRepo,
+    saleorClient: deps.saleorClient,
+    fiefAdmin: deps.fiefAdmin,
+    reconciliationFlagRepo: deps.reconciliationFlagRepo,
+  });
+
+  const permissionRoleFieldHandler = async (
+    payload: WebhookEventPayload,
+  ): Promise<Result<unknown, RegisterHandlersError | PermissionRoleFieldUseCaseError>> => {
+    const connectionResult = await deps.resolveConnectionForEvent(payload);
+
+    if (connectionResult.isErr()) {
+      logger.error("resolveConnectionForEvent failed for Fief permission/role/field event", {
+        eventType: payload.type,
+        eventId: payload.eventId,
+        error: connectionResult.error,
+      });
+
+      return err(
+        new RegisterHandlersError.ConnectionNotResolved(
+          "Failed to resolve connection for Fief permission/role/field event",
+          { cause: connectionResult.error },
+        ),
+      );
+    }
+
+    const context = connectionResult.value;
+
+    if (context === null) {
+      logger.warn(
+        "No connection matched the Fief permission/role/field event — accepting without write",
+        {
+          eventType: payload.type,
+          eventId: payload.eventId,
+        },
+      );
+
+      return err(
+        new RegisterHandlersError.ConnectionNotResolved(
+          "No connection matches this Fief permission/role/field event (resolver returned null)",
+        ),
+      );
+    }
+
+    /*
+     * `user_field.updated` does NOT need an admin token (it raises a
+     * flag without re-fetching any user). The other four event types DO
+     * need one. We only enforce the presence check at the use-case
+     * boundary so a misconfigured resolver surfaces a typed error rather
+     * than crashing on undefined.
+     */
+    const adminTokenForUseCase: FiefAdminToken =
+      context.adminToken ?? ("" as unknown as FiefAdminToken);
+
+    return permissionRoleFieldUseCase.execute({
+      saleorApiUrl: context.saleorApiUrl,
+      claimMapping: context.claimMapping,
+      adminToken: adminTokenForUseCase,
+      payload,
+    });
+  };
+
+  deps.eventRouter
+    .registerHandler("user_permission.created", permissionRoleFieldHandler)
+    .registerHandler("user_permission.deleted", permissionRoleFieldHandler)
+    .registerHandler("user_role.created", permissionRoleFieldHandler)
+    .registerHandler("user_role.deleted", permissionRoleFieldHandler)
+    .registerHandler("user_field.updated", permissionRoleFieldHandler);
 
   return deps.eventRouter;
 };
