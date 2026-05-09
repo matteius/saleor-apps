@@ -829,6 +829,9 @@ importers:
       mongodb-memory-server:
         specifier: 10.4.3
         version: 10.4.3
+      msw:
+        specifier: 2.10.2
+        version: 2.10.2(@types/node@24.1.0)(typescript@5.8.2)
       next-test-api-route-handler:
         specifier: 'catalog:'
         version: 5.0.4(next@15.2.8(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
