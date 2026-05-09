@@ -1,6 +1,7 @@
 // cspell:ignore upsert opensensor
 
 import { compose } from "@saleor/apps-shared/compose";
+import { decodeJwt } from "jose";
 import { err, ok, type Result } from "neverthrow";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
@@ -398,6 +399,30 @@ const handler = async (req: NextRequest): Promise<Response> => {
   }
 
   // -- Extract Fief claims -------------------------------------------------
+  /*
+   * Fief's `/api/token` returns standard OIDC fields — the user claims live
+   * inside the `id_token` JWT, not as a sibling `claims` field. Decode the
+   * id_token here (no verify — the trust boundary is the TLS+client_secret
+   * exchange we just completed) so `extractFiefClaims` has the dictionary
+   * shape it expects.
+   */
+  if (exchangeParsed.data.idToken && !exchangeParsed.data.claims) {
+    try {
+      const payload = decodeJwt(exchangeParsed.data.idToken);
+
+      exchangeParsed.data.claims = payload as Record<string, unknown>;
+    } catch (cause) {
+      logger.error("Failed to decode Fief id_token", {
+        errorMessage: cause instanceof Error ? cause.message : String(cause),
+      });
+
+      return jsonResponse(502, {
+        error: "Bad Gateway",
+        reason: "fief-id-token-undecodable",
+        message: "Fief id_token failed JWT decode",
+      });
+    }
+  }
 
   const claimsResult = extractFiefClaims(exchangeParsed.data);
 
