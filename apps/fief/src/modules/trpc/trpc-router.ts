@@ -6,6 +6,7 @@
  *   - T36 — `claimsMapping`           (TODO)
  *   - T37 — `webhookLog`              (TODO)
  *   - T38 — `reconciliation`          (TODO)
+ *   - T51 — `dlq.replay`              (this file)
  *
  * The browser guard mirrors `apps/stripe/src/modules/trpc/trpc-router.ts` —
  * this module transitively imports server-only deps (Mongo client lifetime
@@ -28,8 +29,12 @@ if (typeof window !== "undefined") {
 }
 
 /* eslint-disable import/first */
+import { createLogger } from "@/lib/logger";
 import { MongoChannelConfigurationRepo } from "@/modules/channel-configuration/repositories/mongodb/mongodb-channel-configuration-repo";
 import { buildChannelConfigRouter } from "@/modules/channel-configuration/trpc-router";
+import { DlqReplayUseCase } from "@/modules/dlq/replay.use-case";
+import { MongodbDlqRepo } from "@/modules/dlq/repositories/mongodb/mongodb-dlq-repo";
+import { buildDlqRouter } from "@/modules/dlq/trpc-router";
 import { FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
 import { FiefBaseUrlSchema } from "@/modules/fief-client/admin-api-types";
 import { FiefOidcClient } from "@/modules/fief-client/oidc-client";
@@ -39,6 +44,9 @@ import { CreateConnectionUseCase } from "@/modules/provider-connections/use-case
 import { DeleteConnectionUseCase } from "@/modules/provider-connections/use-cases/delete-connection.use-case";
 import { RotateConnectionSecretUseCase } from "@/modules/provider-connections/use-cases/rotate-connection-secret.use-case";
 import { UpdateConnectionUseCase } from "@/modules/provider-connections/use-cases/update-connection.use-case";
+import { MongodbOutboundQueueRepo } from "@/modules/queue/repositories/mongodb/mongodb-queue-repo";
+import { eventRouter } from "@/modules/sync/fief-to-saleor/event-router";
+import { MongodbWebhookLogRepo } from "@/modules/webhook-log/repositories/mongodb/mongodb-webhook-log-repo";
 
 import { router } from "./trpc-server";
 
@@ -109,9 +117,32 @@ const channelConfigRouter = buildChannelConfigRouter({
   repo: channelConfigurationRepo,
 });
 
+/*
+ * T51 — DLQ replay sub-router.
+ *
+ * Wires the production `DlqReplayUseCase`. Every collaborator is a
+ * shared singleton (Mongo repos, the module-level `eventRouter` from
+ * T22, and the outbound queue repo from T52). The `fiefReceiver` seam
+ * adapts `eventRouter.dispatch(payload)` so the use case doesn't have
+ * to import receiver internals.
+ */
+const dlqReplayUseCase = new DlqReplayUseCase({
+  dlqRepo: new MongodbDlqRepo(),
+  webhookLogRepo: new MongodbWebhookLogRepo(),
+  providerConnectionRepo,
+  fiefReceiver: {
+    dispatch: (payload) => eventRouter.dispatch(payload),
+  },
+  outboundQueue: new MongodbOutboundQueueRepo(),
+  logger: createLogger("trpc.dlq.replay"),
+});
+
+const dlqRouter = buildDlqRouter({ useCase: dlqReplayUseCase });
+
 export const trpcRouter = router({
   connections: connectionsRouter,
   channelConfig: channelConfigRouter,
+  dlq: dlqRouter,
 });
 
 export type TrpcRouter = typeof trpcRouter;
