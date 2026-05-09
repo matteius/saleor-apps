@@ -1,0 +1,5 @@
+.fief-app-config.json
+
+# Test artifacts
+node_modules/
+/test-results/

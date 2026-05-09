@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.v2.json",
+  "extends": ["//"],
+  "tasks": {
+    "deploy": {
+      "env": [
+        "ALLOWED_DOMAIN_PATTERN",
+        "APL",
+        "APP_API_BASE_URL",
+        "APP_IFRAME_BASE_URL",
+        "APP_NAME",
+        "CRON_SECRET",
+        "FIEF_BASE_URL",
+        "FIEF_SALEOR_TO_FIEF_DISABLED",
+        "FIEF_SYNC_DISABLED",
+        "MANIFEST_APP_ID",
+        "MONGODB_DATABASE",
+        "MONGODB_URL",
+        "NEW_SECRET_KEY",
+        "SECRET_KEY"
+      ]
+    }
+  }
+}

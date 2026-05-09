@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "saleor-app-fief",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "check-types": "tsc",
+    "dev": "NODE_OPTIONS='--inspect' next dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "start": "next start",
+    "test": "pnpm run test:unit",
+    "test:ci": "pnpm run test:unit --coverage",
+    "test:unit": "vitest --project=unit"
+  },
+  "config": {
+    "saleor": {
+      "schemaVersion": "3.22"
+    }
+  },
+  "dependencies": {
+    "@hookform/resolvers": "catalog:",
+    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/apps-shared": "workspace:*",
+    "@saleor/apps-ui": "workspace:*",
+    "@saleor/macaw-ui": "catalog:",
+    "@saleor/react-hook-form-macaw": "workspace:*",
+    "@t3-oss/env-nextjs": "catalog:",
+    "modern-errors": "catalog:",
+    "modern-errors-serialize": "catalog:",
+    "mongodb": "^6.3.0",
+    "neverthrow": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-hook-form": "catalog:",
+    "urql": "catalog:",
+    "usehooks-ts": "catalog:",
+    "zod": "catalog:",
+    "zod-validation-error": "catalog:"
+  },
+  "devDependencies": {
+    "@saleor/eslint-config-apps": "workspace:*",
+    "@saleor/typescript-config-apps": "workspace:*",
+    "@total-typescript/ts-reset": "0.6.1",
+    "@types/node": "catalog:",
+    "@types/react": "18.2.5",
+    "@types/react-dom": "18.2.5",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-n": "catalog:",
+    "next-test-api-route-handler": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  }
+}
