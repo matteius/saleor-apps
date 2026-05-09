@@ -49,13 +49,10 @@ import {
  *      unique-email constraint guarantees the second create's user is the
  *      same identity the first request established.
  *
- * /* cspell:words retriable
- */
-/*
  * Errors are wrapped in `SaleorCustomerCreateFailed` / `SaleorMetadataWriteFailed`
  * to match the use-case contract. Network/HTTP/JSON failures (`fetch` rejects
- * or non-2xx) are mapped to the same write-failure shapes — they're retriable
- * from T19's perspective.
+ * or non-2xx) are mapped to the same write-failure shapes — retry-safe from
+ * T19's perspective.
  */
 
 const logger = createLogger("modules.sync.fief-to-saleor.saleor-graphql-client");
