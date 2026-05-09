@@ -3,7 +3,11 @@ import { err, ok, type Result } from "neverthrow";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
-import { FiefAdminTokenSchema, FiefClientIdSchema } from "@/modules/fief-client/admin-api-types";
+import {
+  FiefAdminTokenSchema,
+  type FiefBaseUrl,
+  FiefClientIdSchema,
+} from "@/modules/fief-client/admin-api-types";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 import { type ProviderConnectionId } from "../provider-connection";
@@ -59,17 +63,22 @@ export interface DeleteConnectionUseCaseInput {
 
 export interface DeleteConnectionUseCaseDeps {
   repo: ProviderConnectionRepo;
-  fiefAdmin: FiefAdminApiClient;
+  /**
+   * Per-call admin client builder; the connection record carries the right
+   * `baseUrl` so `deleteClient` / `deleteWebhook` target the tenant the
+   * connection was provisioned against.
+   */
+  adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
 }
 
 export class DeleteConnectionUseCase {
   private readonly repo: ProviderConnectionRepo;
-  private readonly fiefAdmin: FiefAdminApiClient;
+  private readonly adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   private readonly logger = createLogger("provider-connections.delete-connection");
 
   constructor(deps: DeleteConnectionUseCaseDeps) {
     this.repo = deps.repo;
-    this.fiefAdmin = deps.fiefAdmin;
+    this.adminClientFactory = deps.adminClientFactory;
   }
 
   async execute(
@@ -121,12 +130,13 @@ export class DeleteConnectionUseCase {
 
     const adminToken = FiefAdminTokenSchema.parse(decrypted.value.fief.adminToken);
     const fiefClientId = FiefClientIdSchema.parse(connection.fief.clientId);
+    const fiefAdmin = this.adminClientFactory({ baseUrl: connection.fief.baseUrl });
 
     /*
      * Step 1 — delete the Fief OIDC client. 404 is treated as success
      * (already gone is the intent state). Any other failure aborts.
      */
-    const clientDelete = await this.fiefAdmin.deleteClient(adminToken, fiefClientId);
+    const clientDelete = await fiefAdmin.deleteClient(adminToken, fiefClientId);
 
     if (
       clientDelete.isErr() &&
@@ -151,10 +161,7 @@ export class DeleteConnectionUseCase {
      * Skipped entirely for legacy connections that don't track a webhook id.
      */
     if (connection.fief.webhookId !== null) {
-      const webhookDelete = await this.fiefAdmin.deleteWebhook(
-        adminToken,
-        connection.fief.webhookId,
-      );
+      const webhookDelete = await fiefAdmin.deleteWebhook(adminToken, connection.fief.webhookId);
 
       if (
         webhookDelete.isErr() &&

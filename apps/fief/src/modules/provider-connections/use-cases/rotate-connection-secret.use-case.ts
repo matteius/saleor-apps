@@ -5,6 +5,7 @@ import { err, ok, type Result } from "neverthrow";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
+import { type FiefBaseUrl } from "@/modules/fief-client/admin-api-types";
 import { FiefAdminTokenSchema } from "@/modules/fief-client/admin-api-types";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
@@ -120,7 +121,12 @@ export interface CancelRotationInput {
 
 export interface RotateConnectionSecretUseCaseDeps {
   repo: ProviderConnectionRepo;
-  fiefAdmin: FiefAdminApiClient;
+  /**
+   * Per-call admin client builder; the connection record carries the right
+   * `baseUrl` so each rotation call targets the tenant the connection was
+   * provisioned against.
+   */
+  adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   /** Test seam — defaults to `node:crypto.randomBytes`. */
   randomBytesImpl?: (n: number) => Buffer;
 }
@@ -141,13 +147,13 @@ export interface InitiateRotationResult {
 
 export class RotateConnectionSecretUseCase {
   private readonly repo: ProviderConnectionRepo;
-  private readonly fiefAdmin: FiefAdminApiClient;
+  private readonly adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   private readonly randomBytesImpl: (n: number) => Buffer;
   private readonly logger = createLogger("provider-connections.rotate-connection-secret");
 
   constructor(deps: RotateConnectionSecretUseCaseDeps) {
     this.repo = deps.repo;
-    this.fiefAdmin = deps.fiefAdmin;
+    this.adminClientFactory = deps.adminClientFactory;
     this.randomBytesImpl = deps.randomBytesImpl ?? ((n) => randomBytes(n));
   }
 
@@ -191,6 +197,7 @@ export class RotateConnectionSecretUseCase {
     }
 
     const adminToken = FiefAdminTokenSchema.parse(decryptedSecrets.value.fief.adminToken);
+    const fiefAdmin = this.adminClientFactory({ baseUrl: connection.fief.baseUrl });
 
     /*
      * Step A — rotate the webhook signing secret on Fief. Fief generates +
@@ -206,7 +213,7 @@ export class RotateConnectionSecretUseCase {
     let newPendingWebhookSecretToStore: string;
 
     if (connection.fief.webhookId !== null) {
-      const rotateResult = await this.fiefAdmin.rotateWebhookSecret(
+      const rotateResult = await fiefAdmin.rotateWebhookSecret(
         adminToken,
         connection.fief.webhookId,
       );

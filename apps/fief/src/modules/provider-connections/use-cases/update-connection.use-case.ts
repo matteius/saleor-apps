@@ -3,7 +3,11 @@ import { err, ok, type Result } from "neverthrow";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
-import { FiefAdminTokenSchema, FiefClientIdSchema } from "@/modules/fief-client/admin-api-types";
+import {
+  FiefAdminTokenSchema,
+  type FiefBaseUrl,
+  FiefClientIdSchema,
+} from "@/modules/fief-client/admin-api-types";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 import {
@@ -62,17 +66,22 @@ export interface UpdateConnectionUseCaseInput {
 
 export interface UpdateConnectionUseCaseDeps {
   repo: ProviderConnectionRepo;
-  fiefAdmin: FiefAdminApiClient;
+  /**
+   * Per-call admin client builder; the connection record carries the right
+   * `baseUrl` so each `execute()` constructs a fresh client targeting the
+   * tenant the connection was provisioned against.
+   */
+  adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
 }
 
 export class UpdateConnectionUseCase {
   private readonly repo: ProviderConnectionRepo;
-  private readonly fiefAdmin: FiefAdminApiClient;
+  private readonly adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   private readonly logger = createLogger("provider-connections.update-connection");
 
   constructor(deps: UpdateConnectionUseCaseDeps) {
     this.repo = deps.repo;
-    this.fiefAdmin = deps.fiefAdmin;
+    this.adminClientFactory = deps.adminClientFactory;
   }
 
   async execute(
@@ -136,8 +145,9 @@ export class UpdateConnectionUseCase {
       const adminToken = FiefAdminTokenSchema.parse(decrypted.value.fief.adminToken);
       const fiefClientId = FiefClientIdSchema.parse(connection.fief.clientId);
       const redirectUris = newOrigins!.map((origin) => origin.toString());
+      const fiefAdmin = this.adminClientFactory({ baseUrl: connection.fief.baseUrl });
 
-      const patchResult = await this.fiefAdmin.updateClient(adminToken, fiefClientId, {
+      const patchResult = await fiefAdmin.updateClient(adminToken, fiefClientId, {
         redirect_uris: redirectUris,
       });
 

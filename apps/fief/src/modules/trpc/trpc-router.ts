@@ -39,7 +39,7 @@ import { DlqReplayUseCase } from "@/modules/dlq/replay.use-case";
 import { MongodbDlqRepo } from "@/modules/dlq/repositories/mongodb/mongodb-dlq-repo";
 import { buildDlqRouter } from "@/modules/dlq/trpc-router";
 import { FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
-import { FiefBaseUrlSchema } from "@/modules/fief-client/admin-api-types";
+import { type FiefBaseUrl, FiefBaseUrlSchema } from "@/modules/fief-client/admin-api-types";
 import { FiefOidcClient } from "@/modules/fief-client/oidc-client";
 import { MongodbProviderConnectionRepo } from "@/modules/provider-connections/repositories/mongodb/mongodb-provider-connection-repo";
 import { buildConnectionsRouter } from "@/modules/provider-connections/trpc-router";
@@ -74,45 +74,36 @@ const providerConnectionRepo = new MongodbProviderConnectionRepo();
 const channelConfigurationRepo = new MongoChannelConfigurationRepo();
 
 /*
- * The four lifecycle use cases all need a `FiefAdminApiClient`. Production
- * builds one per use-case construction; the client is stateless per request
- * (the admin token is supplied per call) so a single shared instance is fine.
+ * The four lifecycle use cases all need a `FiefAdminApiClient`, and the
+ * client's `baseUrl` is locked at construction time. But connection-lifecycle
+ * calls run against ONE Fief tenant per call — the tenant's base URL is on
+ * the connection record (or, for `create`, on the form input), NOT a single
+ * deployment-wide constant. So we inject an `adminClientFactory` and let each
+ * `execute()` call construct a fresh client from the right baseUrl.
  *
- * NOTE: The admin client's `baseUrl` is required at construction time.
- * Connection-lifecycle use cases run against ONE Fief tenant per call — but
- * the tenant's base URL is on the connection record, not the constructor.
- * To keep the existing T17 use-case API stable we construct the admin client
- * with a placeholder base URL here; in practice each use case immediately
- * uses the decrypted admin token + the per-connection base URL via dynamic
- * client construction (see use cases). If/when T17 grows a per-call client
- * factory we'll thread that here.
- *
- * Until then, production deployments MUST set FIEF_BASE_URL in env and we
- * read it via the env helper to seed the fallback admin client. Tests do
- * not exercise this branch (they swap in stubs at the router boundary).
+ * Tests pass their own factory (`() => mockFiefAdmin`) at the router boundary.
  */
-const seedFiefAdminClient = FiefAdminApiClient.create({
-  baseUrl: FiefBaseUrlSchema.parse("https://placeholder-not-used.invalid/"),
-});
+const adminClientFactory = ({ baseUrl }: { baseUrl: FiefBaseUrl }) =>
+  FiefAdminApiClient.create({ baseUrl });
 
 const connectionsRouter = buildConnectionsRouter({
   repo: providerConnectionRepo,
   useCases: {
     createConnection: new CreateConnectionUseCase({
       repo: providerConnectionRepo,
-      fiefAdmin: seedFiefAdminClient,
+      adminClientFactory,
     }),
     updateConnection: new UpdateConnectionUseCase({
       repo: providerConnectionRepo,
-      fiefAdmin: seedFiefAdminClient,
+      adminClientFactory,
     }),
     rotateConnectionSecret: new RotateConnectionSecretUseCase({
       repo: providerConnectionRepo,
-      fiefAdmin: seedFiefAdminClient,
+      adminClientFactory,
     }),
     deleteConnection: new DeleteConnectionUseCase({
       repo: providerConnectionRepo,
-      fiefAdmin: seedFiefAdminClient,
+      adminClientFactory,
     }),
   },
   oidcClientFactory: ({ baseUrl }) => new FiefOidcClient({ baseUrl }),

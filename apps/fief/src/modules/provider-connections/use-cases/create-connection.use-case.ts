@@ -7,6 +7,7 @@ import { createLogger } from "@/lib/logger";
 import { type FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
 import {
   FiefAdminTokenSchema,
+  type FiefBaseUrl,
   FiefClientIdSchema,
   FiefTenantIdSchema,
   FiefWebhookIdSchema,
@@ -117,20 +118,26 @@ const DEFAULT_WEBHOOK_EVENTS: FiefWebhookEventList = [
 
 export interface CreateConnectionUseCaseDeps {
   repo: ProviderConnectionRepo;
-  fiefAdmin: FiefAdminApiClient;
+  /**
+   * Per-call admin client builder. The Fief admin client's `baseUrl` is locked
+   * at construction; we receive a factory so each `execute()` call can build
+   * a client targeting the *form's* baseUrl rather than a deployment-wide
+   * constant. Tests pass `() => mockFiefAdmin`.
+   */
+  adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   /** Cryptographically-secure random byte source. Test seam. */
   randomBytesImpl?: (n: number) => Buffer;
 }
 
 export class CreateConnectionUseCase {
   private readonly repo: ProviderConnectionRepo;
-  private readonly fiefAdmin: FiefAdminApiClient;
+  private readonly adminClientFactory: (args: { baseUrl: FiefBaseUrl }) => FiefAdminApiClient;
   private readonly randomBytesImpl: (n: number) => Buffer;
   private readonly logger = createLogger("provider-connections.create-connection");
 
   constructor(deps: CreateConnectionUseCaseDeps) {
     this.repo = deps.repo;
-    this.fiefAdmin = deps.fiefAdmin;
+    this.adminClientFactory = deps.adminClientFactory;
     this.randomBytesImpl = deps.randomBytesImpl ?? ((n) => randomBytes(n));
   }
 
@@ -140,11 +147,12 @@ export class CreateConnectionUseCase {
     const adminToken = FiefAdminTokenSchema.parse(input.fief.adminToken);
     const tenantId = FiefTenantIdSchema.parse(input.fief.tenantId);
     const baseUrl = createFiefBaseUrl(input.fief.baseUrl);
+    const fiefAdmin = this.adminClientFactory({ baseUrl });
 
     /*
      * Step 1 — provision the Fief OIDC client.
      */
-    const clientResult = await this.fiefAdmin.createClient(adminToken, {
+    const clientResult = await fiefAdmin.createClient(adminToken, {
       name: input.fief.clientName,
       first_party: true,
       client_type: "confidential",
@@ -184,7 +192,7 @@ export class CreateConnectionUseCase {
      * use case would mean threading a `withId` option through T8.
      */
     const placeholderUrl = appendConnectionIdQuery(input.webhookReceiverBaseUrl, "__pending__");
-    const webhookResult = await this.fiefAdmin.createWebhook(adminToken, {
+    const webhookResult = await fiefAdmin.createWebhook(adminToken, {
       url: placeholderUrl,
       events: input.webhookEvents ?? DEFAULT_WEBHOOK_EVENTS,
     });
@@ -195,7 +203,7 @@ export class CreateConnectionUseCase {
         error: webhookResult.error,
       });
       // Roll back the client we just created.
-      await this.bestEffortDeleteClient(adminToken, fiefClientUuid);
+      await this.bestEffortDeleteClient(fiefAdmin, adminToken, fiefClientUuid);
 
       return err(
         new CreateConnectionError.FiefProvisioningFailed(
@@ -243,8 +251,8 @@ export class CreateConnectionUseCase {
         saleorApiUrl: input.saleorApiUrl,
         error: persisted.error,
       });
-      await this.bestEffortDeleteWebhook(adminToken, webhookId);
-      await this.bestEffortDeleteClient(adminToken, fiefClientUuid);
+      await this.bestEffortDeleteWebhook(fiefAdmin, adminToken, webhookId);
+      await this.bestEffortDeleteClient(fiefAdmin, adminToken, fiefClientUuid);
 
       return err(
         new CreateConnectionError.PersistFailed(
@@ -262,7 +270,7 @@ export class CreateConnectionUseCase {
      * usable for outbound (Saleor → Fief); only inbound webhooks would
      * misfire, which T34 (reconciliation tooling) can repair.
      */
-    const patchResult = await this.fiefAdmin.updateWebhook(adminToken, webhookId, {
+    const patchResult = await fiefAdmin.updateWebhook(adminToken, webhookId, {
       url: appendConnectionIdQuery(input.webhookReceiverBaseUrl, connection.id),
     });
 
@@ -282,10 +290,11 @@ export class CreateConnectionUseCase {
   }
 
   private async bestEffortDeleteClient(
+    fiefAdmin: FiefAdminApiClient,
     token: ReturnType<(typeof FiefAdminTokenSchema)["parse"]>,
     id: ReturnType<(typeof FiefClientIdSchema)["parse"]>,
   ): Promise<void> {
-    const result = await this.fiefAdmin.deleteClient(token, id);
+    const result = await fiefAdmin.deleteClient(token, id);
 
     if (result.isErr()) {
       this.logger.warn(
@@ -299,10 +308,11 @@ export class CreateConnectionUseCase {
   }
 
   private async bestEffortDeleteWebhook(
+    fiefAdmin: FiefAdminApiClient,
     token: ReturnType<(typeof FiefAdminTokenSchema)["parse"]>,
     id: ReturnType<(typeof FiefWebhookIdSchema)["parse"]>,
   ): Promise<void> {
-    const result = await this.fiefAdmin.deleteWebhook(token, id);
+    const result = await fiefAdmin.deleteWebhook(token, id);
 
     if (result.isErr()) {
       this.logger.warn(

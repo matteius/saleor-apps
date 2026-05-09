@@ -94,7 +94,7 @@ describe("RotateConnectionSecretUseCase — full lifecycle", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     /* --- Initiate. --- */
@@ -151,7 +151,7 @@ describe("RotateConnectionSecretUseCase — full lifecycle", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
       randomBytesImpl: (n) => Buffer.alloc(n, 0xcd),
     });
 
@@ -180,7 +180,7 @@ describe("RotateConnectionSecretUseCase — guards + failure modes", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const first = await useCase.initiateRotation({
@@ -207,7 +207,7 @@ describe("RotateConnectionSecretUseCase — guards + failure modes", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const result = await useCase.confirmRotation({
@@ -231,7 +231,7 @@ describe("RotateConnectionSecretUseCase — guards + failure modes", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const result = await useCase.initiateRotation({
@@ -252,7 +252,7 @@ describe("RotateConnectionSecretUseCase — guards + failure modes", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const result = await useCase.initiateRotation({
@@ -275,7 +275,7 @@ describe("RotateConnectionSecretUseCase — cancelRotation", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     /* Open a rotation so cancelRotation has something to clean up. */
@@ -324,7 +324,7 @@ describe("RotateConnectionSecretUseCase — cancelRotation", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const result = await useCase.cancelRotation({
@@ -344,7 +344,7 @@ describe("RotateConnectionSecretUseCase — cancelRotation", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const first = await useCase.initiateRotation({
@@ -390,7 +390,7 @@ describe("RotateConnectionSecretUseCase — cancelRotation", () => {
 
     const useCase = new RotateConnectionSecretUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
     });
 
     const result = await useCase.cancelRotation({

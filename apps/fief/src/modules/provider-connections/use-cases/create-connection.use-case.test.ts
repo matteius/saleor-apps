@@ -155,7 +155,7 @@ describe("CreateConnectionUseCase — happy path", () => {
     const repo = new InMemoryProviderConnectionRepo();
     const useCase = new CreateConnectionUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
       randomBytesImpl: (n) => Buffer.alloc(n, 0xab),
     });
 
@@ -196,7 +196,7 @@ describe("CreateConnectionUseCase — happy path", () => {
     const repo = new InMemoryProviderConnectionRepo();
     const useCase = new CreateConnectionUseCase({
       repo,
-      fiefAdmin: buildFiefClient(),
+      adminClientFactory: () => buildFiefClient(),
       randomBytesImpl: (n) => Buffer.alloc(n, 0x5a),
     });
 
@@ -230,7 +230,10 @@ describe("CreateConnectionUseCase — failure modes", () => {
     );
 
     const repo = new InMemoryProviderConnectionRepo();
-    const useCase = new CreateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new CreateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
 
     const result = await useCase.execute(buildInput());
 
@@ -260,7 +263,10 @@ describe("CreateConnectionUseCase — failure modes", () => {
     );
 
     const repo = new InMemoryProviderConnectionRepo();
-    const useCase = new CreateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new CreateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
 
     const result = await useCase.execute(buildInput());
 

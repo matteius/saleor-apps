@@ -84,7 +84,10 @@ describe("UpdateConnectionUseCase — happy paths", () => {
       ),
     );
 
-    const useCase = new UpdateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new UpdateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
     const result = await useCase.execute({
       saleorApiUrl: SALEOR_API_URL,
       id: seeded.id,
@@ -126,7 +129,10 @@ describe("UpdateConnectionUseCase — happy paths", () => {
       }),
     );
 
-    const useCase = new UpdateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new UpdateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
     const result = await useCase.execute({
       saleorApiUrl: SALEOR_API_URL,
       id: seeded.id,
@@ -166,7 +172,10 @@ describe("UpdateConnectionUseCase — happy paths", () => {
       }),
     );
 
-    const useCase = new UpdateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new UpdateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
     const result = await useCase.execute({
       saleorApiUrl: SALEOR_API_URL,
       id: seeded.id,
@@ -189,7 +198,10 @@ describe("UpdateConnectionUseCase — happy paths", () => {
 describe("UpdateConnectionUseCase — failure modes", () => {
   it("returns NotFound when the connection does not exist", async () => {
     const repo = new InMemoryProviderConnectionRepo();
-    const useCase = new UpdateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new UpdateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
 
     const result = await useCase.execute({
       saleorApiUrl: SALEOR_API_URL,
@@ -211,7 +223,10 @@ describe("UpdateConnectionUseCase — failure modes", () => {
       ),
     );
 
-    const useCase = new UpdateConnectionUseCase({ repo, fiefAdmin: buildFiefClient() });
+    const useCase = new UpdateConnectionUseCase({
+      repo,
+      adminClientFactory: () => buildFiefClient(),
+    });
     const result = await useCase.execute({
       saleorApiUrl: SALEOR_API_URL,
       id: seeded.id,

@@ -27,6 +27,19 @@ import {
 } from "./oidc-types";
 
 /*
+ * Re-export error classes so test code (and future callers) can grab them via
+ * the oidc-client surface without reaching into ./oidc-errors directly.
+ */
+export {
+  FiefOidcDiscoveryError,
+  type FiefOidcError,
+  FiefOidcJwksError,
+  FiefOidcRevokeError,
+  FiefOidcTokenError,
+  FiefOidcVerifyError,
+};
+
+/*
  * Fief OIDC client wrapper — auth-plane hot path.
  *
  * What lives in this file
