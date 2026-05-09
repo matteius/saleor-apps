@@ -667,7 +667,20 @@ const handler = async (req: NextRequest): Promise<Response> => {
     writtenSeq,
   });
 
-  return jsonResponse(200, shaped as unknown as Record<string, unknown>);
+  /*
+   * Wire-contract: the Saleor `BasePlugin` Python client (T56) at
+   * `saleor/plugins/fief/client.py:198-218` reads `payload["claims"]` and
+   * `payload["fiefAccessToken"]` (KeyError without them) and uses
+   * `payload.get("fiefRefreshToken")`. Surface those alongside the existing
+   * `ShapedSaleorPluginClaims` keys (id, email, metadata, ...) so both
+   * consumers see what they expect off the same response.
+   */
+  return jsonResponse(200, {
+    ...(shaped as unknown as Record<string, unknown>),
+    claims: fiefClaims,
+    fiefAccessToken: exchangeParsed.data.accessToken,
+    fiefRefreshToken: exchangeParsed.data.refreshToken,
+  });
 };
 
 // -- Helpers ------------------------------------------------------------------
