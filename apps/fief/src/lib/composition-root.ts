@@ -1,4 +1,4 @@
-import { err, ok } from "neverthrow";
+import { err } from "neverthrow";
 
 import { saleorApp } from "@/lib/saleor-app";
 import { type IChannelConfigurationRepo } from "@/modules/channel-configuration/channel-configuration-repo";
@@ -11,7 +11,6 @@ import { createFiefEncryptor, type RotatingFiefEncryptor } from "@/modules/crypt
 import { FiefAdminApiClient } from "@/modules/fief-client/admin-api-client";
 import { type FiefBaseUrl } from "@/modules/fief-client/admin-api-types";
 import { FiefOidcClient } from "@/modules/fief-client/oidc-client";
-import { createSaleorUserId } from "@/modules/identity-map/identity-map";
 import { type IdentityMapRepo } from "@/modules/identity-map/identity-map-repo";
 import { MongoIdentityMapRepo } from "@/modules/identity-map/repositories/mongodb/mongodb-identity-map-repo";
 import { type ProviderConnection } from "@/modules/provider-connections/provider-connection";
@@ -21,10 +20,8 @@ import {
 } from "@/modules/provider-connections/provider-connection-repo";
 import { MongodbProviderConnectionRepo } from "@/modules/provider-connections/repositories/mongodb/mongodb-provider-connection-repo";
 import { type FindConnectionById } from "@/modules/sync/fief-to-saleor/receiver";
-import {
-  type SaleorCustomerClient,
-  UserUpsertUseCaseError,
-} from "@/modules/sync/fief-to-saleor/user-upsert.use-case";
+import { createSaleorGraphQLCustomerClient } from "@/modules/sync/fief-to-saleor/saleor-graphql-client";
+import { type SaleorCustomerClient } from "@/modules/sync/fief-to-saleor/user-upsert.use-case";
 import { MongodbWebhookLogRepo } from "@/modules/webhook-log/repositories/mongodb/mongodb-webhook-log-repo";
 import { type WebhookLogRepo } from "@/modules/webhook-log/webhook-log-repo";
 
@@ -273,48 +270,24 @@ export const findConnectionById: FindConnectionById = async (connectionId) => {
 };
 
 /**
- * Stub Saleor write surface. The full T7 GraphQL wiring lands as a follow-up;
- * T40's integration tests stub this client (the unit tests for T19 already
- * cover the contract).
+ * Production Saleor write surface (T7).
  *
- * For the auth-plane (T19) cold path, Saleor itself creates the customer via
- * its `_get_or_create_user(claims)` step (`saleor/plugins/fief/plugin.py:230`)
- * AFTER reading our response — so we don't actually need to write to Saleor
- * here for auth to succeed. The route still calls `customerCreate` to
- * populate the `identity_map` Fief↔Saleor binding for the future webhook
- * sync flow; without T7's GraphQL the binding's `saleorUserId` is a synthetic
- * value derived from the Fief `sub`. The webhook reconciliation flow (T30) is
- * expected to repair these on first contact.
- *
- * Returning `Result.err` would surface as 500 to the storefront and block
- * sign-in entirely; returning a synthetic-id `Result.ok` keeps the auth flow
- * unblocked while T7 is still pending.
+ * Resolves the per-install app-token from the APL on every call so the client
+ * tracks token rotations transparently. `customerCreate` does
+ * find-or-create-by-email so an existing Saleor customer (with order history)
+ * is bound to the new Fief identity instead of a duplicate getting minted —
+ * the "user owns their historical orders" requirement.
  */
-const stubSaleorClient: SaleorCustomerClient = {
-  customerCreate: async (input) => {
-    /*
-     * Synthetic, deterministic Saleor relay-id placeholder. Format mirrors
-     * a real Saleor `User:<id>` base64 ID so downstream code that decodes
-     * does not blow up. The string `fief-pending-<email-hash>` makes orphan
-     * rows easy to grep for during the T30 reconciliation pass.
-     */
-    const tag = `fief-pending-${input.email}`;
-    const synthetic = Buffer.from(`User:${tag}`, "utf-8").toString("base64");
-    const idResult = createSaleorUserId(synthetic);
+const buildSaleorCustomerClient = (): SaleorCustomerClient =>
+  createSaleorGraphQLCustomerClient({
+    tokenProvider: async (saleorApiUrl) => {
+      const auth = await saleorApp.apl.get(saleorApiUrl);
 
-    if (idResult.isErr()) {
-      return err(
-        new UserUpsertUseCaseError.SaleorCustomerCreateFailed(
-          `composition-root: failed to brand synthetic SaleorUserId for ${input.email}`,
-        ),
-      );
-    }
+      if (!auth) return undefined;
 
-    return ok({ saleorUserId: idResult.value, email: input.email });
-  },
-  updateMetadata: async () => ok(undefined),
-  updatePrivateMetadata: async () => ok(undefined),
-};
+      return { saleorApiUrl: auth.saleorApiUrl, token: auth.token };
+    },
+  });
 
 /**
  * Compose the production dependency graph. Process-cached: every call returns
@@ -354,7 +327,7 @@ export const getProductionDeps = (): ProductionDeps => {
     oidcClientFactory: buildOidcClient,
     adminClientFactory: buildAdminClient,
     findConnectionById,
-    saleorClient: stubSaleorClient,
+    saleorClient: buildSaleorCustomerClient(),
   };
 
   return cachedDeps;
