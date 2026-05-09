@@ -67,6 +67,7 @@ import {
   type DeleteConnectionUseCaseInput,
 } from "./use-cases/delete-connection.use-case";
 import {
+  type CancelRotationInput,
   type ConfirmRotationInput,
   type InitiateRotationInput,
   type InitiateRotationResult,
@@ -266,6 +267,10 @@ const confirmRotationInputSchema = z.object({
   id: z.string().uuid(),
 });
 
+const cancelRotationInputSchema = z.object({
+  id: z.string().uuid(),
+});
+
 const deleteInputSchema = z.object({
   id: z.string().uuid(),
 });
@@ -286,7 +291,7 @@ export interface ConnectionsRouterUseCases {
   updateConnection: Pick<UpdateConnectionUseCase, "execute">;
   rotateConnectionSecret: Pick<
     RotateConnectionSecretUseCase,
-    "initiateRotation" | "confirmRotation"
+    "initiateRotation" | "confirmRotation" | "cancelRotation"
   >;
   deleteConnection: Pick<DeleteConnectionUseCase, "execute">;
 }
@@ -575,6 +580,53 @@ export const buildConnectionsRouter = (deps: ConnectionsRouterDeps) => {
 
         if (result.isErr()) {
           ctx.logger.error("connections.confirmRotation failed", { error: result.error });
+          throw mapLifecycleErrorToTrpc(result.error);
+        }
+
+        return redactProviderConnection(result.value);
+      }),
+
+    /**
+     * Abort an in-flight rotation. Drops the pending slots and returns the
+     * connection to its pre-`rotateSecret` shape. Use this when the operator
+     * wants to back out before promoting (e.g. they pasted the wrong client
+     * secret, or Fief never delivered events signed with the new webhook
+     * secret). Mirrors `confirmRotation`'s shape so the UI can call it the
+     * same way.
+     *
+     * Maps `NoPendingRotation` to `CONFLICT` (consistent with the other
+     * lifecycle procedures' categorical mapping).
+     */
+    cancelRotation: protectedClientProcedure
+      .input(cancelRotationInputSchema)
+      .mutation(async ({ ctx, input }): Promise<RedactedProviderConnection> => {
+        const saleorApiUrlResult = createSaleorApiUrl(ctx.saleorApiUrl);
+
+        if (saleorApiUrlResult.isErr()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid saleorApiUrl in request context",
+          });
+        }
+
+        let useCaseInput: CancelRotationInput;
+
+        try {
+          useCaseInput = {
+            saleorApiUrl: saleorApiUrlResult.value,
+            id: createProviderConnectionId(input.id),
+          };
+        } catch (cause) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Invalid cancel-rotation input: ${(cause as Error).message}`,
+          });
+        }
+
+        const result = await useCases.rotateConnectionSecret.cancelRotation(useCaseInput);
+
+        if (result.isErr()) {
+          ctx.logger.error("connections.cancelRotation failed", { error: result.error });
           throw mapLifecycleErrorToTrpc(result.error);
         }
 

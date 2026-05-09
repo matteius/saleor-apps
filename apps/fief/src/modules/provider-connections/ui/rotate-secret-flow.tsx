@@ -10,13 +10,18 @@
  *     **plaintext webhook secret** which we display ONCE for the operator
  *     to copy (it will not be available again).
  *
- *   Stage 2 — Confirm
+ *   Stage 2 — Confirm OR Cancel (wire-up follow-up)
  *     After the operator has verified Fief is now signing/issuing with the
  *     new secret, they click "Confirm rotation" which calls
  *     `connections.confirmRotation`. The use case promotes pending → current.
+ *     If they realize the rotation was a mistake (wrong pasted secret, Fief
+ *     never delivered with the new key, etc.) they instead click "Cancel
+ *     rotation" which calls `connections.cancelRotation` — that drops the
+ *     pending slots and reverts the UI to stage 1 so they can re-initiate.
  *
  * Stage transition is driven by `rotateMutation.data` being set: once the
- * initiate call returns successfully, we switch to stage 2.
+ * initiate call returns successfully, we switch to stage 2. Cancelling clears
+ * the local mutation cache so we drop back to stage 1.
  */
 import { useDashboardNotification } from "@saleor/apps-shared/use-dashboard-notification";
 import { Box, Button, Text } from "@saleor/macaw-ui";
@@ -53,6 +58,22 @@ export const RotateSecretFlow = ({ connection, onClose }: RotateSecretFlowProps)
     },
   });
 
+  const cancelMutation = trpcClient.connections.cancelRotation.useMutation({
+    onSuccess() {
+      notifySuccess("Rotation cancelled");
+      /*
+       * Drop the cached initiate result so the gating expression below
+       * (`stage2 = rotateMutation.data`) flips back to stage 1 — the
+       * operator can immediately initiate a fresh rotation without having
+       * to close + reopen the panel.
+       */
+      rotateMutation.reset();
+    },
+    onError(err) {
+      notifyError("Cancellation failed", err.message);
+    },
+  });
+
   const onInitiate = () => {
     rotateMutation.mutate({
       id: connection.id,
@@ -64,6 +85,10 @@ export const RotateSecretFlow = ({ connection, onClose }: RotateSecretFlowProps)
 
   const onConfirm = () => {
     confirmMutation.mutate({ id: connection.id });
+  };
+
+  const onCancelRotation = () => {
+    cancelMutation.mutate({ id: connection.id });
   };
 
   const stage2 = rotateMutation.data;
@@ -172,18 +197,29 @@ export const RotateSecretFlow = ({ connection, onClose }: RotateSecretFlowProps)
               type="button"
               variant="tertiary"
               onClick={onClose}
-              disabled={confirmMutation.isLoading}
+              disabled={confirmMutation.isLoading || cancelMutation.isLoading}
             >
               Close (leave pending)
             </Button>
-            <Button
-              type="button"
-              onClick={onConfirm}
-              disabled={confirmMutation.isLoading}
-              data-testid="confirm-rotation-button"
-            >
-              {confirmMutation.isLoading ? "Confirming..." : "Confirm rotation"}
-            </Button>
+            <Box display="flex" gap={3}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onCancelRotation}
+                disabled={confirmMutation.isLoading || cancelMutation.isLoading}
+                data-testid="cancel-rotation-button"
+              >
+                {cancelMutation.isLoading ? "Cancelling..." : "Cancel rotation"}
+              </Button>
+              <Button
+                type="button"
+                onClick={onConfirm}
+                disabled={confirmMutation.isLoading || cancelMutation.isLoading}
+                data-testid="confirm-rotation-button"
+              >
+                {confirmMutation.isLoading ? "Confirming..." : "Confirm rotation"}
+              </Button>
+            </Box>
           </Box>
         </Box>
       )}

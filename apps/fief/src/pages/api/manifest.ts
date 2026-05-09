@@ -1,6 +1,10 @@
 import { createManifestHandler } from "@saleor/app-sdk/handlers/next";
 import { type AppManifest } from "@saleor/app-sdk/types";
 
+import { customerCreatedWebhookDefinition } from "@/app/api/webhooks/saleor/customer-created/webhook-definition";
+import { customerDeletedWebhookDefinition } from "@/app/api/webhooks/saleor/customer-deleted/webhook-definition";
+import { customerMetadataUpdatedWebhookDefinition } from "@/app/api/webhooks/saleor/customer-metadata-updated/webhook-definition";
+import { customerUpdatedWebhookDefinition } from "@/app/api/webhooks/saleor/customer-updated/webhook-definition";
 import { env } from "@/lib/env";
 
 import packageJson from "../../../package.json";
@@ -8,21 +12,16 @@ import packageJson from "../../../package.json";
 /*
  * Manifest endpoint — Saleor calls this when an operator clicks "Install".
  *
- * Webhooks list is intentionally empty at T1: concrete sync auth-webhook
- * definitions land in T18-T21 (AUTH_AUTHENTICATE_ME, AUTH_ISSUE_ACCESS_TOKENS,
- * AUTH_REFRESH_ACCESS_TOKENS, AUTH_LOGOUT) and concrete async customer-webhook
- * definitions in T26-T29. This file becomes their registration site:
+ * Aggregates the four async customer webhook definitions (T26-T29) so the
+ * Saleor backend learns the app wants `CUSTOMER_*` events at install time.
+ * Each definition exposes the SDK's `getWebhookManifest(apiBaseUrl)` builder
+ * which renders the webhook into Saleor's manifest shape.
  *
- *   webhooks: [
- *     authAuthenticateMeWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     authIssueAccessTokensWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     authRefreshAccessTokensWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     authLogoutWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     customerCreatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     customerUpdatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     customerMetadataUpdatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *     customerDeletedWebhookDefinition.getWebhookManifest(apiBaseUrl),
- *   ]
+ * The four sync auth webhooks the original T1 plan envisioned (T18-T21)
+ * pivoted to a Saleor `BasePlugin` (Path A — see T2 spike): Saleor 3.x has
+ * NO `AUTH_*` sync-webhook event names, so the auth plane is delivered via a
+ * Python plugin calling our HTTPS endpoints directly. There is therefore no
+ * auth-webhook entry to aggregate here.
  */
 export default createManifestHandler({
   async manifestFactory({ appBaseUrl }) {
@@ -49,7 +48,12 @@ export default createManifestHandler({
       supportUrl: "https://saleor.io/discord",
       tokenTargetUrl: `${apiBaseUrl}/api/register`,
       version: packageJson.version,
-      webhooks: [],
+      webhooks: [
+        customerCreatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
+        customerUpdatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
+        customerMetadataUpdatedWebhookDefinition.getWebhookManifest(apiBaseUrl),
+        customerDeletedWebhookDefinition.getWebhookManifest(apiBaseUrl),
+      ],
     };
 
     return manifest;

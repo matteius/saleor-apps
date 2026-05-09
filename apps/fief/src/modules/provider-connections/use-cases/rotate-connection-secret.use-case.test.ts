@@ -265,3 +265,140 @@ describe("RotateConnectionSecretUseCase — guards + failure modes", () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(RotateConnectionSecretError.InvalidInput);
   });
 });
+
+describe("RotateConnectionSecretUseCase — cancelRotation", () => {
+  it("clears pending slots and leaves current secrets untouched", async () => {
+    const repo = new InMemoryProviderConnectionRepo();
+    const connection = await seed(repo);
+
+    server.use(stubWebhookRotate("wh_secret_TO_BE_CANCELLED"));
+
+    const useCase = new RotateConnectionSecretUseCase({
+      repo,
+      fiefAdmin: buildFiefClient(),
+    });
+
+    /* Open a rotation so cancelRotation has something to clean up. */
+    const initiated = await useCase.initiateRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+      clientSecretSource: {
+        mode: "operator-supplied",
+        newClientSecret: "client_secret_TO_BE_CANCELLED",
+      },
+    });
+
+    expect(initiated.isOk()).toBe(true);
+    expect(initiated._unsafeUnwrap().connection.fief.encryptedPendingClientSecret).not.toBeNull();
+    expect(initiated._unsafeUnwrap().connection.fief.encryptedPendingWebhookSecret).not.toBeNull();
+
+    /* --- Cancel. --- */
+    const cancelled = await useCase.cancelRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+    });
+
+    expect(cancelled.isOk()).toBe(true);
+    const cancelledConn = cancelled._unsafeUnwrap();
+
+    expect(cancelledConn.fief.encryptedPendingClientSecret).toBeNull();
+    expect(cancelledConn.fief.encryptedPendingWebhookSecret).toBeNull();
+
+    /*
+     * CRITICAL — current secrets MUST be intact (the whole point of cancel
+     * is to revert to pre-initiate state).
+     */
+    const decrypted = (
+      await repo.getDecryptedSecrets({ saleorApiUrl: SALEOR_API_URL, id: connection.id })
+    )._unsafeUnwrap();
+
+    expect(decrypted.fief.clientSecret).toBe("current-client-secret");
+    expect(decrypted.fief.webhookSecret).toBe("current-webhook-secret");
+    expect(decrypted.fief.pendingClientSecret).toBeNull();
+    expect(decrypted.fief.pendingWebhookSecret).toBeNull();
+  });
+
+  it("returns NoPendingRotation when there is nothing to cancel", async () => {
+    const repo = new InMemoryProviderConnectionRepo();
+    const connection = await seed(repo);
+
+    const useCase = new RotateConnectionSecretUseCase({
+      repo,
+      fiefAdmin: buildFiefClient(),
+    });
+
+    const result = await useCase.cancelRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+    });
+
+    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr()).toBeInstanceOf(RotateConnectionSecretError.NoPendingRotation);
+  });
+
+  it("after cancel, a fresh initiateRotation succeeds (AlreadyRotating guard cleared)", async () => {
+    const repo = new InMemoryProviderConnectionRepo();
+    const connection = await seed(repo);
+
+    server.use(stubWebhookRotate("wh_secret_FIRST"));
+
+    const useCase = new RotateConnectionSecretUseCase({
+      repo,
+      fiefAdmin: buildFiefClient(),
+    });
+
+    const first = await useCase.initiateRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+      clientSecretSource: { mode: "operator-supplied", newClientSecret: "first" },
+    });
+
+    expect(first.isOk()).toBe(true);
+
+    const cancelled = await useCase.cancelRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+    });
+
+    expect(cancelled.isOk()).toBe(true);
+
+    server.use(stubWebhookRotate("wh_secret_SECOND"));
+
+    const second = await useCase.initiateRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: connection.id,
+      clientSecretSource: { mode: "operator-supplied", newClientSecret: "second" },
+    });
+
+    expect(second.isOk()).toBe(true);
+    expect(second._unsafeUnwrap().newWebhookSecretPlaintext).toBe("wh_secret_SECOND");
+  });
+
+  it("returns NotFound when the connection does not exist", async () => {
+    const repo = new InMemoryProviderConnectionRepo();
+    const connection = await seed(repo);
+
+    /*
+     * Use a freshly minted connection id that was never persisted — must
+     * be a UUIDv4 to satisfy the branded schema; otherwise the brand
+     * constructor throws before we hit the repo.
+     */
+    void connection;
+    const missingId = "00000000-0000-4000-8000-deadbeef0001" as ReturnType<
+      typeof connection.id.valueOf
+    > as typeof connection.id;
+
+    const useCase = new RotateConnectionSecretUseCase({
+      repo,
+      fiefAdmin: buildFiefClient(),
+    });
+
+    const result = await useCase.cancelRotation({
+      saleorApiUrl: SALEOR_API_URL,
+      id: missingId,
+    });
+
+    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr()).toBeInstanceOf(RotateConnectionSecretError.NotFound);
+  });
+});
