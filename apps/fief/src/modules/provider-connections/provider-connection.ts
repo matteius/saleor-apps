@@ -78,6 +78,17 @@ const fiefClientIdSchema = z.string().min(1).brand("FiefClientId");
 export type FiefClientId = z.infer<typeof fiefClientIdSchema>;
 export const createFiefClientId = (raw: string): FiefClientId => fiefClientIdSchema.parse(raw);
 
+/**
+ * Fief webhook subscriber id. Persisted alongside the OIDC client id so the
+ * lifecycle use cases (T17) can rotate / delete the webhook on the Fief side
+ * without an extra discovery call. Modeled as a UUID-shaped string per Fief
+ * 0.x's `webhooks.py` schema.
+ */
+const fiefWebhookIdSchema = z.string().min(1).brand("FiefWebhookId");
+
+export type FiefWebhookId = z.infer<typeof fiefWebhookIdSchema>;
+export const createFiefWebhookId = (raw: string): FiefWebhookId => fiefWebhookIdSchema.parse(raw);
+
 /*
  * Encrypted-at-rest brands. The repo writes ciphertext (produced by T4's
  * `RotatingFiefEncryptor.encrypt(...)`) into these slots; the brand keeps
@@ -115,6 +126,14 @@ export const fiefConfigSchema = z.object({
   baseUrl: fiefBaseUrlSchema,
   tenantId: fiefTenantIdSchema,
   clientId: fiefClientIdSchema,
+  /**
+   * Fief webhook subscriber id. Nullable for backwards compat with legacy
+   * connections persisted before T17 (which provisioned the subscriber but
+   * did not store its id). T17's lifecycle use cases require this to be
+   * present for rotate/delete; missing values surface a typed error rather
+   * than crashing the parser.
+   */
+  webhookId: fiefWebhookIdSchema.nullable(),
   encryptedClientSecret: encryptedSecretSchema,
   encryptedPendingClientSecret: encryptedSecretSchema.nullable(),
   encryptedAdminToken: encryptedSecretSchema,
@@ -135,15 +154,35 @@ export const brandingConfigSchema = z.object({
 export type BrandingConfig = z.infer<typeof brandingConfigSchema>;
 
 /*
- * Single claim-mapping rule. T14 will consume an array of these to translate
- * Fief-side claims (e.g. `email`, `tenant_id`, `roles[*]`) into Saleor-side
- * metadata keys with optional transforms. The shape kept minimal here so T14
- * can extend without re-versioning the connection doc.
+ * Single claim-mapping rule. T14 consumes an array of these via
+ * `projectClaimsToSaleorMetadata` to translate Fief-side claims (e.g. `email`,
+ * `tenant_id`, `roles[*]`) into Saleor-side metadata keys.
+ *
+ * Schema version notes:
+ *   - `required` (T8 baseline) is kept for backwards compatibility — legacy
+ *     persisted docs may still carry it. Defaults to `false` and is currently
+ *     unused by T14's projector. Slated for deprecation in a follow-up.
+ *   - `visibility: "public" | "private"` (T17 extension) routes the projected
+ *     value into Saleor's `metadata` (storefront-visible) vs `privateMetadata`
+ *     (server-only) bucket. Defaults to `"private"` so a legacy mapping that
+ *     omits the field cannot accidentally leak claim values to the storefront
+ *     before the operator opts in via T36's UI.
+ *   - `reverseSyncEnabled` (T17 extension) marks a mapping as eligible for
+ *     **Saleor → Fief** reverse-sync (per PRD §F3.4 / T34). Defaults to `false`
+ *     so the Fief-as-source-of-truth direction is preserved unless the operator
+ *     explicitly opts in to bi-directional sync for that mapping.
+ *
+ * Both new defaults are conservative ("nothing leaks; nothing reverse-syncs")
+ * which lets us land the schema extension without forcing a data migration on
+ * existing connections (Mongo's missing-field semantics + Zod `.default()`
+ * combine cleanly here).
  */
 export const claimMappingEntrySchema = z.object({
   fiefClaim: z.string().min(1),
   saleorMetadataKey: z.string().min(1),
   required: z.boolean().default(false),
+  visibility: z.enum(["public", "private"]).default("private"),
+  reverseSyncEnabled: z.boolean().default(false),
 });
 export type ClaimMappingEntry = z.infer<typeof claimMappingEntrySchema>;
 
@@ -186,6 +225,8 @@ export interface ProviderConnectionCreateInput {
     baseUrl: FiefBaseUrl;
     tenantId: FiefTenantId;
     clientId: FiefClientId;
+    /** Fief webhook subscriber id; null for legacy connections, present for T17+. */
+    webhookId?: FiefWebhookId | null;
     /** Plaintext — repo encrypts before write. */
     clientSecret: string;
     /** Plaintext — repo encrypts before write. Optional; defaults to null. */
@@ -218,6 +259,8 @@ export interface ProviderConnectionUpdateInput {
     baseUrl?: FiefBaseUrl;
     tenantId?: FiefTenantId;
     clientId?: FiefClientId;
+    /** Fief webhook subscriber id, or `null` to clear. */
+    webhookId?: FiefWebhookId | null;
     /** Plaintext — repo re-encrypts before write. */
     clientSecret?: string;
     /** Plaintext or null to clear the pending slot. */

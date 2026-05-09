@@ -64,6 +64,7 @@ const buildCreateInput = (
     baseUrl: createFiefBaseUrl("https://tenant.fief.dev"),
     tenantId: createFiefTenantId("tenant-uuid-1"),
     clientId: createFiefClientId("client-uuid-1"),
+    webhookId: null,
     clientSecret: "plaintext-client-secret-aaaa",
     pendingClientSecret: null,
     adminToken: "plaintext-admin-token-bbbb",
@@ -77,8 +78,20 @@ const buildCreateInput = (
     ...override.branding,
   },
   claimMapping: [
-    { fiefClaim: "email", saleorMetadataKey: "fief.email", required: true },
-    { fiefClaim: "tenant_id", saleorMetadataKey: "fief.tenant_id", required: false },
+    {
+      fiefClaim: "email",
+      saleorMetadataKey: "fief.email",
+      required: true,
+      visibility: "private",
+      reverseSyncEnabled: false,
+    },
+    {
+      fiefClaim: "tenant_id",
+      saleorMetadataKey: "fief.tenant_id",
+      required: false,
+      visibility: "private",
+      reverseSyncEnabled: false,
+    },
   ],
   ...("name" in override ? { name: override.name! } : {}),
   ...("saleorApiUrl" in override

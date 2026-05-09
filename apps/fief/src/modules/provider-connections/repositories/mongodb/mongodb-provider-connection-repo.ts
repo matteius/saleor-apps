@@ -66,6 +66,11 @@ interface MongoProviderConnectionDoc {
     baseUrl: string;
     tenantId: string;
     clientId: string;
+    /**
+     * T17 schema extension. Optional on the wire so legacy docs (pre-T17)
+     * round-trip; the schema parser fills the default (`null`).
+     */
+    webhookId?: string | null;
     encryptedClientSecret: string;
     encryptedPendingClientSecret: string | null;
     encryptedAdminToken: string;
@@ -76,7 +81,23 @@ interface MongoProviderConnectionDoc {
     encryptedSigningKey: string;
     allowedOrigins: string[];
   };
-  claimMapping: Array<{ fiefClaim: string; saleorMetadataKey: string; required: boolean }>;
+  claimMapping: Array<{
+    fiefClaim: string;
+    saleorMetadataKey: string;
+    required: boolean;
+    /**
+     * T17 schema extension. Optional on the wire so legacy docs (pre-T17)
+     * round-trip without a data migration; the schema parser fills the
+     * default (`"private"`).
+     */
+    visibility?: "public" | "private";
+    /**
+     * T17 schema extension. Optional on the wire so legacy docs (pre-T17)
+     * round-trip without a data migration; the schema parser fills the
+     * default (`false`).
+     */
+    reverseSyncEnabled?: boolean;
+  }>;
   softDeletedAt: Date | null;
 }
 
@@ -155,6 +176,7 @@ export class MongodbProviderConnectionRepo implements ProviderConnectionRepo {
           baseUrl: input.fief.baseUrl,
           tenantId: input.fief.tenantId,
           clientId: input.fief.clientId,
+          webhookId: input.fief.webhookId ?? null,
           encryptedClientSecret: this.encryptor.encrypt(input.fief.clientSecret).ciphertext,
           encryptedPendingClientSecret:
             input.fief.pendingClientSecret == null
@@ -175,6 +197,8 @@ export class MongodbProviderConnectionRepo implements ProviderConnectionRepo {
           fiefClaim: entry.fiefClaim,
           saleorMetadataKey: entry.saleorMetadataKey,
           required: entry.required,
+          visibility: entry.visibility,
+          reverseSyncEnabled: entry.reverseSyncEnabled,
         })),
         softDeletedAt: null,
       };
@@ -322,6 +346,8 @@ export class MongodbProviderConnectionRepo implements ProviderConnectionRepo {
           fiefClaim: entry.fiefClaim,
           saleorMetadataKey: entry.saleorMetadataKey,
           required: entry.required,
+          visibility: entry.visibility,
+          reverseSyncEnabled: entry.reverseSyncEnabled,
         }));
       }
 
@@ -334,6 +360,9 @@ export class MongodbProviderConnectionRepo implements ProviderConnectionRepo {
         }
         if (patch.fief.clientId !== undefined) {
           set["fief.clientId"] = patch.fief.clientId;
+        }
+        if (patch.fief.webhookId !== undefined) {
+          set["fief.webhookId"] = patch.fief.webhookId;
         }
         if (patch.fief.clientSecret !== undefined) {
           set["fief.encryptedClientSecret"] = this.encryptor.encrypt(

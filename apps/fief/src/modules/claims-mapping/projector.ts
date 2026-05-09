@@ -25,14 +25,15 @@
 /*
  * The shape of a single mapping entry as consumed by the projector.
  *
- * NOTE: this is structurally a subset of T8's `ClaimMappingEntry` (which
- * currently exports `{ fiefClaim, saleorMetadataKey, required }`). The PRD
- * §F3.1 calls for a `visibility: "public" | "private"` field on the entry; T8
- * is expected to add it (tracked under T36's reverse-sync future-additions).
- * Until then, the projector defines its own input contract — callers map
- * the persisted entry onto this shape at the boundary. This keeps T14
- * decoupled from the in-flight T8 schema migration without forcing a
- * cross-task edit.
+ * As of T17, T8's `ClaimMappingEntry` carries a superset of the projector's
+ * input fields (`{ fiefClaim, saleorMetadataKey, required, visibility,
+ * reverseSyncEnabled }`). The projector only needs the `visibility`-routed
+ * subset, so we keep this `interface` as a structural Pick to avoid a hard
+ * dependency from T14 onto T8's schema module — call sites can pass either
+ * shape because TypeScript structural typing matches on field overlap.
+ *
+ * Tests still use `ClaimMappingProjectionEntry` directly to keep the test
+ * surface focused on what the projector actually reads.
  */
 export interface ClaimMappingProjectionEntry {
   fiefClaim: string;

@@ -63,6 +63,11 @@ const buildConnection = (id: ProviderConnectionId): ProviderConnection =>
       baseUrl: "https://example.fief.dev/" as ProviderConnection["fief"]["baseUrl"],
       tenantId: "tenant" as ProviderConnection["fief"]["tenantId"],
       clientId: "client" as ProviderConnection["fief"]["clientId"],
+      /*
+       * T17 schema extension: webhookId is nullable on the connection record;
+       * legacy fixtures use `null`.
+       */
+      webhookId: null,
       encryptedClientSecret: "enc" as ProviderConnection["fief"]["encryptedClientSecret"],
       encryptedPendingClientSecret: null,
       encryptedAdminToken: "enc" as ProviderConnection["fief"]["encryptedAdminToken"],
