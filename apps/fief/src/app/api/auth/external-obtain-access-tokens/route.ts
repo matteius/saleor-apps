@@ -601,6 +601,16 @@ const innerHandler = async (req: NextRequest): Promise<Response> => {
   const metadataItems = toMetadataItems(finalMetadata);
   const privateMetadataItems = toMetadataItems(finalPrivateMetadata);
 
+  /*
+   * Metadata writes are auxiliary to the auth flow — they store the
+   * projected Fief claims on the Saleor user for the Fief→Saleor sync
+   * surface (T22+) and the loop-guard origin marker (T13). Failures here
+   * are common and survivable: e.g. the matched Saleor user is a STAFF
+   * member, in which case `updateMetadata`/`updatePrivateMetadata`
+   * require `MANAGE_STAFF` (the app only holds `MANAGE_USERS`). Log and
+   * continue — the auth response still goes back with valid claims, and
+   * the next webhook can re-attempt the projection if needed.
+   */
   const metadataResult = await deps.saleorClient.updateMetadata({
     saleorApiUrl,
     saleorUserId,
@@ -608,13 +618,9 @@ const innerHandler = async (req: NextRequest): Promise<Response> => {
   });
 
   if (metadataResult.isErr()) {
-    logger.error("Saleor updateMetadata failed", {
+    logger.warn("Saleor updateMetadata failed (best-effort, continuing)", {
       errorMessage: metadataResult.error.message,
-    });
-
-    return jsonResponse(500, {
-      error: "Internal Server Error",
-      reason: "saleor-metadata-write-failed",
+      saleorUserId,
     });
   }
 
@@ -625,13 +631,9 @@ const innerHandler = async (req: NextRequest): Promise<Response> => {
   });
 
   if (privateMetadataResult.isErr()) {
-    logger.error("Saleor updatePrivateMetadata failed", {
+    logger.warn("Saleor updatePrivateMetadata failed (best-effort, continuing)", {
       errorMessage: privateMetadataResult.error.message,
-    });
-
-    return jsonResponse(500, {
-      error: "Internal Server Error",
-      reason: "saleor-private-metadata-write-failed",
+      saleorUserId,
     });
   }
 
