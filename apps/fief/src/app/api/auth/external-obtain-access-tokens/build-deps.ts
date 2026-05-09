@@ -1,3 +1,4 @@
+import { getProductionDeps } from "@/lib/composition-root";
 import { type ChannelResolver } from "@/modules/channel-configuration/channel-resolver";
 import { type IdentityMapRepo } from "@/modules/identity-map/identity-map-repo";
 import { type ProviderConnectionRepo } from "@/modules/provider-connections/provider-connection-repo";
@@ -10,11 +11,10 @@ import { type SaleorCustomerClient } from "@/modules/sync/fief-to-saleor/user-up
  * file (`route.test.ts`) can mock the wiring out without standing up Mongo,
  * the encryptor, an urql client, or anything else heavyweight.
  *
- * Production wiring lands when the central composition root (T34 follow-up)
- * stitches together the Mongo-backed repos + the GraphQL-backed
- * `SaleorCustomerClient`. For now this factory deliberately throws on call
- * so an under-provisioned environment fails loud rather than silently 500ing
- * with `undefined.method` errors.
+ * Production wiring lives in `@/lib/composition-root` (T40) — see
+ * `getProductionDeps()`. The Saleor write surface is currently a placeholder
+ * that throws (T7 GraphQL wiring is a follow-up); the auth-plane integration
+ * tests stub this slot to assert the end-to-end pipeline.
  */
 
 export interface RouteDeps {
@@ -31,7 +31,12 @@ export interface RouteDeps {
 }
 
 export const buildDeps = (): RouteDeps => {
-  throw new Error(
-    "T19 buildDeps not wired in production yet — central composition root (T34 follow-up) must inject ChannelResolver + ProviderConnectionRepo + IdentityMapRepo + SaleorCustomerClient here. Tests inject via vi.mock('./build-deps').",
-  );
+  const deps = getProductionDeps();
+
+  return {
+    channelResolver: deps.buildChannelResolver(),
+    connectionRepo: deps.connectionRepo,
+    identityMapRepo: deps.identityMapRepo,
+    saleorClient: deps.saleorClient,
+  };
 };

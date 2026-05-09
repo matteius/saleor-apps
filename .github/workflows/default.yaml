@@ -96,4 +96,5 @@ jobs:
           dockerfile: Dockerfile
           image_path: whitewhale/saleor-fief-app
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          FIEF_PLUGIN_HMAC_SECRET: ${{ secrets.FIEF_PLUGIN_HMAC_SECRET }}
           APP_LOG_LEVEL: debug

@@ -35,6 +35,10 @@ inputs:
     description: The log level
     required: false
     default: "info"
+  FIEF_PLUGIN_HMAC_SECRET:
+    description: HMAC secret used by the Fief app for plugin signing (only required when app_name=fief)
+    required: false
+    default: ""
 
 outputs:
   image_url:
@@ -70,6 +74,7 @@ runs:
           --build-arg SECRET_KEY=${{ inputs.SECRET_KEY }} \
           --build-arg REDIS_URL=${{ inputs.REDIS_URL }} \
           --build-arg APP_LOG_LEVEL=${{ inputs.APP_LOG_LEVEL }} \
+          --build-arg FIEF_PLUGIN_HMAC_SECRET=${{ inputs.FIEF_PLUGIN_HMAC_SECRET }} \
           -t ${{ steps.image_tags.outputs.sha }} \
           -t ${{ steps.image_tags.outputs.latest }}
 

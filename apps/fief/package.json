@@ -8,6 +8,8 @@
     "build": "next build",
     "check-types": "tsc",
     "dev": "NODE_OPTIONS='--inspect' next dev",
+    "e2e": "vitest --project=e2e run",
+    "e2e:watch": "vitest --project=e2e",
     "generate": "pnpm run /^generate:.*/",
     "generate:app": "graphql-codegen",
     "lint": "eslint .",
@@ -15,6 +17,7 @@
     "start": "next start",
     "test": "pnpm run test:unit",
     "test:ci": "pnpm run test:unit --coverage",
+    "test:integration": "vitest --project=integration run",
     "test:unit": "vitest --project=unit"
   },
   "config": {
