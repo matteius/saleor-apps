@@ -9,7 +9,7 @@ import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import { withLoggerContext } from "@/lib/logger-context";
 import { withSaleorApiUrlAttributes } from "@/lib/observability-saleor-api-url";
-import { verify as verifyBrandingOrigin } from "@/modules/branding/origin-signer";
+import { verifyStateToken } from "@/modules/auth-state/state-token";
 import {
   type ChannelSlug,
   createChannelSlug,
@@ -96,34 +96,19 @@ const logger = createLogger("api.auth.external-obtain-access-tokens");
 
 /**
  * Request body shape. Matches the Saleor `BasePlugin` client (T56)
- * `client.obtain_access_tokens(...)` send shape.
+ * `client.obtain_access_tokens(...)` flat send shape:
+ *
+ *   { code: <auth code>, state: <state token> }
+ *
+ * `saleorApiUrl` and `channelSlug` come from the verified HMAC headers.
+ * `redirectUri` and `origin` are recovered by verifying `state` (minted by
+ * T18, signed with `FIEF_PLUGIN_HMAC_SECRET`) — the Python client cannot
+ * carry them through Saleor's `external_obtain_access_tokens` hook because
+ * the hook only forwards `{code, state}`.
  */
 const requestBodySchema = z.object({
-  saleorApiUrl: z.string().min(1),
-  channelSlug: z.string().min(1),
-  input: z.object({
-    /**
-     * The Fief OIDC authorization code returned to the storefront after
-     * the user completed the `/authorize` round-trip (T18).
-     */
-    code: z.string().min(1),
-    /**
-     * The same redirect URI the storefront used in T18's authorize URL.
-     * Required by RFC 6749 §4.1.3 — Fief's token endpoint will reject the
-     * exchange if this does not match.
-     */
-    redirectUri: z.string().url(),
-    /**
-     * Storefront origin (e.g. `https://shop.example.com`). Must be in the
-     * connection's `branding.allowedOrigins`.
-     */
-    origin: z.string().url(),
-    /**
-     * Signed `branding_origin` token minted by T18 (T15's signer). Verified
-     * here against the per-connection signing key + allowedOrigins list.
-     */
-    brandingOrigin: z.string().min(1),
-  }),
+  code: z.string().min(1),
+  state: z.string().min(1),
 });
 
 // -- HTTP responses -----------------------------------------------------------
@@ -236,13 +221,15 @@ const handler = async (req: NextRequest): Promise<Response> => {
     });
   }
 
-  const { saleorApiUrl: saleorApiUrlRaw, channelSlug: channelSlugRaw, input } = parsed.data;
+  const { code, state } = parsed.data;
 
-  const saleorApiUrlResult = createSaleorApiUrl(saleorApiUrlRaw);
+  // -- Saleor identity from verified HMAC headers --------------------------
+
+  const saleorApiUrlResult = createSaleorApiUrl(verifyResult.value.saleorApiUrl);
 
   if (saleorApiUrlResult.isErr()) {
-    logger.warn("saleorApiUrl in body failed brand validation", {
-      saleorApiUrl: saleorApiUrlRaw,
+    logger.warn("saleorApiUrl header failed brand validation", {
+      saleorApiUrl: verifyResult.value.saleorApiUrl,
     });
 
     return jsonResponse(400, { error: "Bad Request", message: "invalid saleorApiUrl" });
@@ -250,13 +237,36 @@ const handler = async (req: NextRequest): Promise<Response> => {
 
   const saleorApiUrl = saleorApiUrlResult.value;
 
+  if (!verifyResult.value.channelSlug) {
+    return jsonResponse(400, { error: "Bad Request", message: "missing channelSlug header" });
+  }
+
   let channelSlug: ChannelSlug;
 
   try {
-    channelSlug = createChannelSlug(channelSlugRaw);
+    channelSlug = createChannelSlug(verifyResult.value.channelSlug);
   } catch {
     return jsonResponse(400, { error: "Bad Request", message: "invalid channelSlug" });
   }
+
+  // -- Recover redirectUri + origin from state token -----------------------
+
+  const stateVerify = verifyStateToken(state, env.FIEF_PLUGIN_HMAC_SECRET);
+
+  if (stateVerify.isErr()) {
+    logger.warn("state token verification failed", {
+      errorBrand: (stateVerify.error as { _brand?: string })._brand,
+      errorMessage: stateVerify.error.message,
+    });
+
+    return jsonResponse(400, {
+      error: "Bad Request",
+      reason: "state-invalid",
+      message: "OIDC state token failed verification",
+    });
+  }
+
+  const { redirectUri, origin } = stateVerify.value;
 
   // -- Resolve dependencies ------------------------------------------------
 
@@ -318,49 +328,30 @@ const handler = async (req: NextRequest): Promise<Response> => {
     return jsonResponse(500, { error: "Internal Server Error" });
   }
 
-  const { fief: fiefSecrets, branding: brandingSecrets } = decryptedResult.value;
+  const { fief: fiefSecrets } = decryptedResult.value;
 
-  // -- Verify inbound branding_origin token (T15) --------------------------
-
+  // -- Re-validate origin against connection allowlist ---------------------
+  /*
+   * The state-token already proves origin came from the same operator-trusted
+   * mint at T18. Re-checking against `branding.allowedOrigins` catches the
+   * case where the connection's allowlist was tightened *between* mint and
+   * exchange — without a Mongo state store, this is the only way to drop a
+   * still-valid (within 10-minute window) state token whose origin is no
+   * longer permitted.
+   */
   const allowedOriginStrings = connection.branding.allowedOrigins.map(
     (o) => o as unknown as string,
   );
 
-  const brandingVerifyResult = verifyBrandingOrigin(
-    input.brandingOrigin,
-    brandingSecrets.signingKey,
-    allowedOriginStrings,
-  );
-
-  if (brandingVerifyResult.isErr()) {
-    logger.warn("branding_origin token verification failed", {
-      errorBrand: (brandingVerifyResult.error as { _brand?: string })._brand,
-      errorMessage: brandingVerifyResult.error.message,
+  if (!allowedOriginStrings.includes(origin)) {
+    logger.warn("State token origin no longer in connection allowedOrigins", {
+      origin,
     });
 
     return jsonResponse(400, {
       error: "Bad Request",
-      reason: "branding-origin-invalid",
-      message: "branding_origin token failed verification",
-    });
-  }
-
-  /*
-   * Defense-in-depth: the body's `origin` field MUST equal the parsed
-   * `branding_origin` segment. This catches the scenario where the
-   * storefront sends a valid token for one origin but claims a different
-   * `origin` in the request body.
-   */
-  if (brandingVerifyResult.value.origin !== input.origin) {
-    logger.warn("branding_origin parsed origin does not match request origin field", {
-      parsedOrigin: brandingVerifyResult.value.origin,
-      requestOrigin: input.origin,
-    });
-
-    return jsonResponse(400, {
-      error: "Bad Request",
-      reason: "origin-mismatch",
-      message: "branding_origin origin does not match request origin",
+      reason: "origin-not-allowed",
+      message: "state token origin not in connection allowedOrigins",
     });
   }
 
@@ -373,8 +364,8 @@ const handler = async (req: NextRequest): Promise<Response> => {
   );
 
   const exchangeResult = await oidcClient.exchangeCode({
-    code: input.code,
-    redirectUri: input.redirectUri,
+    code,
+    redirectUri,
     clientId: connection.fief.clientId as unknown as string,
     clientSecrets,
   });

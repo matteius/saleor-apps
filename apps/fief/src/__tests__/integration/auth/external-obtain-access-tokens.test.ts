@@ -21,6 +21,8 @@
 import { ok, type Result } from "neverthrow";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { mintStateToken } from "@/modules/auth-state/state-token";
+
 import {
   ALLOWED_ORIGIN,
   buildSignedRequest,
@@ -29,10 +31,9 @@ import {
   type IntegrationHarness,
   measureLatency,
   percentile,
+  PLUGIN_SECRET,
   REDIRECT_URI,
-  SALEOR_API_URL,
   seedConnection,
-  SIGNING_KEY,
   startHarness,
   stopHarness,
 } from "./harness";
@@ -156,11 +157,8 @@ const ROUTE_PATHNAME = "/api/auth/external-obtain-access-tokens";
 
 let harness: IntegrationHarness;
 
-const buildBrandingOriginToken = async (): Promise<string> => {
-  const { sign } = await import("@/modules/branding/origin-signer");
-
-  return sign(ALLOWED_ORIGIN, SIGNING_KEY);
-};
+const buildState = (): string =>
+  mintStateToken({ redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN }, PLUGIN_SECRET);
 
 const callRoute = async (req: Request): Promise<Response> => {
   const { POST } = await import("@/app/api/auth/external-obtain-access-tokens/route");
@@ -201,19 +199,10 @@ beforeEach(async () => {
 
 describe("T40 — external-obtain-access-tokens end-to-end", () => {
   it("cold first-login: creates Saleor customer + identity-map row + returns shaped claims", async () => {
-    const brandingOrigin = await buildBrandingOriginToken();
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: {
-          code: "fief-auth-code-cold",
-          redirectUri: REDIRECT_URI,
-          origin: ALLOWED_ORIGIN,
-          brandingOrigin,
-        },
-      },
+      body: { code: "fief-auth-code-cold", state: buildState() },
+      channelSlug: CHANNEL_SLUG as unknown as string,
     });
 
     const res = await callRoute(req);
@@ -236,19 +225,13 @@ describe("T40 — external-obtain-access-tokens end-to-end", () => {
   });
 
   it("warm returning user: re-uses bound saleorUserId without re-creating Saleor customer", async () => {
-    const brandingOrigin = await buildBrandingOriginToken();
-    const body = {
-      saleorApiUrl: SALEOR_API_URL as unknown as string,
-      channelSlug: CHANNEL_SLUG as unknown as string,
-      input: {
-        code: "fief-auth-code-warm",
-        redirectUri: REDIRECT_URI,
-        origin: ALLOWED_ORIGIN,
-        brandingOrigin,
-      },
-    };
+    const body = { code: "fief-auth-code-warm", state: buildState() };
 
-    const firstReq = buildSignedRequest({ pathname: ROUTE_PATHNAME, body });
+    const firstReq = buildSignedRequest({
+      pathname: ROUTE_PATHNAME,
+      body,
+      channelSlug: CHANNEL_SLUG as unknown as string,
+    });
     const firstRes = await callRoute(firstReq);
 
     expect(firstRes.status).toBe(200);
@@ -256,7 +239,11 @@ describe("T40 — external-obtain-access-tokens end-to-end", () => {
 
     resetSaleorTrace();
 
-    const secondReq = buildSignedRequest({ pathname: ROUTE_PATHNAME, body });
+    const secondReq = buildSignedRequest({
+      pathname: ROUTE_PATHNAME,
+      body,
+      channelSlug: CHANNEL_SLUG as unknown as string,
+    });
     const secondRes = await callRoute(secondReq);
 
     expect(secondRes.status).toBe(200);
@@ -264,19 +251,10 @@ describe("T40 — external-obtain-access-tokens end-to-end", () => {
   });
 
   it("returns 401 on bad HMAC", async () => {
-    const brandingOrigin = await buildBrandingOriginToken();
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: {
-          code: "x",
-          redirectUri: REDIRECT_URI,
-          origin: ALLOWED_ORIGIN,
-          brandingOrigin,
-        },
-      },
+      body: { code: "x", state: buildState() },
+      channelSlug: CHANNEL_SLUG as unknown as string,
       secret: "the-wrong-secret",
     });
 
@@ -290,24 +268,24 @@ describe("T40 — external-obtain-access-tokens end-to-end", () => {
     "p95 latency over 1000 requests is under 600 ms (T19 budget)",
     { timeout: 300_000 },
     async () => {
-      const brandingOrigin = await buildBrandingOriginToken();
-      const body = {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: {
-          code: "fief-auth-code-bench",
-          redirectUri: REDIRECT_URI,
-          origin: ALLOWED_ORIGIN,
-          brandingOrigin,
-        },
-      };
+      const body = { code: "fief-auth-code-bench", state: buildState() };
 
       // Seed once outside the loop so every iteration takes the warm path.
-      await callRoute(buildSignedRequest({ pathname: ROUTE_PATHNAME, body }));
+      await callRoute(
+        buildSignedRequest({
+          pathname: ROUTE_PATHNAME,
+          body,
+          channelSlug: CHANNEL_SLUG as unknown as string,
+        }),
+      );
       resetSaleorTrace();
 
       const samples = await measureLatency(1000, async () => {
-        const req = buildSignedRequest({ pathname: ROUTE_PATHNAME, body });
+        const req = buildSignedRequest({
+          pathname: ROUTE_PATHNAME,
+          body,
+          channelSlug: CHANNEL_SLUG as unknown as string,
+        });
         const res = await callRoute(req);
 
         if (res.status !== 200) {

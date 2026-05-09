@@ -24,7 +24,6 @@ import {
   measureLatency,
   percentile,
   REDIRECT_URI,
-  SALEOR_API_URL,
   seedConnection,
   SIGNING_KEY,
   startHarness,
@@ -58,14 +57,8 @@ describe("T40 — external-authentication-url end-to-end", () => {
   it("returns a Fief authorize URL with verifiable branding_origin", async () => {
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: {
-          redirectUri: REDIRECT_URI,
-          origin: ALLOWED_ORIGIN,
-        },
-      },
+      body: { redirectUri: REDIRECT_URI },
+      channelSlug: CHANNEL_SLUG as unknown as string,
     });
 
     const res = await callRoute(req);
@@ -81,7 +74,8 @@ describe("T40 — external-authentication-url end-to-end", () => {
     expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT_URI);
     expect(url.searchParams.get("response_type")).toBe("code");
     expect(url.searchParams.get("scope")).toBe("openid email profile");
-    expect(url.searchParams.get("state")).toMatch(/^[0-9a-f]{64}$/);
+    // State is now an HMAC-signed token: payload_b64.signature_hex
+    expect(url.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]+\.[0-9a-f]{64}$/u);
 
     const brandingToken = url.searchParams.get("branding_origin");
 
@@ -96,11 +90,8 @@ describe("T40 — external-authentication-url end-to-end", () => {
   it("returns 401 on bad HMAC signature", async () => {
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: { redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN },
-      },
+      body: { redirectUri: REDIRECT_URI },
+      channelSlug: CHANNEL_SLUG as unknown as string,
       secret: "the-wrong-secret",
     });
 
@@ -119,11 +110,8 @@ describe("T40 — external-authentication-url end-to-end", () => {
     const otherSaleorUrl = "https://shop-2.saleor.cloud/graphql/";
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: otherSaleorUrl,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: { redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN },
-      },
+      body: { redirectUri: REDIRECT_URI },
+      channelSlug: CHANNEL_SLUG as unknown as string,
       saleorApiUrl: otherSaleorUrl,
     });
 
@@ -132,17 +120,11 @@ describe("T40 — external-authentication-url end-to-end", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 on origin not in connection allowedOrigins", async () => {
+  it("returns 400 on redirectUri origin not in connection allowedOrigins", async () => {
     const req = buildSignedRequest({
       pathname: ROUTE_PATHNAME,
-      body: {
-        saleorApiUrl: SALEOR_API_URL as unknown as string,
-        channelSlug: CHANNEL_SLUG as unknown as string,
-        input: {
-          redirectUri: REDIRECT_URI,
-          origin: "https://malicious.example.com",
-        },
-      },
+      body: { redirectUri: "https://malicious.example.com/cb" },
+      channelSlug: CHANNEL_SLUG as unknown as string,
     });
 
     const res = await callRoute(req);
@@ -157,11 +139,8 @@ describe("T40 — external-authentication-url end-to-end", () => {
       const samples = await measureLatency(1000, async () => {
         const req = buildSignedRequest({
           pathname: ROUTE_PATHNAME,
-          body: {
-            saleorApiUrl: SALEOR_API_URL as unknown as string,
-            channelSlug: CHANNEL_SLUG as unknown as string,
-            input: { redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN },
-          },
+          body: { redirectUri: REDIRECT_URI },
+          channelSlug: CHANNEL_SLUG as unknown as string,
         });
 
         const res = await callRoute(req);

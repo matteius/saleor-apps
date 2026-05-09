@@ -399,14 +399,10 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
 
     const { POST } = await import("./route");
 
-    const req = buildSignedRequest({
-      saleorApiUrl: SALEOR_API_URL,
-      channelSlug: "default",
-      input: {
-        redirectUri: "https://shop-1.example.com/callback",
-        origin: ALLOWED_ORIGIN,
-      },
-    });
+    const req = buildSignedRequest(
+      { redirectUri: "https://shop-1.example.com/callback" },
+      { channelSlug: "default" },
+    );
 
     const res = await POST(req);
 
@@ -427,7 +423,8 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
     expect(url.searchParams.get("redirect_uri")).toBe("https://shop-1.example.com/callback");
     expect(url.searchParams.get("response_type")).toBe("code");
     expect(url.searchParams.get("scope")).toBe("openid email profile");
-    expect(url.searchParams.get("state")).toBeTruthy();
+    // State is now an HMAC-signed token: payload_b64.signature_hex
+    expect(url.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]+\.[0-9a-f]{64}$/u);
 
     // Signed branding_origin verifies via T15 against the per-connection key.
     const brandingOrigin = url.searchParams.get("branding_origin");
@@ -451,12 +448,8 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
     const { POST } = await import("./route");
 
     const req = buildSignedRequest(
-      {
-        saleorApiUrl: SALEOR_API_URL,
-        channelSlug: "default",
-        input: { redirectUri: "https://shop-1.example.com/cb", origin: ALLOWED_ORIGIN },
-      },
-      { secret: "wrong-secret" },
+      { redirectUri: "https://shop-1.example.com/cb" },
+      { secret: "wrong-secret", channelSlug: "default" },
     );
 
     const res = await POST(req);
@@ -485,11 +478,10 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
 
     const { POST } = await import("./route");
 
-    const req = buildSignedRequest({
-      saleorApiUrl: SALEOR_API_URL,
-      channelSlug: "opted-out",
-      input: { redirectUri: "https://shop-1.example.com/cb", origin: ALLOWED_ORIGIN },
-    });
+    const req = buildSignedRequest(
+      { redirectUri: "https://shop-1.example.com/cb" },
+      { channelSlug: "opted-out" },
+    );
 
     const res = await POST(req);
 
@@ -510,23 +502,23 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
 
     const { POST } = await import("./route");
 
-    const req = buildSignedRequest({
-      saleorApiUrl: SALEOR_API_URL,
-      channelSlug: "default",
-      input: { redirectUri: "https://shop-1.example.com/cb", origin: ALLOWED_ORIGIN },
-    });
+    const req = buildSignedRequest(
+      { redirectUri: "https://shop-1.example.com/cb" },
+      { channelSlug: "default" },
+    );
 
     const res = await POST(req);
 
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 when the request origin is not in the connection's allowedOrigins", async () => {
+  it("returns 400 when the redirectUri's origin is not in the connection's allowedOrigins", async () => {
     /*
-     * Choice (documented in route + plan): a request whose `origin` is not
-     * in the per-connection allowlist is a *client* mistake (the Saleor
-     * plugin gave us an origin we don't trust), so 400 — distinct from 403
-     * which we reserve for "operator opted this channel out of Fief auth".
+     * Choice (documented in route + plan): a request whose `redirectUri`
+     * resolves to an origin not in the per-connection allowlist is a
+     * *client* mistake (the Saleor plugin gave us a redirect URI we don't
+     * trust), so 400 — distinct from 403 which we reserve for "operator
+     * opted this channel out of Fief auth".
      */
     const harness = buildHarness();
 
@@ -537,14 +529,10 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
 
     const { POST } = await import("./route");
 
-    const req = buildSignedRequest({
-      saleorApiUrl: SALEOR_API_URL,
-      channelSlug: "default",
-      input: {
-        redirectUri: "https://shop-1.example.com/cb",
-        origin: "https://attacker.example.com",
-      },
-    });
+    const req = buildSignedRequest(
+      { redirectUri: "https://attacker.example.com/cb" },
+      { channelSlug: "default" },
+    );
 
     const res = await POST(req);
 
@@ -561,12 +549,26 @@ describe("POST /api/auth/external-authentication-url — T18", () => {
 
     const { POST } = await import("./route");
 
-    // Missing `input.redirectUri`.
-    const req = buildSignedRequest({
-      saleorApiUrl: SALEOR_API_URL,
-      channelSlug: "default",
-      input: {},
+    // Missing `redirectUri`.
+    const req = buildSignedRequest({}, { channelSlug: "default" });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when the channelSlug header is missing", async () => {
+    const harness = buildHarness();
+
+    buildResolverMock.mockReturnValue({
+      channelResolver: harness.channelResolver,
+      connectionRepo: harness.connectionRepo,
     });
+
+    const { POST } = await import("./route");
+
+    // No channelSlug in opts ⇒ no X-Fief-Plugin-Channel header sent.
+    const req = buildSignedRequest({ redirectUri: "https://shop-1.example.com/cb" });
 
     const res = await POST(req);
 

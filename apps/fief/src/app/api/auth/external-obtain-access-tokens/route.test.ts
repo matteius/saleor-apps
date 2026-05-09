@@ -41,7 +41,7 @@ import { type NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Real implementations — wire format is locked by the test, not the dep.
-import { sign as signBrandingOrigin } from "@/modules/branding/origin-signer";
+import { mintStateToken } from "@/modules/auth-state/state-token";
 import {
   type ChannelConfiguration,
   createConnectionId,
@@ -608,30 +608,24 @@ const buildHarness = (opts: BuildHarnessOpts = {}): TestHarness => {
   };
 };
 
-const buildBrandingOriginToken = (
-  signingKey: string = SIGNING_KEY,
-  origin: string = ALLOWED_ORIGIN,
-): string => signBrandingOrigin(origin, signingKey);
-
 const buildValidBody = (
   overrides: Partial<{
     code: string;
     redirectUri: string;
     origin: string;
-    brandingOrigin: string;
-    saleorApiUrl: string;
-    channelSlug: string;
-    fiefUser: Record<string, unknown>;
+    state: string;
   }> = {},
 ) => ({
-  saleorApiUrl: overrides.saleorApiUrl ?? SALEOR_API_URL,
-  channelSlug: overrides.channelSlug ?? "default",
-  input: {
-    code: overrides.code ?? "fief_authcode_xyz",
-    redirectUri: overrides.redirectUri ?? REDIRECT_URI,
-    origin: overrides.origin ?? ALLOWED_ORIGIN,
-    brandingOrigin: overrides.brandingOrigin ?? buildBrandingOriginToken(),
-  },
+  code: overrides.code ?? "fief_authcode_xyz",
+  state:
+    overrides.state ??
+    mintStateToken(
+      {
+        redirectUri: overrides.redirectUri ?? REDIRECT_URI,
+        origin: overrides.origin ?? ALLOWED_ORIGIN,
+      },
+      PLUGIN_SECRET,
+    ),
 });
 
 /*
@@ -1033,9 +1027,9 @@ describe("POST /api/auth/external-obtain-access-tokens — T19", () => {
     expect(h.saleorClient.customerCreateCalls).toHaveLength(0);
   });
 
-  // -- Bad branding_origin ----------------------------------------------------
+  // -- Bad state token --------------------------------------------------------
 
-  it("returns 400 when branding_origin token fails T15 verification", async () => {
+  it("returns 400 when state token fails HMAC verification", async () => {
     const h = buildHarness();
 
     wireDeps(h);
@@ -1043,7 +1037,10 @@ describe("POST /api/auth/external-obtain-access-tokens — T19", () => {
     const { POST } = await import("./route");
 
     const body = buildValidBody({
-      brandingOrigin: signBrandingOrigin(ALLOWED_ORIGIN, "WRONG_SIGNING_KEY"),
+      state: mintStateToken(
+        { redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN },
+        "wrong-state-secret",
+      ),
     });
 
     const res = await POST(buildSignedRequest({ body, channelSlug: "default" }));
@@ -1053,7 +1050,7 @@ describe("POST /api/auth/external-obtain-access-tokens — T19", () => {
     expect(h.saleorClient.customerCreateCalls).toHaveLength(0);
   });
 
-  it("returns 400 when branding_origin's parsed origin is not in allowedOrigins", async () => {
+  it("returns 400 when state token's origin is not in allowedOrigins", async () => {
     const h = buildHarness();
 
     wireDeps(h);
@@ -1062,7 +1059,7 @@ describe("POST /api/auth/external-obtain-access-tokens — T19", () => {
 
     const body = buildValidBody({
       origin: "https://attacker.example.com",
-      brandingOrigin: signBrandingOrigin("https://attacker.example.com", SIGNING_KEY),
+      redirectUri: "https://attacker.example.com/cb",
     });
 
     const res = await POST(buildSignedRequest({ body, channelSlug: "default" }));

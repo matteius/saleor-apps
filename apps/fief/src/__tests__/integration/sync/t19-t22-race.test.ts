@@ -32,6 +32,8 @@
 import { ok, type Result } from "neverthrow";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { mintStateToken } from "@/modules/auth-state/state-token";
+
 import {
   ALLOWED_ORIGIN,
   buildSignedRequest,
@@ -39,10 +41,10 @@ import {
   CONNECTION_ID,
   FIEF_USER_ID,
   type IntegrationHarness,
+  PLUGIN_SECRET,
   REDIRECT_URI,
   SALEOR_API_URL,
   seedConnection,
-  SIGNING_KEY,
   startHarness,
   stopHarness,
 } from "../auth/harness";
@@ -141,11 +143,8 @@ let harness: IntegrationHarness;
 let saleorDeactivateClient: InMemorySaleorDeactivateClient;
 let fiefAdmin: FiefAdminMockHandle;
 
-const buildBrandingOriginToken = async (): Promise<string> => {
-  const { sign } = await import("@/modules/branding/origin-signer");
-
-  return sign(ALLOWED_ORIGIN, SIGNING_KEY);
-};
+const buildState = (): string =>
+  mintStateToken({ redirectUri: REDIRECT_URI, origin: ALLOWED_ORIGIN }, PLUGIN_SECRET);
 
 const T19_PATHNAME = "/api/auth/external-obtain-access-tokens";
 
@@ -202,21 +201,16 @@ describe("T19 ↔ T22 race — through real Mongo + receiver", () => {
      * them concurrently. The atomic identity_map upsert is the
      * synchronization point — exactly one of them wins `wasInserted=true`.
      */
-    const brandingOrigin = await buildBrandingOriginToken();
-
-    const t19Body = {
-      saleorApiUrl: SALEOR_API_URL as unknown as string,
-      channelSlug: CHANNEL_SLUG as unknown as string,
-      input: {
-        code: "fief-auth-code-race",
-        redirectUri: REDIRECT_URI,
-        origin: ALLOWED_ORIGIN,
-        brandingOrigin,
-      },
-    };
+    const t19Body = { code: "fief-auth-code-race", state: buildState() };
 
     const [t19Res, fiefRes] = await Promise.all([
-      callT19(buildSignedRequest({ pathname: T19_PATHNAME, body: t19Body })),
+      callT19(
+        buildSignedRequest({
+          pathname: T19_PATHNAME,
+          body: t19Body,
+          channelSlug: CHANNEL_SLUG as unknown as string,
+        }),
+      ),
       deliverFiefWebhook({
         connectionId: CONNECTION_ID as unknown as string,
         type: "user.created",
@@ -266,21 +260,17 @@ describe("T19 ↔ T22 race — through real Mongo + receiver", () => {
   });
 
   it("identity_map row is stable: a third call does NOT re-create the customer", async () => {
-    const brandingOrigin = await buildBrandingOriginToken();
-    const t19Body = {
-      saleorApiUrl: SALEOR_API_URL as unknown as string,
-      channelSlug: CHANNEL_SLUG as unknown as string,
-      input: {
-        code: "fief-auth-code-race-stable",
-        redirectUri: REDIRECT_URI,
-        origin: ALLOWED_ORIGIN,
-        brandingOrigin,
-      },
-    };
+    const t19Body = { code: "fief-auth-code-race-stable", state: buildState() };
+    const buildReq = () =>
+      buildSignedRequest({
+        pathname: T19_PATHNAME,
+        body: t19Body,
+        channelSlug: CHANNEL_SLUG as unknown as string,
+      });
 
     // Race the two surfaces.
     await Promise.all([
-      callT19(buildSignedRequest({ pathname: T19_PATHNAME, body: t19Body })),
+      callT19(buildReq()),
       deliverFiefWebhook({
         connectionId: CONNECTION_ID as unknown as string,
         type: "user.created",
@@ -297,7 +287,7 @@ describe("T19 ↔ T22 race — through real Mongo + receiver", () => {
     // The third call (a returning user) MUST NOT call customerCreate.
     raceSaleorClient!.reset();
 
-    const thirdRes = await callT19(buildSignedRequest({ pathname: T19_PATHNAME, body: t19Body }));
+    const thirdRes = await callT19(buildReq());
 
     expect(thirdRes.status).toBe(200);
     expect(raceSaleorClient!.trace.customerCreateCount).toBe(0);

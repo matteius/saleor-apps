@@ -1,5 +1,3 @@
-import * as crypto from "node:crypto";
-
 import { compose } from "@saleor/apps-shared/compose";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
@@ -8,6 +6,7 @@ import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import { withLoggerContext } from "@/lib/logger-context";
 import { withSaleorApiUrlAttributes } from "@/lib/observability-saleor-api-url";
+import { mintStateToken } from "@/modules/auth-state/state-token";
 import { sign as signBrandingOrigin } from "@/modules/branding/origin-signer";
 import {
   type ChannelSlug,
@@ -76,22 +75,28 @@ const logger = createLogger("api.auth.external-authentication-url");
 
 /**
  * Request body shape. Matches Saleor `BasePlugin` client (T56)
- * `client.authentication_url(...)` send shape exactly so the byte-lock fixture
- * in `saleor/plugins/fief/tests/test_client.py::test_build_signature_matches_byte_lock`
- * round-trips through this verifier without modification.
+ * `client.authentication_url(...)` flat send shape:
+ *
+ *   { redirectUri: <url>, saleorUserId?: <string> }
+ *
+ * `saleorApiUrl` and `channelSlug` are read from the HMAC-signed headers
+ * (`X-Fief-Plugin-Saleor-Url` / `X-Fief-Plugin-Channel`) — same convention
+ * as `external-refresh` and `external-logout`. Carrying them in the body
+ * would be redundant and would diverge from the Python client.
+ *
+ * The storefront `origin` is derived from `redirectUri` (URL.origin) instead
+ * of being a separate field — the Python client doesn't carry it, and the
+ * authorize-URL branding overlay only needs a value the connection's
+ * `branding.allowedOrigins` can be cross-checked against.
+ *
+ * The OIDC `state` token is *not* a body field: this route mints it (see
+ * `mintStateToken`) so it can carry `redirectUri` + `origin` through the
+ * Fief round-trip and have `external-obtain-access-tokens` recover them
+ * without a Mongo session store.
  */
 const requestBodySchema = z.object({
-  saleorApiUrl: z.string().min(1),
-  channelSlug: z.string().min(1),
-  input: z.object({
-    redirectUri: z.string().url(),
-    /**
-     * Storefront origin (e.g. `https://shop.example.com`). Required because
-     * Fief's branding overlay needs to know which storefront's brand to
-     * apply. Must be present in the connection's allowedOrigins.
-     */
-    origin: z.string().url(),
-  }),
+  redirectUri: z.string().url(),
+  saleorUserId: z.string().min(1).optional(),
 });
 
 // -- HTTP responses -----------------------------------------------------------
@@ -109,17 +114,19 @@ interface BuildAuthorizeUrlInput {
   redirectUri: string;
   origin: string;
   signingKey: string;
+  state: string;
 }
 
 /**
  * Build the Fief OIDC `/authorize` URL with all required params + a signed
  * `branding_origin` produced by T15.
  *
- * `state` is a fresh 32-byte hex value (256 bits of entropy). The
- * storefront opaquely round-trips it to T19; CSRF binding against the
- * storefront's session cookie lives on the storefront/Saleor side
- * (Saleor's standard `csrf_token` mechanism on the `external*` plugin
- * methods).
+ * `state` is the HMAC-signed token minted by `mintStateToken` — it carries
+ * the `redirectUri` + `origin` so `external-obtain-access-tokens` can
+ * recover them when the Saleor plugin (which only sends `{code, state}`)
+ * forwards the callback. CSRF binding against the storefront's session
+ * cookie lives on the storefront/Saleor side (Saleor's standard
+ * `csrf_token` mechanism on the `external*` plugin methods).
  */
 const buildAuthorizeUrl = (input: BuildAuthorizeUrlInput): string => {
   const url = new URL("/authorize", input.connection.fief.baseUrl);
@@ -133,7 +140,7 @@ const buildAuthorizeUrl = (input: BuildAuthorizeUrlInput): string => {
   url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "openid email profile");
-  url.searchParams.set("state", crypto.randomBytes(32).toString("hex"));
+  url.searchParams.set("state", input.state);
   url.searchParams.set("branding_origin", signBrandingOrigin(input.origin, input.signingKey));
 
   return url.toString();
@@ -204,13 +211,15 @@ const handler = async (req: NextRequest): Promise<Response> => {
     });
   }
 
-  const { saleorApiUrl: saleorApiUrlRaw, channelSlug: channelSlugRaw, input } = parsed.data;
+  const { redirectUri } = parsed.data;
 
-  const saleorApiUrlResult = createSaleorApiUrl(saleorApiUrlRaw);
+  // -- Saleor identity from verified HMAC headers --------------------------
+
+  const saleorApiUrlResult = createSaleorApiUrl(verifyResult.value.saleorApiUrl);
 
   if (saleorApiUrlResult.isErr()) {
-    logger.warn("saleorApiUrl in body failed brand validation", {
-      saleorApiUrl: saleorApiUrlRaw,
+    logger.warn("saleorApiUrl header failed brand validation", {
+      saleorApiUrl: verifyResult.value.saleorApiUrl,
     });
 
     return jsonResponse(400, { error: "Bad Request", message: "invalid saleorApiUrl" });
@@ -218,12 +227,26 @@ const handler = async (req: NextRequest): Promise<Response> => {
 
   const saleorApiUrl = saleorApiUrlResult.value;
 
+  if (!verifyResult.value.channelSlug) {
+    return jsonResponse(400, { error: "Bad Request", message: "missing channelSlug header" });
+  }
+
   let channelSlug: ChannelSlug;
 
   try {
-    channelSlug = createChannelSlug(channelSlugRaw);
+    channelSlug = createChannelSlug(verifyResult.value.channelSlug);
   } catch {
     return jsonResponse(400, { error: "Bad Request", message: "invalid channelSlug" });
+  }
+
+  // -- Derive storefront origin from redirectUri ---------------------------
+
+  let origin: string;
+
+  try {
+    origin = new URL(redirectUri).origin;
+  } catch {
+    return jsonResponse(400, { error: "Bad Request", message: "invalid redirectUri" });
   }
 
   // -- Resolve connection via channel-scope --------------------------------
@@ -275,15 +298,15 @@ const handler = async (req: NextRequest): Promise<Response> => {
     (o) => o as unknown as string,
   );
 
-  if (!allowedOriginStrings.includes(input.origin)) {
-    logger.warn("Request origin not in connection allowedOrigins", {
-      origin: input.origin,
+  if (!allowedOriginStrings.includes(origin)) {
+    logger.warn("Derived storefront origin not in connection allowedOrigins", {
+      origin,
     });
 
     return jsonResponse(400, {
       error: "Bad Request",
       reason: "origin-not-allowed",
-      message: "origin not in connection allowedOrigins",
+      message: "redirectUri origin not in connection allowedOrigins",
     });
   }
 
@@ -306,11 +329,14 @@ const handler = async (req: NextRequest): Promise<Response> => {
 
   // -- Build + return authorize URL ----------------------------------------
 
+  const state = mintStateToken({ redirectUri, origin }, env.FIEF_PLUGIN_HMAC_SECRET);
+
   const authorizationUrl = buildAuthorizeUrl({
     connection,
-    redirectUri: input.redirectUri,
-    origin: input.origin,
+    redirectUri,
+    origin,
     signingKey,
+    state,
   });
 
   return jsonResponse(200, { authorizationUrl });
