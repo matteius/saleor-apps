@@ -41,6 +41,14 @@ export const env = createEnv({
     MONGODB_DATABASE: z.string().optional(),
     APPSTORE_URL: z.string().optional(),
     APP_NAME: z.string().default("Stripe"),
+    // URL of the OwlBooks /api/webhooks/subscription-status receiver.
+    OWLBOOKS_WEBHOOK_URL: z.string().url().optional(),
+    // HMAC-SHA256 secret shared with OwlBooks for webhook signature verification.
+    OWLBOOKS_WEBHOOK_SECRET: z.string().min(32).optional(),
+    // HMAC-SHA256 secret shared with the storefront for the public subscription API in T19a.
+    STOREFRONT_BRIDGE_SECRET: z.string().min(32).optional(),
+    // Vercel Cron auth bearer (used by the failed-mint retry job in T32a).
+    CRON_SECRET: z.string().optional(),
   },
   shared: {
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -78,6 +86,10 @@ export const env = createEnv({
     MONGODB_DATABASE: process.env.MONGODB_DATABASE,
     APPSTORE_URL: process.env.APPSTORE_URL,
     APP_NAME: process.env.APP_NAME,
+    OWLBOOKS_WEBHOOK_URL: process.env.OWLBOOKS_WEBHOOK_URL,
+    OWLBOOKS_WEBHOOK_SECRET: process.env.OWLBOOKS_WEBHOOK_SECRET,
+    STOREFRONT_BRIDGE_SECRET: process.env.STOREFRONT_BRIDGE_SECRET,
+    CRON_SECRET: process.env.CRON_SECRET,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
   onValidationError(issues) {
