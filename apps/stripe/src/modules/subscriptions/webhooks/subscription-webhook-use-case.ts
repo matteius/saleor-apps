@@ -49,10 +49,16 @@ import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { type StripeEnv } from "@/modules/stripe/stripe-env";
 import { type StripeRestrictedKey } from "@/modules/stripe/stripe-restricted-key";
 
+import {
+  type IStripeChargesApi,
+  type IStripeChargesApiFactory,
+  StripeChargesApiFactory,
+} from "../api/stripe-charges-api";
 import { type IStripeCustomerApi } from "../api/stripe-customer-api";
 import { type IStripeSubscriptionsApi } from "../api/stripe-subscriptions-api";
 import { type IStripeSubscriptionsApiFactory } from "../api/stripe-subscriptions-api-factory";
 import { type OwlBooksWebhookNotifier } from "../notifiers/owlbooks-notifier";
+import { type RefundDlqRepo } from "../repositories/refund-dlq-repo";
 import { type SubscriptionRepo } from "../repositories/subscription-repo";
 import { type IPriceVariantMapRepo } from "../saleor-bridge/price-variant-map";
 import { type ISaleorCustomerResolver } from "../saleor-bridge/saleor-customer-resolver";
@@ -61,6 +67,8 @@ import {
   type ChargeRefundHandlerError,
   type ChargeRefundHandlerSuccess,
   type IChargeRefundHandler,
+  type ISaleorGraphqlClientFactory,
+  type PassThroughToOneShotRefundHandlerResponse,
 } from "./charge-refund-handler";
 import {
   CustomerSubscriptionHandler,
@@ -116,6 +124,7 @@ export type SubscriptionWebhookExecuteSuccess =
   | CustomerSubscriptionHandlerSuccess
   | InvoiceHandlerSuccess
   | ChargeRefundHandlerSuccess
+  | PassThroughToOneShotRefundHandlerResponse
   | SubscriptionWebhookNoOpResponse;
 
 export type SubscriptionWebhookExecuteError =
@@ -146,6 +155,24 @@ export interface SubscriptionWebhookUseCaseDeps {
   stripeCustomerApiFactory?: {
     createCustomerApi(args: { key: StripeRestrictedKey }): IStripeCustomerApi;
   };
+  /**
+   * Factory for the per-installation Stripe Charges API client (T17). Only
+   * used by `ChargeRefundHandler` to expand `charge.invoice` on the hot path.
+   * Defaults to {@link StripeChargesApiFactory} when omitted.
+   */
+  stripeChargesApiFactory?: IStripeChargesApiFactory;
+  /**
+   * Operational queues for refund handling (T17). Required only if the
+   * default `ChargeRefundHandler` is used; if a test injects a mock
+   * `chargeRefundHandler`, this can be omitted.
+   */
+  refundDlqRepo?: RefundDlqRepo;
+  /**
+   * Saleor GraphQL client factory used by `ChargeRefundHandler.handleFullRefund`
+   * to call `orderVoid`. Required for the production wiring; tests typically
+   * inject a mock `chargeRefundHandler` instead.
+   */
+  saleorGraphqlClientFactory?: ISaleorGraphqlClientFactory;
   owlbooksWebhookNotifier: OwlBooksWebhookNotifier;
   /**
    * Optional handler overrides — primarily for unit tests. Production callers
@@ -188,7 +215,14 @@ export class SubscriptionWebhookUseCase {
   private readonly deps: SubscriptionWebhookUseCaseDeps;
   private readonly customerSubscriptionHandler: ICustomerSubscriptionHandler;
   private readonly invoiceHandler: IInvoiceHandler;
-  private readonly chargeRefundHandler: IChargeRefundHandler;
+  /**
+   * `chargeRefundHandler` may be undefined when no test override is supplied
+   * — in that case we lazily build it per `execute` call from
+   * `ctx.restrictedKey` (T17), since the underlying Stripe Charges API is
+   * scoped to a per-installation restricted key.
+   */
+  private readonly explicitChargeRefundHandler: IChargeRefundHandler | undefined;
+  private readonly stripeChargesApiFactory: IStripeChargesApiFactory;
   private readonly logger = createLogger("SubscriptionWebhookUseCase");
 
   constructor(deps: SubscriptionWebhookUseCaseDeps) {
@@ -196,7 +230,40 @@ export class SubscriptionWebhookUseCase {
     this.customerSubscriptionHandler =
       deps.customerSubscriptionHandler ?? new CustomerSubscriptionHandler();
     this.invoiceHandler = deps.invoiceHandler ?? new InvoiceHandler();
-    this.chargeRefundHandler = deps.chargeRefundHandler ?? new ChargeRefundHandler();
+    this.explicitChargeRefundHandler = deps.chargeRefundHandler;
+    this.stripeChargesApiFactory = deps.stripeChargesApiFactory ?? new StripeChargesApiFactory();
+  }
+
+  /**
+   * Build a default {@link ChargeRefundHandler} for the current installation.
+   * The Stripe Charges API client is keyed by `ctx.restrictedKey`, so we
+   * construct it per-call rather than at use-case construction time.
+   *
+   * Throws (caller surfaces as Err) if the production wiring is missing
+   * `refundDlqRepo` or `saleorGraphqlClientFactory`.
+   */
+  private getChargeRefundHandler(ctx: SubscriptionWebhookContext): IChargeRefundHandler {
+    if (this.explicitChargeRefundHandler) {
+      return this.explicitChargeRefundHandler;
+    }
+
+    if (!this.deps.refundDlqRepo || !this.deps.saleorGraphqlClientFactory) {
+      throw new BaseError(
+        "Default ChargeRefundHandler requires `refundDlqRepo` and `saleorGraphqlClientFactory` deps; provide them or inject `chargeRefundHandler`.",
+      );
+    }
+
+    const chargesApi: IStripeChargesApi = this.stripeChargesApiFactory.createChargesApi({
+      key: ctx.restrictedKey,
+    });
+
+    return new ChargeRefundHandler({
+      stripeChargesApi: chargesApi,
+      subscriptionRepo: this.deps.subscriptionRepo,
+      refundDlqRepo: this.deps.refundDlqRepo,
+      notifier: this.deps.owlbooksWebhookNotifier,
+      graphqlClientFactory: this.deps.saleorGraphqlClientFactory,
+    });
   }
 
   /**
@@ -243,7 +310,7 @@ export class SubscriptionWebhookUseCase {
         return this.invoiceHandler.handleFailed(event as Stripe.InvoicePaymentFailedEvent, ctx);
 
       case "charge.refunded":
-        return this.chargeRefundHandler.handle(event as Stripe.ChargeRefundedEvent, ctx);
+        return this.getChargeRefundHandler(ctx).handle(event as Stripe.ChargeRefundedEvent, ctx);
 
       /*
        * Informational invoice events — Stripe Tax / Stripe Billing emit these
