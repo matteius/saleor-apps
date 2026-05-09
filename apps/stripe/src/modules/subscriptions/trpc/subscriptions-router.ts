@@ -16,6 +16,9 @@ import { z } from "zod";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 import { router } from "@/modules/trpc/trpc-server";
 
+import { BillingPortalTrpcHandler } from "./billing-portal";
+import { GetStatusTrpcHandler } from "./get-status";
+
 /**
  * Shared address shape passed when creating a subscription. Optional on the
  * outer input; if present, all listed fields are required so Stripe Tax can
@@ -29,12 +32,22 @@ const billingAddressSchema = z.object({
   country: z.string().length(2, "ISO-3166-1 alpha-2 country code (e.g. 'US')"),
 });
 
-const createInputSchema = z.object({
-  fiefUserId: z.string().min(1),
-  email: z.string().email(),
-  stripePriceId: z.string().min(1).startsWith("price_"),
-  billingAddress: billingAddressSchema.optional(),
-});
+/**
+ * `.strict()` so unknown keys throw at validation. Storefront / dashboard
+ * callers MUST NOT pass `promoCode`, `couponId`, or `discount` — the
+ * existing OwlBooks `PromoCode` model is for AI-credit redemption and does
+ * not apply to subscriptions in v1 (T20). The strict mode surfaces these
+ * as a Zod error naming the offending key so the integration misuse is
+ * obvious from the error message alone.
+ */
+const createInputSchema = z
+  .object({
+    fiefUserId: z.string().min(1),
+    email: z.string().email(),
+    stripePriceId: z.string().min(1).startsWith("price_"),
+    billingAddress: billingAddressSchema.optional(),
+  })
+  .strict();
 
 const createOutputSchema = z.object({
   stripeSubscriptionId: z.string(),
@@ -62,38 +75,15 @@ const changePlanOutputSchema = z.object({
   currentPeriodEnd: z.string().datetime().nullable(),
 });
 
-const billingPortalInputSchema = z.object({
-  stripeCustomerId: z.string().min(1).startsWith("cus_"),
-  returnUrl: z.string().url(),
-});
-
-const billingPortalOutputSchema = z.object({
-  url: z.string().url(),
-});
-
-/**
- * XOR via Zod discriminated union — caller must provide exactly one of the
- * two lookup keys. Discriminator field is `by` so downstream handlers can
- * branch without ambiguity.
+/*
+ * Note: The `createBillingPortalSession` (T22) and `getStatus` (T23)
+ * procedure schemas live in their own modules (`./billing-portal` and
+ * `./get-status`) and are re-exported from the handler classes. The inline
+ * schema bindings were dropped here because the router-level type tests
+ * (`subscriptions-router.types.test.ts`) derive their assertions from
+ * `inferRouterInputs<TrpcRouter>` / `inferRouterOutputs<TrpcRouter>`,
+ * which sees each procedure's bindings directly.
  */
-const getStatusInputSchema = z.discriminatedUnion("by", [
-  z.object({
-    by: z.literal("stripeSubscriptionId"),
-    stripeSubscriptionId: z.string().min(1).startsWith("sub_"),
-  }),
-  z.object({
-    by: z.literal("fiefUserId"),
-    fiefUserId: z.string().min(1),
-  }),
-]);
-
-const getStatusOutputSchema = z.object({
-  status: z.string(),
-  currentPeriodEnd: z.string().datetime().nullable(),
-  cancelAtPeriodEnd: z.boolean(),
-  lastSaleorOrderId: z.string().nullable(),
-  planName: z.string().nullable(),
-});
 
 export type SubscriptionsCreateInput = z.infer<typeof createInputSchema>;
 export type SubscriptionsCreateOutput = z.infer<typeof createOutputSchema>;
@@ -101,10 +91,6 @@ export type SubscriptionsCancelInput = z.infer<typeof cancelInputSchema>;
 export type SubscriptionsCancelOutput = z.infer<typeof cancelOutputSchema>;
 export type SubscriptionsChangePlanInput = z.infer<typeof changePlanInputSchema>;
 export type SubscriptionsChangePlanOutput = z.infer<typeof changePlanOutputSchema>;
-export type SubscriptionsBillingPortalInput = z.infer<typeof billingPortalInputSchema>;
-export type SubscriptionsBillingPortalOutput = z.infer<typeof billingPortalOutputSchema>;
-export type SubscriptionsGetStatusInput = z.infer<typeof getStatusInputSchema>;
-export type SubscriptionsGetStatusOutput = z.infer<typeof getStatusOutputSchema>;
 
 const notImplemented = (taskId: string) =>
   new TRPCError({
@@ -149,23 +135,21 @@ export const subscriptionsRouter = router({
 
   /**
    * Mint a Stripe Customer Portal session URL.
-   * Body implemented in T22 (`billing-portal.ts`).
+   * Body implemented in T22 — delegates to {@link BillingPortalTrpcHandler}.
+   *
+   * The handler enforces its own input/output via schemas re-declared in
+   * `billing-portal.ts` that mirror the inline `billingPortal*Schema`
+   * bindings here (kept for type-test stability).
    */
-  createBillingPortalSession: protectedClientProcedure
-    .input(billingPortalInputSchema)
-    .output(billingPortalOutputSchema)
-    .mutation(async (_opts): Promise<SubscriptionsBillingPortalOutput> => {
-      throw notImplemented("T22");
-    }),
+  createBillingPortalSession: new BillingPortalTrpcHandler().getTrpcProcedure(),
 
   /**
    * Read subscription state from the DynamoDB cache.
-   * Body implemented in T23 (`get-status.ts`).
+   * Body implemented in T23 — delegates to {@link GetStatusTrpcHandler}.
+   *
+   * The handler enforces its own input/output via the same schemas declared
+   * here (re-exported from `get-status.ts`); the inline schema bindings are
+   * kept for type-test stability.
    */
-  getStatus: protectedClientProcedure
-    .input(getStatusInputSchema)
-    .output(getStatusOutputSchema)
-    .query(async (_opts): Promise<SubscriptionsGetStatusOutput> => {
-      throw notImplemented("T23");
-    }),
+  getStatus: new GetStatusTrpcHandler().getTrpcProcedure(),
 });

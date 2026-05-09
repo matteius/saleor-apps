@@ -469,6 +469,7 @@ export class InvoiceHandler implements IInvoiceHandler {
       cancelAtPeriodEnd: subscriptionRecord.cancelAtPeriodEnd,
       lastInvoiceId: stripeInvoiceId,
       lastSaleorOrderId: minted.saleorOrderId,
+      planName: subscriptionRecord.planName,
       createdAt: subscriptionRecord.createdAt,
       updatedAt: new Date(),
     });
@@ -636,6 +637,7 @@ export class InvoiceHandler implements IInvoiceHandler {
       cancelAtPeriodEnd: subscriptionRecord.cancelAtPeriodEnd,
       lastInvoiceId: subscriptionRecord.lastInvoiceId,
       lastSaleorOrderId: subscriptionRecord.lastSaleorOrderId,
+      planName: subscriptionRecord.planName,
       createdAt: subscriptionRecord.createdAt,
       updatedAt: new Date(),
     });

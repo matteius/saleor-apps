@@ -289,6 +289,14 @@ function buildRecord(
     cancelAtPeriodEnd: parsed.cancelAtPeriodEnd,
     lastInvoiceId: existing?.lastInvoiceId ?? null,
     lastSaleorOrderId: existing?.lastSaleorOrderId ?? null,
+    /*
+     * Preserve any planName cached by T20 (`create`) — T15 doesn't fetch
+     * Stripe Product names on every webhook (it would double the call rate).
+     * If the price changed, T15's caller is responsible for refreshing
+     * planName via a follow-up upsert; for now the stale label is acceptable
+     * and the storefront has a Stripe-side source of truth for the price id.
+     */
+    planName: existing?.planName ?? null,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   });

@@ -70,6 +70,17 @@ export class SubscriptionRecord {
   readonly cancelAtPeriodEnd: boolean;
   readonly lastInvoiceId: string | null;
   readonly lastSaleorOrderId: string | null;
+  /**
+   * Human-readable plan name (e.g. Stripe Product `name`) cached on the
+   * record by T20 (`create`) and T15 (`updated`) for the storefront /
+   * settings UI to render without an extra Stripe API round-trip on every
+   * `getStatus` poll.
+   *
+   * Nullable for forward/backward compat — pre-T23 records won't have it,
+   * and T23 (`getStatus`) falls back to the `stripePriceId` string when
+   * absent. See the T23 plan log for the rationale (option (b)).
+   */
+  readonly planName: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
@@ -87,6 +98,7 @@ export class SubscriptionRecord {
     cancelAtPeriodEnd: boolean;
     lastInvoiceId?: string | null;
     lastSaleorOrderId?: string | null;
+    planName?: string | null;
     createdAt: Date;
     updatedAt: Date;
   }) {
@@ -103,6 +115,7 @@ export class SubscriptionRecord {
     this.cancelAtPeriodEnd = args.cancelAtPeriodEnd;
     this.lastInvoiceId = args.lastInvoiceId ?? null;
     this.lastSaleorOrderId = args.lastSaleorOrderId ?? null;
+    this.planName = args.planName ?? null;
     this.createdAt = args.createdAt;
     this.updatedAt = args.updatedAt;
   }

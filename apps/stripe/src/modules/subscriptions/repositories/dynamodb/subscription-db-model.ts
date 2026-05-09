@@ -64,6 +64,11 @@ const Schema = item({
   cancelAtPeriodEnd: boolean(),
   lastInvoiceId: string().optional(),
   lastSaleorOrderId: string().optional(),
+  /**
+   * Cached plan display name (T23). Optional so existing rows continue to
+   * parse; readers fall back to `stripePriceId` when absent.
+   */
+  planName: string().optional(),
 });
 
 const createEntity = (table: DynamoMainTable) => {

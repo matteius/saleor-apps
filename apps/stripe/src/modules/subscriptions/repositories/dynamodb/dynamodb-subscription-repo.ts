@@ -53,6 +53,7 @@ type ParsedRow = {
   cancelAtPeriodEnd: boolean;
   lastInvoiceId?: string;
   lastSaleorOrderId?: string;
+  planName?: string;
   createdAt?: string;
   modifiedAt?: string;
 };
@@ -72,6 +73,7 @@ const mapRowToRecord = (row: ParsedRow): SubscriptionRecord => {
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
     lastInvoiceId: row.lastInvoiceId ?? null,
     lastSaleorOrderId: row.lastSaleorOrderId ?? null,
+    planName: row.planName ?? null,
     createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
     updatedAt: row.modifiedAt ? new Date(row.modifiedAt) : new Date(),
   });
@@ -117,6 +119,7 @@ export class DynamoDbSubscriptionRepo implements SubscriptionRepo {
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         lastInvoiceId: subscription.lastInvoiceId ?? undefined,
         lastSaleorOrderId: subscription.lastSaleorOrderId ?? undefined,
+        planName: subscription.planName ?? undefined,
       });
 
       const result = await operation.send();
