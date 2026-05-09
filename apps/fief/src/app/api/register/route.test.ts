@@ -21,7 +21,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as EnvModule from "@/lib/env";
 import type * as WebhookManagementModule from "@/modules/webhook-management";
 
-import { buildRegisterHandler, POST } from "./route";
+import { buildRegisterHandler } from "./build-register-handler";
+import { POST } from "./route";
 
 const { captured, runWebhookMigrationsExecute } = vi.hoisted(() => ({
   captured: { lastConfig: undefined as Record<string, unknown> | undefined },
