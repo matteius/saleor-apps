@@ -371,26 +371,15 @@ const handler = async (req: NextRequest): Promise<Response> => {
   });
 
   if (exchangeResult.isErr()) {
-    const cause = (exchangeResult.error as { cause?: unknown }).cause;
-
     logger.error("Fief code exchange failed", {
       errorBrand: (exchangeResult.error as { _brand?: string })._brand,
       errorMessage: exchangeResult.error.message,
-      upstream: cause,
     });
 
-    /*
-     * Surface the upstream Fief error in the response body. The endpoint is
-     * HMAC-protected and only Saleor reaches it, so leaking the exact OIDC
-     * error code (e.g. `invalid_grant`, `invalid_client`) is fine — and it's
-     * the only signal an operator running `kubectl logs` can act on, since
-     * the tslog instance is configured with `type: "hidden"`.
-     */
     return jsonResponse(502, {
       error: "Bad Gateway",
       reason: "fief-exchange-failed",
       message: "upstream Fief code exchange failed",
-      upstream: cause ?? exchangeResult.error.message,
     });
   }
 
