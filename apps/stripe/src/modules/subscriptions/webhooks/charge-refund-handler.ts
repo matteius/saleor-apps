@@ -8,12 +8,16 @@
  * On a one-shot purchase refund (no `charge.invoice.subscription`), this
  * handler delegates back to the existing `StripeRefundHandler`.
  *
- * To be fully implemented in T17.
+ * The class is the STUBBED INTERFACE that T12's
+ * `SubscriptionWebhookUseCase` dispatches to. Method body is intentionally
+ * an `Err`-returning placeholder — T17 replaces it in Wave 5.
  */
 import { err, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
 import { BaseError } from "@/lib/errors";
+
+import { type SubscriptionWebhookContext } from "./subscription-webhook-use-case";
 
 export const TODO_T17_CHARGE_REFUND_HANDLER = "implement in T17";
 
@@ -23,10 +27,20 @@ export interface ChargeRefundHandlerSuccess {
   readonly voidedSaleorOrderId: string | null;
 }
 
-export class ChargeRefundHandler {
-  async handleChargeRefunded(
+export type ChargeRefundHandlerError = InstanceType<typeof BaseError>;
+
+export interface IChargeRefundHandler {
+  handle(
+    event: Stripe.ChargeRefundedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<ChargeRefundHandlerSuccess, ChargeRefundHandlerError>>;
+}
+
+export class ChargeRefundHandler implements IChargeRefundHandler {
+  async handle(
     _event: Stripe.ChargeRefundedEvent,
-  ): Promise<Result<ChargeRefundHandlerSuccess, InstanceType<typeof BaseError>>> {
-    return err(new BaseError("T17 not implemented"));
+    _ctx: SubscriptionWebhookContext,
+  ): Promise<Result<ChargeRefundHandlerSuccess, ChargeRefundHandlerError>> {
+    return err(new BaseError("Implemented in T17"));
   }
 }

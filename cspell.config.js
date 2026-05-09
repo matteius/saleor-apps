@@ -83,7 +83,9 @@ export default {
     "Neue",
     "Segoe",
     "Undiscounted",
-    "OIDC", "oidc"
+    "OIDC", "oidc",
+    "owlbooks", "OWLBOOKS",
+    "Fief", "fief"
   ],
   language: "en-US",
   useGitignore: true,

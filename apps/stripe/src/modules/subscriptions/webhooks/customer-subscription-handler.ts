@@ -8,12 +8,16 @@
  * - `customer.subscription.deleted` (T15): set status to CANCELLED,
  *   set `paidThrough = currentPeriodEnd`.
  *
- * To be fully implemented in T13 and T15.
+ * The class is the STUBBED INTERFACE that T12's
+ * `SubscriptionWebhookUseCase` dispatches to. Method bodies are intentionally
+ * `Err`-returning placeholders — T13 and T15 replace them in Wave 5.
  */
 import { err, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
 import { BaseError } from "@/lib/errors";
+
+import { type SubscriptionWebhookContext } from "./subscription-webhook-use-case";
 
 export const TODO_T13_CUSTOMER_SUBSCRIPTION_HANDLER = "implement in T13";
 export const TODO_T15_CUSTOMER_SUBSCRIPTION_HANDLER = "implement in T15";
@@ -23,22 +27,44 @@ export interface CustomerSubscriptionHandlerSuccess {
   readonly stripeSubscriptionId: string;
 }
 
-export class CustomerSubscriptionHandler {
+export type CustomerSubscriptionHandlerError = InstanceType<typeof BaseError>;
+
+export interface ICustomerSubscriptionHandler {
+  handleCreated(
+    event: Stripe.CustomerSubscriptionCreatedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>>;
+
+  handleUpdated(
+    event: Stripe.CustomerSubscriptionUpdatedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>>;
+
+  handleDeleted(
+    event: Stripe.CustomerSubscriptionDeletedEvent,
+    ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>>;
+}
+
+export class CustomerSubscriptionHandler implements ICustomerSubscriptionHandler {
   async handleCreated(
     _event: Stripe.CustomerSubscriptionCreatedEvent,
-  ): Promise<Result<CustomerSubscriptionHandlerSuccess, InstanceType<typeof BaseError>>> {
-    return err(new BaseError("T13 not implemented"));
+    _ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
+    return err(new BaseError("Implemented in T13"));
   }
 
   async handleUpdated(
     _event: Stripe.CustomerSubscriptionUpdatedEvent,
-  ): Promise<Result<CustomerSubscriptionHandlerSuccess, InstanceType<typeof BaseError>>> {
-    return err(new BaseError("T15 not implemented"));
+    _ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
+    return err(new BaseError("Implemented in T15"));
   }
 
   async handleDeleted(
     _event: Stripe.CustomerSubscriptionDeletedEvent,
-  ): Promise<Result<CustomerSubscriptionHandlerSuccess, InstanceType<typeof BaseError>>> {
-    return err(new BaseError("T15 not implemented"));
+    _ctx: SubscriptionWebhookContext,
+  ): Promise<Result<CustomerSubscriptionHandlerSuccess, CustomerSubscriptionHandlerError>> {
+    return err(new BaseError("Implemented in T15"));
   }
 }
