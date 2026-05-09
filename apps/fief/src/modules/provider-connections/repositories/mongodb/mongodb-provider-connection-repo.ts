@@ -131,16 +131,28 @@ function docToEntity(
 }
 
 export class MongodbProviderConnectionRepo implements ProviderConnectionRepo {
-  private readonly encryptor: RotatingFiefEncryptor;
+  private encryptorInstance: RotatingFiefEncryptor | undefined;
+  private readonly injectedEncryptor: RotatingFiefEncryptor | undefined;
   private collectionPromise: Promise<Collection<MongoProviderConnectionDoc>> | null = null;
 
   /**
    * `encryptor` is injectable so unit tests can substitute a deterministic
-   * one. Production callers leave it `undefined` and the constructor builds
-   * the env-driven singleton via `createFiefEncryptor()`.
+   * one. Production callers leave it `undefined` and the env-driven singleton
+   * is built lazily on first encrypt/decrypt — deferring construction lets
+   * `next build`'s route-collection phase load this module without
+   * `SECRET_KEY` set (build environment doesn't and shouldn't hold the prod
+   * key). Runtime first-use still throws cleanly if `SECRET_KEY` is missing.
    */
   constructor(encryptor?: RotatingFiefEncryptor) {
-    this.encryptor = encryptor ?? createFiefEncryptor();
+    this.injectedEncryptor = encryptor;
+  }
+
+  private get encryptor(): RotatingFiefEncryptor {
+    if (this.encryptorInstance === undefined) {
+      this.encryptorInstance = this.injectedEncryptor ?? createFiefEncryptor();
+    }
+
+    return this.encryptorInstance;
   }
 
   private async getCollection(): Promise<Collection<MongoProviderConnectionDoc>> {

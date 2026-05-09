@@ -153,6 +153,15 @@ export const env = createEnv({
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
+  /*
+   * `next build` imports route modules to collect page data, which transitively
+   * loads this env file. The build environment doesn't (and shouldn't) hold
+   * production secrets — validation must run at runtime, not at build time.
+   * NEXT_PHASE === "phase-production-build" during `next build`. Operators can
+   * also set SKIP_ENV_VALIDATION=1 explicitly (e.g. CI lint jobs).
+   */
+  skipValidation:
+    !!process.env.SKIP_ENV_VALIDATION || process.env.NEXT_PHASE === "phase-production-build",
   onValidationError(issues) {
     const validationError = fromError(issues);
     const EnvValidationError = BaseError.subclass("EnvValidationError");
