@@ -1,0 +1,12 @@
+mutation SubscriptionTransactionCreate($id: ID!, $transaction: TransactionCreateInput!) {
+  transactionCreate(id: $id, transaction: $transaction) {
+    transaction {
+      id
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

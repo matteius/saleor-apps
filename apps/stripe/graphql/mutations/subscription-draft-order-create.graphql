@@ -1,0 +1,12 @@
+mutation SubscriptionDraftOrderCreate($input: DraftOrderCreateInput!) {
+  draftOrderCreate(input: $input) {
+    order {
+      id
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
