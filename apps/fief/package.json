@@ -36,6 +36,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",
+    "tslog": "4.9.2",
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
     "zod": "catalog:",

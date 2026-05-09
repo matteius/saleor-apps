@@ -85,7 +85,8 @@ export default {
     "Undiscounted",
     "OIDC", "oidc",
     "owlbooks", "OWLBOOKS",
-    "Fief", "fief"
+    "Fief", "fief",
+    "tslog"
   ],
   language: "en-US",
   useGitignore: true,
