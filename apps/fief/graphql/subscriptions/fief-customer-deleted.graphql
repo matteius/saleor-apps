@@ -1,0 +1,24 @@
+# T29 — `CUSTOMER_DELETED` async subscription document.
+#
+# Consumed by `apps/fief/src/app/api/webhooks/saleor/customer-deleted/webhook-definition.ts`.
+# Mirrors T26/T27/T28 — same `SaleorCustomerEventUser` slice (id + metadata
+# for the loop-guard origin marker; the use case only needs the saleor user
+# id to look up the identity_map binding, but we send the full slice for
+# parity with the other three customer events and for forward-compatibility
+# with future delete-time enrichment).
+#
+# Naming convention shared across T26/T27/T28/T29: `Fief<Event>` for the
+# subscription operation name; the document export is `Fief<Event>Document`,
+# the per-event fragment is `Fief<Event>EventFragment`.
+fragment FiefCustomerDeletedEvent on CustomerDeleted {
+  version
+  user {
+    ...SaleorCustomerEventUser
+  }
+}
+
+subscription FiefCustomerDeleted {
+  event {
+    ...FiefCustomerDeletedEvent
+  }
+}
