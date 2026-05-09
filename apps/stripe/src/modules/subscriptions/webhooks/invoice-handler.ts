@@ -1,21 +1,38 @@
 /**
  * Handler for `invoice.{paid,payment_failed}` events.
  *
- * - `invoice.paid` (T14 — THE Saleor order mint bridge per PRD §5.4):
+ * - `invoice.paid` (T14 + T31 — THE Saleor order mint bridge per PRD §5.4):
  *     1. Look up cached `SubscriptionRecord` by Stripe subscription id.
- *     2. Idempotency check vs `lastInvoiceId` (DynamoDB cache); a second
- *        webhook for the same invoice short-circuits to `Ok` without minting.
+ *     2. **Idempotency Layer 1** (in-memory): replay check vs cached
+ *        `lastInvoiceId`. A second delivery whose lookup already shows the
+ *        invoice as processed short-circuits to `Ok` without minting.
  *     3. Resolve Saleor variant from Stripe price via T10's
  *        `IPriceVariantMapRepo.get`. An unknown price ID returns
  *        `Err(UnknownStripePriceError)` rather than minting against a
  *        placeholder variant.
- *     4. Call T9's `mintOrderFromInvoice` to create + complete a Saleor draft
+ *     4. **Idempotency Layer A** (T31 — DynamoDB conditional Put): claim
+ *        `lastInvoiceId` via `SubscriptionRepo.markInvoiceProcessed` BEFORE
+ *        minting. Two simultaneous webhook deliveries that both pass Layer 1
+ *        race here; exactly one wins the conditional check
+ *        `attribute_not_exists(lastInvoiceId) OR lastInvoiceId <>
+ *        :newInvoiceId`. The loser receives `'already_processed'` and short-
+ *        circuits to `Ok` with the existing `lastSaleorOrderId` — NO duplicate
+ *        mint is issued.
+ *     5. Call T9's `mintOrderFromInvoice` to create + complete a Saleor draft
  *        order and record the Stripe transaction.
- *     5. Update `lastInvoiceId` + `lastSaleorOrderId` on the cached record.
- *     6. Notify OwlBooks via T28's `/api/webhooks/subscription-status`
- *        receiver. The OwlBooks Postgres path provides the second line of
- *        idempotency defense via `SaleorOrderImport.stripeInvoiceId @unique`
- *        (T31 hardens this further).
+ *     6. Plain-`upsert` to attach the new `lastSaleorOrderId` to the claim
+ *        written in step 4. (Layer A's claim already set `lastInvoiceId`, so
+ *        the failure mode "claimed but never minted" cannot trigger a second
+ *        mint — the next delivery is short-circuited at Layer 1; T32's DLQ
+ *        owns retry of the missing Saleor order.)
+ *     7. Notify OwlBooks via T28's `/api/webhooks/subscription-status`
+ *        receiver. **Idempotency Layer B** (T31 — Postgres unique-violation):
+ *        T28's `SaleorOrderImport.stripeInvoiceId @unique` constraint catches
+ *        any duplicate that slipped through layers 1 + A and surfaces it via
+ *        `action: 'duplicate'` in the response body, which the notifier
+ *        translates to `{processed: 'duplicate'}`. We log it and treat the
+ *        delivery as success; never retry the webhook just because OwlBooks
+ *        already had this row.
  *
  *   Postgres-side concern: writing `'PAST_DUE'` (and other newly-added
  *   subscription statuses) requires the Postgres enum migration to have run.
@@ -46,6 +63,10 @@ import {
   type OwlBooksWebhookPayload,
 } from "../notifiers/owlbooks-notifier";
 import {
+  type FailedMintDlqRepo,
+  type FailedMintRecord,
+} from "../repositories/failed-mint-dlq-repo";
+import {
   createStripeSubscriptionId,
   SubscriptionRecord,
   type SubscriptionStatus,
@@ -57,6 +78,7 @@ import {
   type MintOrderFromInvoiceResult,
   type SaleorOrderFromInvoiceError,
 } from "../saleor-bridge/saleor-order-from-invoice";
+import { computeNextRetryAt } from "./dlq-backoff";
 import { type SubscriptionWebhookContext } from "./subscription-webhook-use-case";
 
 export const TODO_T14_INVOICE_HANDLER = "implement in T14";
@@ -177,6 +199,20 @@ export interface InvoiceHandlerDeps {
   priceVariantMapRepo: PriceVariantMapRepo;
   owlbooksWebhookNotifier: OwlBooksWebhookNotifier;
   apl: APL;
+  /**
+   * Failed-mint dead-letter queue (T32). When present, a `mintOrderFromInvoice`
+   * failure causes the handler to write a DLQ entry and return Ok (so Stripe
+   * accepts the webhook and stops retrying — the DLQ owns retry from there).
+   * When absent (legacy / test paths constructing without DLQ wiring), the
+   * handler falls back to the pre-T32 behavior of returning
+   * `Err(MintFailedError)`.
+   */
+  failedMintDlqRepo?: FailedMintDlqRepo;
+  /**
+   * Time source — injected for deterministic testing of DLQ timestamps.
+   * Returns unix-epoch *seconds*. Production default is `Date.now()/1000`.
+   */
+  nowUnixSeconds?: () => number;
   /** Override for tests; production uses T9's free function. */
   mintOrderFromInvoice?: MintOrderFromInvoiceFn;
   /** Override for tests; production uses `createInstrumentedGraphqlClient`. */
@@ -424,6 +460,81 @@ export class InvoiceHandler implements IInvoiceHandler {
       return err(graphqlClient.error);
     }
 
+    /*
+     * T31 Layer A — race-safe claim BEFORE mint.
+     *
+     * Two concurrent `invoice.paid` deliveries for the same `invoice.id`
+     * that both passed the Layer-1 in-memory check (because they read the
+     * cache before the other wrote) collide here. The DynamoDB conditional
+     * `attribute_not_exists(lastInvoiceId) OR lastInvoiceId <>
+     * :newInvoiceId` permits exactly one writer to set `lastInvoiceId` to
+     * `stripeInvoiceId`; the other receives `'already_processed'` and
+     * returns Ok WITHOUT minting (caller observes Ok with the
+     * lastSaleorOrderId from whoever won, which we don't yet know — return
+     * the cached value as our best signal).
+     *
+     * The claim record stamps `lastInvoiceId` but carries forward the
+     * PREVIOUS `lastSaleorOrderId` — the post-mint upsert below replaces it
+     * with the freshly minted order id. This two-step shape (claim → mint →
+     * upsert) is what makes the "exactly one Saleor order minted across N
+     * concurrent deliveries" invariant hold.
+     */
+    const claimRecord = new SubscriptionRecord({
+      stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
+      stripeCustomerId: subscriptionRecord.stripeCustomerId,
+      saleorChannelSlug: subscriptionRecord.saleorChannelSlug,
+      saleorUserId: subscriptionRecord.saleorUserId,
+      fiefUserId: subscriptionRecord.fiefUserId,
+      saleorEntityId: subscriptionRecord.saleorEntityId,
+      stripePriceId: subscriptionRecord.stripePriceId,
+      status: subscriptionRecord.status,
+      currentPeriodStart: subscriptionRecord.currentPeriodStart,
+      currentPeriodEnd: subscriptionRecord.currentPeriodEnd,
+      cancelAtPeriodEnd: subscriptionRecord.cancelAtPeriodEnd,
+      lastInvoiceId: stripeInvoiceId,
+      /*
+       * Preserve previous order id during the claim — post-mint upsert sets
+       * the new value once we have it.
+       */
+      lastSaleorOrderId: subscriptionRecord.lastSaleorOrderId,
+      planName: subscriptionRecord.planName,
+      createdAt: subscriptionRecord.createdAt,
+      updatedAt: new Date(),
+    });
+
+    const claimResult = await deps.subscriptionRepo.markInvoiceProcessed(repoAccess, claimRecord);
+
+    if (claimResult.isErr()) {
+      logger.error("Layer A: markInvoiceProcessed failed unexpectedly", {
+        stripeInvoiceId,
+        subscriptionId,
+        error: claimResult.error,
+      });
+
+      return err(
+        new SubscriptionRepoFailedError(`Failed to claim lastInvoiceId for ${stripeInvoiceId}`, {
+          cause: claimResult.error,
+        }),
+      );
+    }
+
+    if (claimResult.value === "already_processed") {
+      logger.info(
+        "Layer A: invoice already processed by concurrent webhook delivery — short-circuit Ok without re-mint",
+        {
+          stripeInvoiceId,
+          subscriptionId,
+          existingSaleorOrderId: subscriptionRecord.lastSaleorOrderId,
+        },
+      );
+
+      return ok({
+        _tag: "InvoiceHandlerSuccess",
+        stripeInvoiceId,
+        mintedSaleorOrderId: subscriptionRecord.lastSaleorOrderId,
+      });
+    }
+
     const mintFn = deps.mintOrderFromInvoice ?? defaultMintOrderFromInvoice;
 
     const mintResult = await mintFn({
@@ -440,6 +551,87 @@ export class InvoiceHandler implements IInvoiceHandler {
         subscriptionId,
         error: mintResult.error,
       });
+
+      /*
+       * T32 — money-taken-no-Saleor-order (PRD §10).
+       *
+       * If a DLQ is wired, record the failure and return Ok so Stripe stops
+       * retrying. The cron sweeper takes over from here. We deliberately do
+       * NOT update `lastInvoiceId` on the subscription record so that any
+       * future Stripe webhook redelivery for the same invoice is caught by
+       * the Layer-1 idempotency check at the top of this handler — meaning
+       * the DLQ retry job is the authoritative replay path.
+       *
+       * If no DLQ is wired (legacy/test construction), fall back to the
+       * pre-T32 behavior and return Err so the caller surfaces a non-2xx
+       * to Stripe.
+       */
+      if (deps.failedMintDlqRepo) {
+        const now = (deps.nowUnixSeconds ?? defaultNowUnixSeconds)();
+        const dlqRecord: FailedMintRecord = {
+          stripeInvoiceId,
+          stripeSubscriptionId: subscriptionRecord.stripeSubscriptionId,
+          stripeCustomerId: subscriptionRecord.stripeCustomerId,
+          fiefUserId: subscriptionRecord.fiefUserId,
+          saleorChannelSlug: subscriptionRecord.saleorChannelSlug,
+          saleorVariantId: mapping.saleorVariantId,
+          amountCents: invoice.amount_paid,
+          currency: invoice.currency,
+          taxCents: sumTaxCents(invoice),
+          errorMessage: String(mintResult.error?.message ?? mintResult.error),
+          errorClass: mintResult.error?.name ?? "UnknownError",
+          attemptCount: 1,
+          // First failure → schedule first retry per backoff[0].
+          nextRetryAt: computeNextRetryAt(1, now) ?? now,
+          firstAttemptAt: now,
+          lastAttemptAt: now,
+          invoicePayload: JSON.stringify(invoice),
+        };
+
+        const dlqResult = await deps.failedMintDlqRepo.record(repoAccess, dlqRecord);
+
+        if (dlqResult.isErr()) {
+          /*
+           * If we cannot even write to the DLQ, the safest fallback is to
+           * surface Err so Stripe retries — at-least-once delivery is the
+           * floor of correctness, and a Stripe retry might happen to land
+           * after the DynamoDB transient is gone. Logged loud.
+           */
+          logger.error(
+            "DLQ write FAILED after mint failure — falling back to Err so Stripe retries",
+            {
+              stripeInvoiceId,
+              subscriptionId,
+              dlqError: dlqResult.error,
+              mintError: mintResult.error,
+            },
+          );
+
+          return err(
+            new MintFailedError(
+              `Failed to mint Saleor order for invoice ${stripeInvoiceId} AND failed to write DLQ entry`,
+              { cause: mintResult.error },
+            ),
+          );
+        }
+
+        logger.warn(
+          "[invoice.paid] mint failed; recorded to failed-mint DLQ — webhook will return 2xx",
+          {
+            stripeInvoiceId,
+            subscriptionId,
+            attemptCount: 1,
+            nextRetryAt: dlqRecord.nextRetryAt,
+            errorClass: dlqRecord.errorClass,
+          },
+        );
+
+        return ok({
+          _tag: "InvoiceHandlerSuccess",
+          stripeInvoiceId,
+          mintedSaleorOrderId: null,
+        });
+      }
 
       return err(
         new MintFailedError(`Failed to mint Saleor order for invoice ${stripeInvoiceId}`, {
@@ -535,6 +727,21 @@ export class InvoiceHandler implements IInvoiceHandler {
           stripeInvoiceId,
           saleorOrderId: minted.saleorOrderId,
           error: notifyResult.error,
+        },
+      );
+    } else if (notifyResult.value.processed === "duplicate") {
+      /*
+       * T31 Layer B — OwlBooks Postgres `SaleorOrderImport.stripeInvoiceId`
+       * unique-constraint hit. Means a previous concurrent or replayed
+       * delivery already wrote the AR row. We minted again on Saleor (a
+       * harmless double draft order — operator may need to void one), but
+       * we MUST treat the Stripe webhook as success so it stops retrying.
+       */
+      logger.info(
+        "Layer B: OwlBooks reported duplicate stripeInvoiceId — webhook acked as success without retry",
+        {
+          stripeInvoiceId,
+          saleorOrderId: minted.saleorOrderId,
         },
       );
     }
@@ -722,6 +929,12 @@ export class InvoiceHandler implements IInvoiceHandler {
     );
   }
 }
+
+/**
+ * Default time source for DLQ timestamps — unix epoch seconds. Hoisted so the
+ * class doesn't need to capture `Date.now` per-instance.
+ */
+const defaultNowUnixSeconds = () => Math.floor(Date.now() / 1000);
 
 /**
  * Default factory — wraps `createInstrumentedGraphqlClient`. Hoisted so the

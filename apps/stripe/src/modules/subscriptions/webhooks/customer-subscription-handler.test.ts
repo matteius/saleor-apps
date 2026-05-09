@@ -131,6 +131,7 @@ interface Harness {
   handler: CustomerSubscriptionHandler;
   subscriptionRepo: {
     upsert: ReturnType<typeof vi.fn>;
+    markInvoiceProcessed: ReturnType<typeof vi.fn>;
     getBySubscriptionId: ReturnType<typeof vi.fn>;
     getByCustomerId: ReturnType<typeof vi.fn>;
     getByFiefUserId: ReturnType<typeof vi.fn>;
@@ -141,13 +142,14 @@ interface Harness {
 function buildHarness(opts: { existingRecord?: SubscriptionRecord | null } = {}): Harness {
   const subscriptionRepo = {
     upsert: vi.fn().mockResolvedValue(ok(null)),
+    markInvoiceProcessed: vi.fn().mockResolvedValue(ok("updated")),
     getBySubscriptionId: vi.fn().mockResolvedValue(ok(null)),
     getByCustomerId: vi.fn().mockResolvedValue(ok(opts.existingRecord ?? null)),
     getByFiefUserId: vi.fn().mockResolvedValue(ok(null)),
   };
 
   const notifier: OwlBooksWebhookNotifier = {
-    notify: vi.fn().mockResolvedValue(ok(undefined)),
+    notify: vi.fn().mockResolvedValue(ok({ processed: "new" as const })),
   };
 
   const handler = new CustomerSubscriptionHandler({

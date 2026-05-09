@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["dub1", "iad1"]
+  "regions": ["dub1", "iad1"],
+  "crons": [
+    {
+      "path": "/api/cron/retry-failed-mints",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

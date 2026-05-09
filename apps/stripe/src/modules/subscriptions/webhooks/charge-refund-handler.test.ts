@@ -177,6 +177,7 @@ function buildHarness(
 
   const subscriptionRepo: SubscriptionRepo = {
     upsert: vi.fn(),
+    markInvoiceProcessed: vi.fn().mockResolvedValue(ok("updated")),
     getBySubscriptionId: vi
       .fn()
       .mockResolvedValue(
@@ -198,7 +199,7 @@ function buildHarness(
   };
 
   const notifier: OwlBooksWebhookNotifier = opts.notifierOverride ?? {
-    notify: vi.fn().mockResolvedValue(ok(undefined)),
+    notify: vi.fn().mockResolvedValue(ok({ processed: "new" as const })),
   };
 
   const graphqlMutation = vi.fn().mockReturnValue({

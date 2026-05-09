@@ -10,6 +10,7 @@
  *     filter on the cached attribute (no GSI in the shared table; v1 fallback
  *     since OwlBooks subscription record count is low).
  */
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { GetItemCommand, Parser, PutItemCommand } from "dynamodb-toolbox";
 import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
 import { err, ok, type Result } from "neverthrow";
@@ -31,6 +32,7 @@ import {
   type SubscriptionStatus,
 } from "../subscription-record";
 import {
+  type MarkInvoiceProcessedOutcome,
   type SubscriptionRepo,
   type SubscriptionRepoAccess,
   SubscriptionRepoError,
@@ -146,6 +148,116 @@ export class DynamoDbSubscriptionRepo implements SubscriptionRepo {
           {
             cause: e,
           },
+        ),
+      );
+    }
+  }
+
+  /**
+   * T31 Layer A — race-safe `lastInvoiceId` claim.
+   *
+   * Implements `attribute_not_exists(lastInvoiceId) OR lastInvoiceId <>
+   * :newInvoiceId` via a dynamodb-toolbox conditional Put. Concurrent webhook
+   * deliveries for the same `invoice.id` will see exactly one writer succeed
+   * with `'updated'`; the loser sees `ConditionalCheckFailedException` and we
+   * resolve `Ok('already_processed')` so the caller can short-circuit without
+   * a second mint.
+   *
+   * The conditional translates to DynamoDB's wire-level
+   * `ConditionExpression: attribute_not_exists(#x) OR #x <> :y`. dynamodb-
+   * toolbox builds and escapes the names/values; we never hand-write the
+   * expression string.
+   */
+  async markInvoiceProcessed(
+    accessPattern: SubscriptionRepoAccess,
+    subscription: SubscriptionRecord,
+  ): Promise<Result<MarkInvoiceProcessedOutcome, SubscriptionRepoError>> {
+    if (!subscription.lastInvoiceId) {
+      // Defensive: caller must populate `lastInvoiceId` for the claim to make
+      // any sense. Surface as a write error so on-call sees the misuse.
+      return err(
+        new SubscriptionRepoError.FailedWritingSubscriptionError(
+          "markInvoiceProcessed called without lastInvoiceId on the record",
+        ),
+      );
+    }
+
+    try {
+      this.logger.debug("markInvoiceProcessed: attempting conditional claim", {
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        lastInvoiceId: subscription.lastInvoiceId,
+      });
+
+      const operation = this.entity
+        .build(PutItemCommand)
+        .item({
+          PK: DynamoDbSubscription.accessPattern.getPK(accessPattern),
+          SK: DynamoDbSubscription.accessPattern.getSKforSpecificItem({
+            stripeSubscriptionId: subscription.stripeSubscriptionId,
+          }),
+          stripeSubscriptionId: subscription.stripeSubscriptionId,
+          stripeCustomerId: subscription.stripeCustomerId,
+          saleorChannelSlug: subscription.saleorChannelSlug,
+          saleorUserId: subscription.saleorUserId,
+          fiefUserId: subscription.fiefUserId,
+          saleorEntityId: subscription.saleorEntityId ?? undefined,
+          stripePriceId: subscription.stripePriceId,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+          currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          lastInvoiceId: subscription.lastInvoiceId,
+          lastSaleorOrderId: subscription.lastSaleorOrderId ?? undefined,
+          planName: subscription.planName ?? undefined,
+        })
+        .options({
+          condition: {
+            or: [
+              { attr: "lastInvoiceId", exists: false },
+              { attr: "lastInvoiceId", ne: subscription.lastInvoiceId },
+            ],
+          },
+        });
+
+      const result = await operation.send();
+
+      if (result.$metadata.httpStatusCode === 200) {
+        this.logger.debug("markInvoiceProcessed: claim succeeded", {
+          stripeSubscriptionId: subscription.stripeSubscriptionId,
+          lastInvoiceId: subscription.lastInvoiceId,
+        });
+
+        return ok("updated");
+      }
+
+      throw new BaseError(
+        "Unexpected response from DynamoDB during markInvoiceProcessed: " +
+          result.$metadata.httpStatusCode,
+        { cause: result },
+      );
+    } catch (e) {
+      if (e instanceof ConditionalCheckFailedException) {
+        this.logger.info(
+          "markInvoiceProcessed: conditional check failed — invoice already processed by concurrent delivery (idempotent)",
+          {
+            stripeSubscriptionId: subscription.stripeSubscriptionId,
+            lastInvoiceId: subscription.lastInvoiceId,
+          },
+        );
+
+        return ok("already_processed");
+      }
+
+      this.logger.error("markInvoiceProcessed: unexpected DynamoDB failure", {
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        lastInvoiceId: subscription.lastInvoiceId,
+        error: e,
+      });
+
+      return err(
+        new SubscriptionRepoError.FailedWritingSubscriptionError(
+          "Failed to mark invoice processed in DynamoDB",
+          { cause: e },
         ),
       );
     }

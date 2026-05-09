@@ -1,3 +1,4 @@
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
@@ -286,6 +287,154 @@ describe("DynamoDbSubscriptionRepo", () => {
       );
 
       expect(result._unsafeUnwrap()).toBeNull();
+    });
+  });
+
+  /*
+   * -------------------------------------------------------------------------
+   * T31 Layer A — markInvoiceProcessed conditional Put
+   *
+   * Wire-level shape:
+   *   PutItem with ConditionExpression
+   *     `attribute_not_exists(#0) OR #0 <> :0` (where #0 = lastInvoiceId)
+   *
+   * Outcomes:
+   *   - PutItem returns 200 → Ok('updated')
+   *   - PutItem throws ConditionalCheckFailedException → Ok('already_processed')
+   *   - PutItem throws other AWS error → Err(FailedWritingSubscriptionError)
+   *
+   * The "different cycle" case verifies that a NEW invoice id (cycle N+1)
+   * also passes the condition because `lastInvoiceId <> :newInvoiceId` is true.
+   * -------------------------------------------------------------------------
+   */
+  describe("markInvoiceProcessed (T31 Layer A)", () => {
+    const NEW_INVOICE_ID = "in_T31_NEW_001";
+
+    const buildClaimRecord = (overrides?: { lastInvoiceId?: string }) =>
+      new SubscriptionRecord({
+        stripeSubscriptionId,
+        stripeCustomerId,
+        saleorChannelSlug,
+        saleorUserId,
+        fiefUserId,
+        saleorEntityId: null,
+        stripePriceId,
+        status: "active",
+        currentPeriodStart: FIXED_PERIOD_START,
+        currentPeriodEnd: FIXED_PERIOD_END,
+        cancelAtPeriodEnd: false,
+        lastInvoiceId: overrides?.lastInvoiceId ?? NEW_INVOICE_ID,
+        lastSaleorOrderId: null,
+        createdAt: FIXED_CREATED,
+        updatedAt: FIXED_MODIFIED,
+      });
+
+    it("succeeds with 'updated' when no prior invoice (attribute_not_exists arm wins)", async () => {
+      mockDocumentClient.on(PutCommand).resolvesOnce({
+        $metadata: { httpStatusCode: 200 },
+      });
+
+      const result = await repo.markInvoiceProcessed(
+        { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
+        buildClaimRecord(),
+      );
+
+      expect(result.isOk()).toBe(true);
+      expect(result._unsafeUnwrap()).toBe("updated");
+
+      // Sanity check: the underlying PutItem carried a ConditionExpression
+      // mentioning attribute_not_exists and OR `<>` over `lastInvoiceId`.
+      const putCall = mockDocumentClient.commandCalls(PutCommand)[0];
+      const expr = (putCall.args[0].input as { ConditionExpression?: string })
+        .ConditionExpression;
+
+      expect(expr).toBeDefined();
+      // dynamodb-toolbox alias-substitutes attr names → assert structure.
+      expect(expr).toMatch(/attribute_not_exists/);
+      expect(expr).toMatch(/<>/);
+      // The attribute name appears as a placeholder like `#1_1` in the
+      // ConditionExpression with `lastInvoiceId` resolved via
+      // `ExpressionAttributeNames`. Check the names map for the field.
+      const names = (putCall.args[0].input as {
+        ExpressionAttributeNames?: Record<string, string>;
+      }).ExpressionAttributeNames;
+
+      expect(Object.values(names ?? {})).toContain("lastInvoiceId");
+    });
+
+    it("returns 'already_processed' when prior invoice matches (ConditionalCheckFailedException)", async () => {
+      mockDocumentClient.on(PutCommand).rejectsOnce(
+        new ConditionalCheckFailedException({
+          message: "The conditional request failed",
+          $metadata: {},
+        }),
+      );
+
+      const result = await repo.markInvoiceProcessed(
+        { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
+        buildClaimRecord(),
+      );
+
+      expect(result.isOk()).toBe(true);
+      expect(result._unsafeUnwrap()).toBe("already_processed");
+    });
+
+    it("succeeds with 'updated' when prior invoice differs (cycle N+1; ne arm wins)", async () => {
+      mockDocumentClient.on(PutCommand).resolvesOnce({
+        $metadata: { httpStatusCode: 200 },
+      });
+
+      const result = await repo.markInvoiceProcessed(
+        { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
+        buildClaimRecord({ lastInvoiceId: "in_T31_CYCLE_2" }),
+      );
+
+      expect(result.isOk()).toBe(true);
+      expect(result._unsafeUnwrap()).toBe("updated");
+    });
+
+    it("returns FailedWritingSubscriptionError for non-conditional AWS errors", async () => {
+      mockDocumentClient.on(PutCommand).rejectsOnce(new Error("ProvisionedThroughputExceeded"));
+
+      const result = await repo.markInvoiceProcessed(
+        { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
+        buildClaimRecord(),
+      );
+
+      expect(result._unsafeUnwrapErr()).toBeInstanceOf(
+        SubscriptionRepoError.FailedWritingSubscriptionError,
+      );
+    });
+
+    it("rejects calls without lastInvoiceId on the record (defensive misuse guard)", async () => {
+      const recordWithoutInvoice = new SubscriptionRecord({
+        stripeSubscriptionId,
+        stripeCustomerId,
+        saleorChannelSlug,
+        saleorUserId,
+        fiefUserId,
+        saleorEntityId: null,
+        stripePriceId,
+        status: "active",
+        currentPeriodStart: FIXED_PERIOD_START,
+        currentPeriodEnd: FIXED_PERIOD_END,
+        cancelAtPeriodEnd: false,
+        lastInvoiceId: null, // ← misuse
+        lastSaleorOrderId: null,
+        createdAt: FIXED_CREATED,
+        updatedAt: FIXED_MODIFIED,
+      });
+
+      const result = await repo.markInvoiceProcessed(
+        { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
+        recordWithoutInvoice,
+      );
+
+      expect(result._unsafeUnwrapErr()).toBeInstanceOf(
+        SubscriptionRepoError.FailedWritingSubscriptionError,
+      );
+      // No PutItem should have been issued.
+      expect(mockDocumentClient.commandCalls(PutCommand)).toHaveLength(0);
     });
   });
 });

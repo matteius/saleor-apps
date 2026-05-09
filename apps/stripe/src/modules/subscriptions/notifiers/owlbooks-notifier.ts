@@ -118,8 +118,23 @@ export type NotifyError = InstanceType<
   | typeof NotifyError.NonSuccessResponseError
 >;
 
+/**
+ * T31 Layer B — outcome surfaced from the OwlBooks receiver. T28's response
+ * body looks like `{ ok: true, action: 'created' | 'updated' | 'replay' |
+ * 'duplicate' | 'noop' }`. A `'duplicate'` action means OwlBooks's Postgres
+ * `SaleorOrderImport.stripeInvoiceId @unique` constraint hit a re-delivery —
+ * we should NOT treat that as an error or trigger a retry.
+ *
+ * Anything other than `'duplicate'` is collapsed to `'new'` here; downstream
+ * callers only need the binary signal. Older versions of T28 that return
+ * `{ok:true}` without an `action` field are also treated as `'new'`.
+ */
+export interface NotifyResult {
+  processed: "new" | "duplicate";
+}
+
 export interface OwlBooksWebhookNotifier {
-  notify(payload: OwlBooksWebhookPayload): Promise<Result<void, NotifyError>>;
+  notify(payload: OwlBooksWebhookPayload): Promise<Result<NotifyResult, NotifyError>>;
 }
 
 /*
@@ -164,7 +179,7 @@ export class HttpOwlBooksWebhookNotifier implements OwlBooksWebhookNotifier {
     this.fetchImpl = config.fetchImpl ?? fetch;
   }
 
-  async notify(payload: OwlBooksWebhookPayload): Promise<Result<void, NotifyError>> {
+  async notify(payload: OwlBooksWebhookPayload): Promise<Result<NotifyResult, NotifyError>> {
     if (!this.url || !this.secret) {
       this.logger.warn(
         "OwlBooks webhook notifier is not configured (missing OWLBOOKS_WEBHOOK_URL or OWLBOOKS_WEBHOOK_SECRET); skipping notification.",
@@ -212,7 +227,24 @@ export class HttpOwlBooksWebhookNotifier implements OwlBooksWebhookNotifier {
         );
       }
 
-      return ok(undefined);
+      // T31 Layer B — parse the receiver's `action` field to surface
+      // 'duplicate' to the caller. Body is best-effort: any parse failure or
+      // missing action is treated as 'new'.
+      let processed: NotifyResult["processed"] = "new";
+
+      try {
+        const parsed = (await response.json()) as { action?: string } | null;
+
+        if (parsed && parsed.action === "duplicate") {
+          processed = "duplicate";
+        }
+      } catch {
+        // Non-JSON body or empty response — treat as 'new'. This preserves
+        // backward compatibility with any non-T28 receiver that returns 200
+        // with no body.
+      }
+
+      return ok({ processed });
     } catch (cause) {
       this.logger.warn("OwlBooks webhook transport failure", { error: cause });
 

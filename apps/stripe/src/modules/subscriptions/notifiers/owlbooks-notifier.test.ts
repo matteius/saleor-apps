@@ -177,6 +177,59 @@ describe("HttpOwlBooksWebhookNotifier", () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(NotifyError.TransportError);
   });
 
+  it("T31 Layer B — parses { ok: true, action: 'duplicate' } body to {processed: 'duplicate'}", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ok: true, action: "duplicate" }), { status: 200 }),
+      );
+
+    const notifier = new HttpOwlBooksWebhookNotifier({
+      url: TEST_URL,
+      secret: TEST_SECRET,
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    });
+
+    const result = await notifier.notify(buildPayload({ type: "invoice.paid" }));
+
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toEqual({ processed: "duplicate" });
+  });
+
+  it("T31 Layer B — { ok: true, action: 'updated' } body resolves to {processed: 'new'}", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ok: true, action: "updated" }), { status: 200 }),
+      );
+
+    const notifier = new HttpOwlBooksWebhookNotifier({
+      url: TEST_URL,
+      secret: TEST_SECRET,
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    });
+
+    const result = await notifier.notify(buildPayload({ type: "invoice.paid" }));
+
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toEqual({ processed: "new" });
+  });
+
+  it("T31 Layer B — empty 200 body still resolves Ok({processed: 'new'}) for non-T28 receivers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 200 }));
+
+    const notifier = new HttpOwlBooksWebhookNotifier({
+      url: TEST_URL,
+      secret: TEST_SECRET,
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    });
+
+    const result = await notifier.notify(buildPayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toEqual({ processed: "new" });
+  });
+
   it("preserves the exact payload bytes used for signing — no double-stringify", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 200 }));
 

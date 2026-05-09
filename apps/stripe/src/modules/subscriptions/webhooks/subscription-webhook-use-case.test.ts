@@ -153,11 +153,12 @@ function buildHarness(): Harness {
   } satisfies IChargeRefundHandler;
 
   const notifierMock: OwlBooksWebhookNotifier = {
-    notify: vi.fn().mockResolvedValue(ok(undefined)),
+    notify: vi.fn().mockResolvedValue(ok({ processed: "new" as const })),
   };
 
   const subscriptionRepoMock: SubscriptionRepo = {
     upsert: vi.fn(),
+    markInvoiceProcessed: vi.fn(),
     getBySubscriptionId: vi.fn(),
     getByCustomerId: vi.fn(),
     getByFiefUserId: vi.fn(),

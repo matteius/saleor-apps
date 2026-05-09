@@ -38,8 +38,8 @@ import {
   SubscriptionRecord,
 } from "../repositories/subscription-record";
 import {
+  SubscriptionRepoError,
   type SubscriptionRepo,
-  type SubscriptionRepoError,
 } from "../repositories/subscription-repo";
 import {
   createSaleorVariantId,
@@ -180,6 +180,7 @@ interface Harness {
   handler: IInvoiceHandler;
   subscriptionRepo: {
     upsert: ReturnType<typeof vi.fn>;
+    markInvoiceProcessed: ReturnType<typeof vi.fn>;
     getBySubscriptionId: ReturnType<typeof vi.fn>;
     getByCustomerId: ReturnType<typeof vi.fn>;
     getByFiefUserId: ReturnType<typeof vi.fn>;
@@ -195,16 +196,27 @@ interface Harness {
   mintFn: ReturnType<typeof vi.fn>;
   graphqlClientFactory: ReturnType<typeof vi.fn>;
   fakeGraphqlClient: MintOrderFromInvoiceArgs["graphqlClient"];
+  failedMintDlqRepo: {
+    record: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+    listPendingRetries: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    markFinalFailure: ReturnType<typeof vi.fn>;
+  };
 }
 
 function makeHarness(opts?: {
   initialRecord?: SubscriptionRecord | null;
   mapping?: PriceVariantMapping | null;
   mintResult?: Result<MintOrderFromInvoiceResult, SaleorOrderFromInvoiceError>;
-  notifierResult?: Result<void, NotifyError>;
+  notifierResult?: Result<{ processed: "new" | "duplicate" }, NotifyError>;
   recordLookupErr?: SubscriptionRepoError;
   upsertResult?: Result<null, SubscriptionRepoError>;
+  markInvoiceProcessedResult?: Result<"updated" | "already_processed", SubscriptionRepoError>;
   authData?: AuthData | null;
+  withDlqRepo?: boolean;
+  dlqRecordResult?: Result<null, unknown>;
+  nowUnixSeconds?: () => number;
 }): Harness {
   const fakeGraphqlClient = {
     mutation: vi.fn(),
@@ -213,6 +225,9 @@ function makeHarness(opts?: {
 
   const subscriptionRepo = {
     upsert: vi.fn().mockResolvedValue(opts?.upsertResult ?? ok(null)),
+    markInvoiceProcessed: vi
+      .fn()
+      .mockResolvedValue(opts?.markInvoiceProcessedResult ?? ok("updated")),
     getBySubscriptionId: vi
       .fn()
       .mockResolvedValue(
@@ -230,7 +245,15 @@ function makeHarness(opts?: {
   };
 
   const notifier = {
-    notify: vi.fn().mockResolvedValue(opts?.notifierResult ?? ok(undefined)),
+    notify: vi.fn().mockResolvedValue(opts?.notifierResult ?? ok({ processed: "new" })),
+  };
+
+  const failedMintDlqRepo = {
+    record: vi.fn().mockResolvedValue(opts?.dlqRecordResult ?? ok(null)),
+    getById: vi.fn().mockResolvedValue(ok(null)),
+    listPendingRetries: vi.fn().mockResolvedValue(ok([])),
+    delete: vi.fn().mockResolvedValue(ok(null)),
+    markFinalFailure: vi.fn().mockResolvedValue(ok(null)),
   };
 
   const apl = {
@@ -248,6 +271,14 @@ function makeHarness(opts?: {
 
   const graphqlClientFactory = vi.fn().mockReturnValue(fakeGraphqlClient);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dlqDeps: any = opts?.withDlqRepo
+    ? {
+        failedMintDlqRepo,
+        nowUnixSeconds: opts.nowUnixSeconds ?? (() => 1_715_000_000),
+      }
+    : {};
+
   const handler = new InvoiceHandler({
     subscriptionRepo: subscriptionRepo as unknown as SubscriptionRepo,
     priceVariantMapRepo: priceVariantMapRepo as unknown as PriceVariantMapRepo,
@@ -255,6 +286,7 @@ function makeHarness(opts?: {
     apl: apl as unknown as APL,
     mintOrderFromInvoice: mintFn as unknown as MintOrderFromInvoiceFn,
     graphqlClientFactory,
+    ...dlqDeps,
   });
 
   return {
@@ -266,6 +298,7 @@ function makeHarness(opts?: {
     mintFn,
     graphqlClientFactory,
     fakeGraphqlClient,
+    failedMintDlqRepo,
   };
 }
 
@@ -455,7 +488,7 @@ describe("InvoiceHandler.handlePaid (T14)", () => {
     expect(harness.notifier.notify).not.toHaveBeenCalled();
   });
 
-  it("mint failure: returns Err(MintFailedError); no DLQ written here (T32 owns DLQ); no cache update", async () => {
+  it("mint failure WITHOUT DLQ wired (legacy fallback): returns Err(MintFailedError); no cache update", async () => {
     const harness = makeHarness({
       initialRecord: buildSubscriptionRecord(),
       mapping: buildMapping(),
@@ -510,6 +543,87 @@ describe("InvoiceHandler.handlePaid (T14)", () => {
     const [payload] = harness.notifier.notify.mock.calls[0]! as [OwlBooksWebhookPayload];
 
     expect(payload.taxCents).toBe(0);
+  });
+});
+
+describe("InvoiceHandler.handlePaid mint failure → DLQ (T32)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("mint failure WITH DLQ wired: writes DLQ entry, returns Ok (NOT Err); cache NOT updated; notifier NOT called", async () => {
+    const NOW = 1_715_000_000;
+    const harness = makeHarness({
+      initialRecord: buildSubscriptionRecord(),
+      mapping: buildMapping(),
+      mintResult: err(
+        new SaleorOrderFromInvoiceError.DraftOrderCreateFailedError(
+          "draftOrderCreate returned errors: GraphQL error: NOT_FOUND",
+        ),
+      ),
+      withDlqRepo: true,
+      nowUnixSeconds: () => NOW,
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
+
+    expect(value.stripeInvoiceId).toBe(TEST_INVOICE_ID);
+    // No order minted means mintedSaleorOrderId is null on the success result.
+    expect(value.mintedSaleorOrderId).toBeNull();
+
+    // DLQ recorded exactly once with the right shape
+    expect(harness.failedMintDlqRepo.record).toHaveBeenCalledTimes(1);
+    const [dlqAccess, dlqRecord] = harness.failedMintDlqRepo.record.mock.calls[0]!;
+
+    expect(dlqAccess).toEqual({
+      saleorApiUrl: mockedSaleorApiUrl,
+      appId: "app_test_T14",
+    });
+    expect(dlqRecord.stripeInvoiceId).toBe(TEST_INVOICE_ID);
+    expect(dlqRecord.stripeSubscriptionId).toBe(TEST_SUB_ID);
+    expect(dlqRecord.stripeCustomerId).toBe(TEST_CUSTOMER_ID);
+    expect(dlqRecord.fiefUserId).toBe(TEST_FIEF_USER_ID);
+    expect(dlqRecord.saleorChannelSlug).toBe(TEST_CHANNEL_SLUG);
+    expect(dlqRecord.saleorVariantId).toBe(TEST_VARIANT_ID);
+    expect(dlqRecord.amountCents).toBe(4900);
+    expect(dlqRecord.currency).toBe("usd");
+    expect(dlqRecord.attemptCount).toBe(1);
+    expect(dlqRecord.firstAttemptAt).toBe(NOW);
+    expect(dlqRecord.lastAttemptAt).toBe(NOW);
+    // First failure → next retry in 5 min per DLQ_BACKOFF_SECONDS[0]
+    expect(dlqRecord.nextRetryAt).toBe(NOW + 5 * 60);
+    expect(dlqRecord.errorClass).toBe(
+      "SaleorOrderFromInvoice.DraftOrderCreateFailedError",
+    );
+    expect(dlqRecord.invoicePayload).toContain(TEST_INVOICE_ID);
+
+    // Cache must NOT be updated post-mint (only the T31 claim happened, no follow-up upsert)
+    expect(harness.subscriptionRepo.upsert).not.toHaveBeenCalled();
+    // Notifier must NOT be called for a failed mint
+    expect(harness.notifier.notify).not.toHaveBeenCalled();
+  });
+
+  it("mint failure WITH DLQ wired but DLQ write also fails: falls back to Err so Stripe retries", async () => {
+    const harness = makeHarness({
+      initialRecord: buildSubscriptionRecord(),
+      mapping: buildMapping(),
+      mintResult: err(
+        new SaleorOrderFromInvoiceError.DraftOrderCreateFailedError("network blip"),
+      ),
+      withDlqRepo: true,
+      dlqRecordResult: err(new Error("DynamoDB throttled")),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const error = expectErr(result);
+
+    expect(error).toBeInstanceOf(InvoiceHandlerErrors.MintFailedError);
+    expect(harness.failedMintDlqRepo.record).toHaveBeenCalledTimes(1);
+    expect(harness.subscriptionRepo.upsert).not.toHaveBeenCalled();
+    expect(harness.notifier.notify).not.toHaveBeenCalled();
   });
 });
 
@@ -602,5 +716,223 @@ describe("InvoiceHandler — wiring guards", () => {
 
     expect(result.isErr()).toBe(true);
     expect(expectErr(result)).toBeInstanceOf(InvoiceHandlerErrors.NotConfiguredError);
+  });
+});
+
+/*
+ * ---------------------------------------------------------------------------
+ * T31 — Idempotency hardening on invoice.paid
+ *
+ * Coverage:
+ *   • Layer A (DynamoDB conditional Put) — `markInvoiceProcessed` is called
+ *     BEFORE mint with `lastInvoiceId` populated, and the cached previous
+ *     `lastSaleorOrderId` carried forward; on `'already_processed'` the
+ *     handler short-circuits to Ok with the cached order id and does NOT
+ *     mint, upsert, or notify.
+ *   • Layer B (OwlBooks unique-violation surfaced via the notifier) — when
+ *     T28's receiver responds `{ ok: true, action: 'duplicate' }`, the
+ *     notifier returns `{processed: 'duplicate'}`; the handler still
+ *     resolves Ok and never errs.
+ *   • 5-way concurrency stress — fire 5 simultaneous `handlePaid` calls
+ *     against a shared mock; assert `mintFn` was invoked exactly once.
+ * ---------------------------------------------------------------------------
+ */
+
+describe("InvoiceHandler.handlePaid (T31 — idempotency hardening)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("Layer A — claim record carries new lastInvoiceId and previous lastSaleorOrderId, called BEFORE mint", async () => {
+    const previousOrderId = "T3JkZXI6OTk5"; // simulate cycle N's order
+    const subscriptionRecord = buildSubscriptionRecord({
+      lastInvoiceId: "in_PREVIOUS_cycle", // not equal to current TEST_INVOICE_ID
+      lastSaleorOrderId: previousOrderId,
+    });
+    const harness = makeHarness({
+      initialRecord: subscriptionRecord,
+      mapping: buildMapping(),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
+
+    expect(value.mintedSaleorOrderId).toBe(MINTED_ORDER_ID);
+
+    // Layer A claim: called exactly once, BEFORE mint
+    expect(harness.subscriptionRepo.markInvoiceProcessed).toHaveBeenCalledTimes(1);
+    const [, claimRecord] = harness.subscriptionRepo.markInvoiceProcessed.mock.calls[0]!;
+
+    expect(claimRecord.lastInvoiceId).toBe(TEST_INVOICE_ID);
+    // Previous order id MUST be preserved on the claim — post-mint upsert is
+    // what swaps in the freshly-minted id.
+    expect(claimRecord.lastSaleorOrderId).toBe(previousOrderId);
+
+    // Mint runs after claim; final upsert carries the new MINTED_ORDER_ID.
+    expect(harness.mintFn).toHaveBeenCalledTimes(1);
+    expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
+    const [, finalRecord] = harness.subscriptionRepo.upsert.mock.calls[0]!;
+
+    expect(finalRecord.lastInvoiceId).toBe(TEST_INVOICE_ID);
+    expect(finalRecord.lastSaleorOrderId).toBe(MINTED_ORDER_ID);
+  });
+
+  it("Layer A — markInvoiceProcessed → 'already_processed' short-circuits Ok WITHOUT mint, upsert, or notify", async () => {
+    const previousOrderId = "T3JkZXI6QUxSRUFEWQ==";
+    const subscriptionRecord = buildSubscriptionRecord({
+      // Layer 1 in-memory check still misses (different lastInvoiceId), so
+      // we proceed to Layer A.
+      lastInvoiceId: "in_DIFFERENT_PREVIOUS",
+      lastSaleorOrderId: previousOrderId,
+    });
+    const harness = makeHarness({
+      initialRecord: subscriptionRecord,
+      mapping: buildMapping(),
+      markInvoiceProcessedResult: ok("already_processed"),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
+
+    expect(value.stripeInvoiceId).toBe(TEST_INVOICE_ID);
+    // Returns the previous mint id since we don't know what the winner minted
+    // (their own write succeeded post-mint and is the source of truth on the
+    // next cache read).
+    expect(value.mintedSaleorOrderId).toBe(previousOrderId);
+
+    expect(harness.subscriptionRepo.markInvoiceProcessed).toHaveBeenCalledTimes(1);
+    expect(harness.mintFn).not.toHaveBeenCalled();
+    expect(harness.subscriptionRepo.upsert).not.toHaveBeenCalled();
+    expect(harness.notifier.notify).not.toHaveBeenCalled();
+  });
+
+  it("Layer A — markInvoiceProcessed Err bubbles as SubscriptionRepoFailedError", async () => {
+    const harness = makeHarness({
+      initialRecord: buildSubscriptionRecord(),
+      mapping: buildMapping(),
+      markInvoiceProcessedResult: err(
+        new SubscriptionRepoError.FailedWritingSubscriptionError("ddb timeout"),
+      ),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const error = expectErr(result);
+
+    expect(error).toBeInstanceOf(InvoiceHandlerErrors.SubscriptionRepoFailedError);
+    expect(harness.mintFn).not.toHaveBeenCalled();
+    expect(harness.subscriptionRepo.upsert).not.toHaveBeenCalled();
+    expect(harness.notifier.notify).not.toHaveBeenCalled();
+  });
+
+  it("Layer A — two concurrent calls: only ONE mint runs across both, both return Ok", async () => {
+    const subscriptionRecord = buildSubscriptionRecord();
+
+    const harness = makeHarness({
+      initialRecord: subscriptionRecord,
+      mapping: buildMapping(),
+    });
+
+    /*
+     * Simulate the DynamoDB conditional check: first writer wins ('updated'),
+     * subsequent writers receive 'already_processed'. No need for real
+     * concurrency primitives — the mock resolves synchronously relative to
+     * the await chain, so a counter inside the mock is enough to model the
+     * "first one to land at the conditional Put wins" semantics.
+     */
+    let claimCallNumber = 0;
+
+    harness.subscriptionRepo.markInvoiceProcessed.mockImplementation(async () => {
+      claimCallNumber++;
+
+      return claimCallNumber === 1 ? ok("updated") : ok("already_processed");
+    });
+
+    const [r1, r2] = await Promise.all([
+      harness.handler.handlePaid(buildPaidEvent(), buildContext()),
+      harness.handler.handlePaid(buildPaidEvent(), buildContext()),
+    ]);
+
+    expect(r1.isOk()).toBe(true);
+    expect(r2.isOk()).toBe(true);
+
+    // Mint runs exactly once even though two webhooks raced past Layer 1.
+    expect(harness.mintFn).toHaveBeenCalledTimes(1);
+    // Final upsert (post-mint) only by the winner; the loser short-circuits.
+    expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
+    // Only the winner notifies.
+    expect(harness.notifier.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it("Concurrency stress — 5 simultaneous deliveries: exactly ONE Saleor order minted", async () => {
+    const subscriptionRecord = buildSubscriptionRecord();
+
+    const harness = makeHarness({
+      initialRecord: subscriptionRecord,
+      mapping: buildMapping(),
+    });
+
+    let claimCallNumber = 0;
+
+    harness.subscriptionRepo.markInvoiceProcessed.mockImplementation(async () => {
+      claimCallNumber++;
+
+      return claimCallNumber === 1 ? ok("updated") : ok("already_processed");
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        harness.handler.handlePaid(buildPaidEvent(), buildContext()),
+      ),
+    );
+
+    expect(results).toHaveLength(5);
+    results.forEach((r) => expect(r.isOk()).toBe(true));
+
+    // The hard invariant: exactly ONE Saleor order minted across all 5
+    // concurrent deliveries. This is the central T31 contract.
+    expect(harness.mintFn).toHaveBeenCalledTimes(1);
+    expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
+    expect(harness.notifier.notify).toHaveBeenCalledTimes(1);
+
+    // All 5 attempts hit Layer A; 4 short-circuited.
+    expect(harness.subscriptionRepo.markInvoiceProcessed).toHaveBeenCalledTimes(5);
+  });
+
+  it("Layer B — notifier returns {processed:'duplicate'}: handler still Ok, no retry, no error", async () => {
+    const harness = makeHarness({
+      initialRecord: buildSubscriptionRecord(),
+      mapping: buildMapping(),
+      notifierResult: ok({ processed: "duplicate" as const }),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+
+    const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
+
+    expect(value.mintedSaleorOrderId).toBe(MINTED_ORDER_ID);
+
+    // Mint and upsert still happened (only the notify came back duplicate).
+    expect(harness.mintFn).toHaveBeenCalledTimes(1);
+    expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
+    expect(harness.notifier.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it("Layer B — notifier 'new' (default) is the happy path; mint + upsert + notify each called once", async () => {
+    const harness = makeHarness({
+      initialRecord: buildSubscriptionRecord(),
+      mapping: buildMapping(),
+      notifierResult: ok({ processed: "new" as const }),
+    });
+
+    const result = await harness.handler.handlePaid(buildPaidEvent(), buildContext());
+    const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
+
+    expect(value.mintedSaleorOrderId).toBe(MINTED_ORDER_ID);
+    expect(harness.mintFn).toHaveBeenCalledTimes(1);
+    expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
+    expect(harness.notifier.notify).toHaveBeenCalledTimes(1);
   });
 });
