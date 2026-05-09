@@ -32,6 +32,8 @@
         "OWLBOOKS_WEBHOOK_URL",
         "OWLBOOKS_WEBHOOK_SECRET",
         "STOREFRONT_BRIDGE_SECRET",
+        "FIEF_JWKS_URL",
+        "STOREFRONT_PUBLIC_URL",
         "CRON_SECRET"
       ]
     }

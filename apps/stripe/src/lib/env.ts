@@ -47,6 +47,18 @@ export const env = createEnv({
     OWLBOOKS_WEBHOOK_SECRET: z.string().min(32).optional(),
     // HMAC-SHA256 secret shared with the storefront for the public subscription API in T19a.
     STOREFRONT_BRIDGE_SECRET: z.string().min(32).optional(),
+    /*
+     * Fief JWKS URL used by the public subscriptions API to verify storefront-issued
+     * Fief access tokens (T19a Layer 2 auth). Example:
+     * https://auth.opensensor.io/.well-known/jwks.json
+     */
+    FIEF_JWKS_URL: z.string().url().optional(),
+    /*
+     * Comma-separated allowlist of storefront origins permitted to call /api/public/*.
+     * Used by the CORS layer of the public subscriptions API (T19a). Example:
+     * https://storefront.opensensor.io,https://owlbooks.ai
+     */
+    STOREFRONT_PUBLIC_URL: z.string().optional(),
     // Vercel Cron auth bearer (used by the failed-mint retry job in T32a).
     CRON_SECRET: z.string().optional(),
   },
@@ -89,6 +101,8 @@ export const env = createEnv({
     OWLBOOKS_WEBHOOK_URL: process.env.OWLBOOKS_WEBHOOK_URL,
     OWLBOOKS_WEBHOOK_SECRET: process.env.OWLBOOKS_WEBHOOK_SECRET,
     STOREFRONT_BRIDGE_SECRET: process.env.STOREFRONT_BRIDGE_SECRET,
+    FIEF_JWKS_URL: process.env.FIEF_JWKS_URL,
+    STOREFRONT_PUBLIC_URL: process.env.STOREFRONT_PUBLIC_URL,
     CRON_SECRET: process.env.CRON_SECRET,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
