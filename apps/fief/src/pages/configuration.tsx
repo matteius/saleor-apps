@@ -1,5 +1,5 @@
 /**
- * T35 / T36 / T37 / T38 — Top-level configuration dashboard for the Fief Saleor App.
+ * T35 / T36 / T37 — Top-level configuration dashboard for the Fief Saleor App.
  *
  * The page is rendered inside the Saleor dashboard iframe via the route
  * declared in the app manifest (`/configuration`).
@@ -10,7 +10,6 @@
  *   - "channel-scope"   — `<ChannelScopeScreen />`           (T36)
  *   - "claims"          — `<ClaimsMappingScreen />`          (T36)
  *   - "webhook-health"  — `<WebhookHealthScreen />` + `<DlqScreen />` (T37)
- *   - "reconciliation"  — `<ReconciliationStatusScreen />`   (T38)
  *
  * Within the connections tab the page owns a state machine that switches
  * between list/create/edit/rotate modes. State transitions are kept in
@@ -27,7 +26,6 @@ import { type RedactedProviderConnection } from "@/modules/provider-connections/
 import { ConnectionFormScreen } from "@/modules/provider-connections/ui/connection-form-screen";
 import { ConnectionListScreen } from "@/modules/provider-connections/ui/connection-list-screen";
 import { RotateSecretFlow } from "@/modules/provider-connections/ui/rotate-secret-flow";
-import { ReconciliationStatusScreen } from "@/modules/reconciliation/ui/reconciliation-status-screen";
 import { trpcClient } from "@/modules/trpc/trpc-client";
 import { WebhookHealthScreen } from "@/modules/webhook-log/ui/webhook-health-screen";
 
@@ -37,7 +35,7 @@ type ScreenMode =
   | { kind: "edit"; connectionId: string }
   | { kind: "rotate"; connectionId: string };
 
-type Tab = "connections" | "channel-scope" | "claims" | "webhook-health" | "reconciliation";
+type Tab = "connections" | "channel-scope" | "claims" | "webhook-health";
 
 const TabButton = ({
   active,
@@ -115,13 +113,6 @@ const ConfigurationPage = () => {
         >
           Webhook health
         </TabButton>
-        <TabButton
-          active={tab === "reconciliation"}
-          onClick={() => setTab("reconciliation")}
-          testId="configuration-tab-reconciliation"
-        >
-          Reconciliation
-        </TabButton>
       </Box>
 
       {tab === "connections" ? (
@@ -187,8 +178,6 @@ const ConfigurationPage = () => {
           <DlqScreen />
         </Box>
       ) : null}
-
-      {tab === "reconciliation" ? <ReconciliationStatusScreen /> : null}
     </Box>
   );
 };

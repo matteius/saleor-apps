@@ -4,7 +4,7 @@
  * Composition map:
  *   - T34 — `connections` + `channelConfig` (this file)
  *   - T36 — `claimsMapping`           (TODO)
- *   - T37 — `webhookLog`              (TODO)
+ *   - T37 — `webhookLog` + `dlq.list` (this file)
  *   - T38 — `reconciliation`          (this file)
  *   - T51 — `dlq.replay`              (this file)
  *
@@ -53,6 +53,7 @@ import { ReconciliationRunner } from "@/modules/reconciliation/runner";
 import { buildReconciliationRouter } from "@/modules/reconciliation/trpc-router";
 import { eventRouter } from "@/modules/sync/fief-to-saleor/event-router";
 import { MongodbWebhookLogRepo } from "@/modules/webhook-log/repositories/mongodb/mongodb-webhook-log-repo";
+import { buildWebhookLogRouter } from "@/modules/webhook-log/trpc-router";
 
 import { router } from "./trpc-server";
 
@@ -131,10 +132,17 @@ const channelConfigRouter = buildChannelConfigRouter({
  * T22, and the outbound queue repo from T52). The `fiefReceiver` seam
  * adapts `eventRouter.dispatch(payload)` so the use case doesn't have
  * to import receiver internals.
+ *
+ * T37 also adds `dlq.list` to the same sub-router and a separate
+ * `webhookLog` sub-router; both share the Mongo DLQ + webhook-log
+ * singletons constructed below.
  */
+const dlqRepo = new MongodbDlqRepo();
+const webhookLogRepo = new MongodbWebhookLogRepo();
+
 const dlqReplayUseCase = new DlqReplayUseCase({
-  dlqRepo: new MongodbDlqRepo(),
-  webhookLogRepo: new MongodbWebhookLogRepo(),
+  dlqRepo,
+  webhookLogRepo,
   providerConnectionRepo,
   fiefReceiver: {
     dispatch: (payload) => eventRouter.dispatch(payload),
@@ -143,7 +151,14 @@ const dlqReplayUseCase = new DlqReplayUseCase({
   logger: createLogger("trpc.dlq.replay"),
 });
 
-const dlqRouter = buildDlqRouter({ useCase: dlqReplayUseCase });
+const dlqRouter = buildDlqRouter({ useCase: dlqReplayUseCase, repo: dlqRepo });
+
+/*
+ * T37 — webhook health sub-router. Reads the `webhook_log` collection
+ * via the existing T11 repo; payloads are fetched lazily by the
+ * dashboard via `webhookLog.getPayload`.
+ */
+const webhookLogRouter = buildWebhookLogRouter({ repo: webhookLogRepo });
 
 /*
  * T38 — reconciliation sub-router.
@@ -181,6 +196,7 @@ export const trpcRouter = router({
   channelConfig: channelConfigRouter,
   dlq: dlqRouter,
   reconciliation: reconciliationRouter,
+  webhookLog: webhookLogRouter,
 });
 
 export type TrpcRouter = typeof trpcRouter;
