@@ -108,7 +108,7 @@ describe("SaleorCustomerClient — production GraphQL impl (T7)", () => {
       const [, init] = fetchMock.mock.calls[0]!;
       const payload = JSON.parse(init.body as string) as { query: string; variables: unknown };
 
-      expect(payload.query).toContain("query FiefUser");
+      expect(payload.query).toContain("query FiefAuthFindUser");
       expect(payload.variables).toMatchObject({ email: "alice@example.com" });
     });
 
@@ -162,7 +162,7 @@ describe("SaleorCustomerClient — production GraphQL impl (T7)", () => {
         variables: { input: { email: string } };
       };
 
-      expect(createBody.query).toContain("mutation FiefCustomerCreate");
+      expect(createBody.query).toContain("mutation FiefAuthCustomerCreate");
       expect(createBody.variables.input.email).toBe("bob@example.com");
     });
 

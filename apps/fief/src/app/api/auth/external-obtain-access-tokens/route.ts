@@ -697,7 +697,6 @@ const writeStderr = (message: string): void => {
 };
 
 const handler = async (req: NextRequest): Promise<Response> => {
-  writeStderr("[fief] external-obtain-access-tokens: handler invoked");
   try {
     return await innerHandler(req);
   } catch (cause) {

@@ -1,21 +1,5 @@
-import { type TypedDocumentNode } from "@graphql-typed-document-node/core";
-import { print } from "graphql";
 import { err, ok, type Result } from "neverthrow";
 
-import {
-  FiefCustomerCreateDocument,
-  type FiefCustomerCreateMutation,
-  type FiefCustomerCreateMutationVariables,
-  FiefUpdateMetadataDocument,
-  type FiefUpdateMetadataMutation,
-  type FiefUpdateMetadataMutationVariables,
-  FiefUpdatePrivateMetadataDocument,
-  type FiefUpdatePrivateMetadataMutation,
-  type FiefUpdatePrivateMetadataMutationVariables,
-  FiefUserDocument,
-  type FiefUserQuery,
-  type FiefUserQueryVariables,
-} from "@/generated/graphql";
 import { createLogger } from "@/lib/logger";
 import { createSaleorUserId, type SaleorUserId } from "@/modules/identity-map/identity-map";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
@@ -68,9 +52,51 @@ export type SaleorAppTokenProvider = (
 
 const HTTP_TIMEOUT_MS = 15_000;
 
-interface ExecuteInput<TResult, TVariables> {
+/*
+ * Inline GraphQL operations that ONLY request fields the auth-plane needs
+ * to bind identity (`id`, `email`). The generated `FiefCustomer` fragment
+ * also pulls `privateMetadata`, but the install's `MANAGE_USERS` permission
+ * doesn't grant read access to that field — Saleor returns a partial-error
+ * that nullifies the entire `user` (or `customerCreate.user`) object up
+ * the chain. Sticking to the slim shape avoids that pitfall and keeps
+ * the find-or-create-by-email flow working without expanding the app's
+ * permission scope.
+ */
+
+const Q_FIND_USER_BY_EMAIL = `
+  query FiefAuthFindUser($email: String!) {
+    user(email: $email) { id email }
+  }
+`;
+
+const M_CUSTOMER_CREATE = `
+  mutation FiefAuthCustomerCreate($input: UserCreateInput!) {
+    customerCreate(input: $input) {
+      user { id email }
+      errors { field message code }
+    }
+  }
+`;
+
+const M_UPDATE_METADATA = `
+  mutation FiefAuthUpdateMetadata($id: ID!, $input: [MetadataInput!]!) {
+    updateMetadata(id: $id, input: $input) {
+      errors { field message code }
+    }
+  }
+`;
+
+const M_UPDATE_PRIVATE_METADATA = `
+  mutation FiefAuthUpdatePrivateMetadata($id: ID!, $input: [MetadataInput!]!) {
+    updatePrivateMetadata(id: $id, input: $input) {
+      errors { field message code }
+    }
+  }
+`;
+
+interface ExecuteInput<TVariables> {
   saleorApiUrl: SaleorApiUrl;
-  document: TypedDocumentNode<TResult, TVariables>;
+  query: string;
   variables: TVariables;
   appToken: string;
 }
@@ -81,7 +107,7 @@ interface GraphQLEnvelope<T> {
 }
 
 const executeGraphQL = async <TResult, TVariables>(
-  input: ExecuteInput<TResult, TVariables>,
+  input: ExecuteInput<TVariables>,
 ): Promise<Result<TResult, Error>> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
@@ -96,7 +122,7 @@ const executeGraphQL = async <TResult, TVariables>(
         Authorization: `Bearer ${input.appToken}`,
       },
       body: JSON.stringify({
-        query: print(input.document),
+        query: input.query,
         variables: input.variables,
       }),
       signal: controller.signal,
@@ -180,11 +206,13 @@ export const createSaleorGraphQLCustomerClient = (deps: ClientDeps): SaleorCusto
     appToken: string,
     email: string,
   ): Promise<Result<{ id: string; email: string } | null, Error>> => {
-    const variables: FiefUserQueryVariables = { email, id: null, externalReference: null };
-    const result = await executeGraphQL<FiefUserQuery, FiefUserQueryVariables>({
+    const result = await executeGraphQL<
+      { user: { id: string; email: string } | null },
+      { email: string }
+    >({
       saleorApiUrl,
-      document: FiefUserDocument,
-      variables,
+      query: Q_FIND_USER_BY_EMAIL,
+      variables: { email },
       appToken,
     });
 
@@ -225,21 +253,30 @@ export const createSaleorGraphQLCustomerClient = (deps: ClientDeps): SaleorCusto
 
       // -- 2. Create new user ----------------------------------------------
 
-      const createVariables: FiefCustomerCreateMutationVariables = {
-        input: {
-          email: input.email,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          isActive: input.isActive,
-        },
-      };
+      interface CustomerCreatePayload {
+        customerCreate: {
+          user: { id: string; email: string } | null;
+          errors: ReadonlyArray<{
+            field?: string | null;
+            message?: string | null;
+            code?: string | null;
+          }>;
+        } | null;
+      }
       const created = await executeGraphQL<
-        FiefCustomerCreateMutation,
-        FiefCustomerCreateMutationVariables
+        CustomerCreatePayload,
+        { input: { email: string; firstName?: string; lastName?: string; isActive?: boolean } }
       >({
         saleorApiUrl: input.saleorApiUrl,
-        document: FiefCustomerCreateDocument,
-        variables: createVariables,
+        query: M_CUSTOMER_CREATE,
+        variables: {
+          input: {
+            email: input.email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            isActive: input.isActive,
+          },
+        },
         appToken,
       });
 
@@ -299,17 +336,25 @@ export const createSaleorGraphQLCustomerClient = (deps: ClientDeps): SaleorCusto
         return err(wrapMetadataFailed(tokenResult.error.message, tokenResult.error));
       }
 
-      const variables: FiefUpdateMetadataMutationVariables = {
-        id: input.saleorUserId as unknown as string,
-        input: input.items,
-      };
+      interface UpdateMetadataPayload {
+        updateMetadata: {
+          errors: ReadonlyArray<{
+            field?: string | null;
+            message?: string | null;
+            code?: string | null;
+          }>;
+        } | null;
+      }
       const result = await executeGraphQL<
-        FiefUpdateMetadataMutation,
-        FiefUpdateMetadataMutationVariables
+        UpdateMetadataPayload,
+        { id: string; input: ReadonlyArray<{ key: string; value: string }> }
       >({
         saleorApiUrl: input.saleorApiUrl,
-        document: FiefUpdateMetadataDocument,
-        variables,
+        query: M_UPDATE_METADATA,
+        variables: {
+          id: input.saleorUserId as unknown as string,
+          input: input.items,
+        },
         appToken: tokenResult.value,
       });
 
@@ -339,17 +384,25 @@ export const createSaleorGraphQLCustomerClient = (deps: ClientDeps): SaleorCusto
         return err(wrapMetadataFailed(tokenResult.error.message, tokenResult.error));
       }
 
-      const variables: FiefUpdatePrivateMetadataMutationVariables = {
-        id: input.saleorUserId as unknown as string,
-        input: input.items,
-      };
+      interface UpdatePrivateMetadataPayload {
+        updatePrivateMetadata: {
+          errors: ReadonlyArray<{
+            field?: string | null;
+            message?: string | null;
+            code?: string | null;
+          }>;
+        } | null;
+      }
       const result = await executeGraphQL<
-        FiefUpdatePrivateMetadataMutation,
-        FiefUpdatePrivateMetadataMutationVariables
+        UpdatePrivateMetadataPayload,
+        { id: string; input: ReadonlyArray<{ key: string; value: string }> }
       >({
         saleorApiUrl: input.saleorApiUrl,
-        document: FiefUpdatePrivateMetadataDocument,
-        variables,
+        query: M_UPDATE_PRIVATE_METADATA,
+        variables: {
+          id: input.saleorUserId as unknown as string,
+          input: input.items,
+        },
         appToken: tokenResult.value,
       });
 
