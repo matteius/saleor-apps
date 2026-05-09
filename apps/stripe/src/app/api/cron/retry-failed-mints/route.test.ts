@@ -15,6 +15,7 @@ import { err, ok } from "neverthrow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
+import { __testing, executeRetryCron } from "@/modules/subscriptions/cron/retry-failed-mints";
 import {
   type FailedMintDlqRepo,
   type FailedMintRecord,
@@ -33,8 +34,6 @@ import {
   DLQ_BACKOFF_SECONDS,
   MAX_DLQ_ATTEMPTS,
 } from "@/modules/subscriptions/webhooks/dlq-backoff";
-
-import { __testing, executeRetryCron } from "./route";
 
 const TEST_AUTH_DATA: AuthData = {
   saleorApiUrl: mockedSaleorApiUrl,

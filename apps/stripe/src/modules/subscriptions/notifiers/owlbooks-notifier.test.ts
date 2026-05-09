@@ -193,7 +193,7 @@ describe("HttpOwlBooksWebhookNotifier", () => {
     const result = await notifier.notify(buildPayload({ type: "invoice.paid" }));
 
     expect(result.isOk()).toBe(true);
-    expect(result._unsafeUnwrap()).toEqual({ processed: "duplicate" });
+    expect(result._unsafeUnwrap()).toStrictEqual({ processed: "duplicate" });
   });
 
   it("T31 Layer B — { ok: true, action: 'updated' } body resolves to {processed: 'new'}", async () => {
@@ -212,7 +212,7 @@ describe("HttpOwlBooksWebhookNotifier", () => {
     const result = await notifier.notify(buildPayload({ type: "invoice.paid" }));
 
     expect(result.isOk()).toBe(true);
-    expect(result._unsafeUnwrap()).toEqual({ processed: "new" });
+    expect(result._unsafeUnwrap()).toStrictEqual({ processed: "new" });
   });
 
   it("T31 Layer B — empty 200 body still resolves Ok({processed: 'new'}) for non-T28 receivers", async () => {
@@ -227,7 +227,7 @@ describe("HttpOwlBooksWebhookNotifier", () => {
     const result = await notifier.notify(buildPayload());
 
     expect(result.isOk()).toBe(true);
-    expect(result._unsafeUnwrap()).toEqual({ processed: "new" });
+    expect(result._unsafeUnwrap()).toStrictEqual({ processed: "new" });
   });
 
   it("preserves the exact payload bytes used for signing — no double-stringify", async () => {
