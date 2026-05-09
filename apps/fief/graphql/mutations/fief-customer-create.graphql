@@ -1,0 +1,10 @@
+mutation FiefCustomerCreate($input: UserCreateInput!) {
+  customerCreate(input: $input) {
+    user {
+      ...FiefCustomer
+    }
+    errors {
+      ...AccountError
+    }
+  }
+}

@@ -1,0 +1,12 @@
+mutation FiefUpdateMetadata($id: ID!, $input: [MetadataInput!]!) {
+  updateMetadata(id: $id, input: $input) {
+    item {
+      ... on User {
+        ...FiefCustomer
+      }
+    }
+    errors {
+      ...MetadataError
+    }
+  }
+}

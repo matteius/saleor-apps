@@ -1,0 +1,5 @@
+query FiefUser($id: ID, $email: String, $externalReference: String) {
+  user(id: $id, email: $email, externalReference: $externalReference) {
+    ...FiefCustomer
+  }
+}

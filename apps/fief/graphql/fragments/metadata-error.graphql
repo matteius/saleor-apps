@@ -1,0 +1,5 @@
+fragment MetadataError on MetadataError {
+  field
+  message
+  code
+}

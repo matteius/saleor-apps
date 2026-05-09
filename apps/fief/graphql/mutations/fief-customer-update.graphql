@@ -1,0 +1,10 @@
+mutation FiefCustomerUpdate($id: ID!, $input: CustomerInput!) {
+  customerUpdate(id: $id, input: $input) {
+    user {
+      ...FiefCustomer
+    }
+    errors {
+      ...AccountError
+    }
+  }
+}

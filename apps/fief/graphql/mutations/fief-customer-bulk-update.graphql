@@ -1,0 +1,19 @@
+mutation FiefCustomerBulkUpdate(
+  $customers: [CustomerBulkUpdateInput!]!
+  $errorPolicy: ErrorPolicyEnum
+) {
+  customerBulkUpdate(customers: $customers, errorPolicy: $errorPolicy) {
+    count
+    results {
+      customer {
+        ...FiefCustomer
+      }
+      errors {
+        ...CustomerBulkUpdateError
+      }
+    }
+    errors {
+      ...CustomerBulkUpdateError
+    }
+  }
+}

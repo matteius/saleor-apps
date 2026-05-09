@@ -1,0 +1,5 @@
+fragment CustomerBulkUpdateError on CustomerBulkUpdateError {
+  path
+  message
+  code
+}

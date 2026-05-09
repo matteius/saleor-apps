@@ -1,0 +1,15 @@
+fragment FiefCustomer on User {
+  id
+  email
+  firstName
+  lastName
+  isActive
+  metadata {
+    key
+    value
+  }
+  privateMetadata {
+    key
+    value
+  }
+}
