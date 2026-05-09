@@ -21,6 +21,7 @@ export default [
       "playwright.config.ts",
       "src/lib/env.ts",
       "e2e/env.ts",
+      "e2e/subscriptions/helpers/env-guard.ts",
       "src/__tests__/integration/env.ts",
       "src/instrumentation.ts",
       "src/__tests__/**/*setup.*.ts",

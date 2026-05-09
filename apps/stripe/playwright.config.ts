@@ -27,6 +27,18 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: ["**/subscriptions/**"],
+    },
+    {
+      /*
+       * T33 — subscription E2E (Stripe test clock + Saleor `owlbooks` channel).
+       * Run focused with: pnpm test:e2e --project=subscriptions-e2e
+       * Most scenarios are fixmed pending manual gates; see
+       * ./e2e/subscriptions/README.md.
+       */
+      name: "subscriptions-e2e",
+      testDir: "./e2e/subscriptions",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 });
