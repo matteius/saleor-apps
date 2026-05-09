@@ -10,6 +10,11 @@ import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 import { type EventRouter, type WebhookEventPayload } from "./event-router";
 import {
+  type SaleorCustomerDeactivateClient,
+  UserDeleteUseCase,
+  type UserDeleteUseCaseError,
+} from "./user-delete.use-case";
+import {
   type SaleorCustomerClient,
   UserUpsertUseCase,
   type UserUpsertUseCaseError,
@@ -110,6 +115,15 @@ export interface RegisterFiefToSaleorHandlersDeps {
   eventRouter: EventRouter;
   identityMapRepo: IdentityMapRepo;
   saleorClient: SaleorCustomerClient;
+  /**
+   * Narrow Saleor write surface for T24's deactivate-on-delete use case.
+   * Production wiring binds the same urql client + the deactivate-shaped
+   * documents (`FiefCustomerUpdateDocument`, `FiefUpdateMetadataDocument`).
+   * Kept as a separate slot so the use case can't reach for
+   * `customerCreate` / `updatePrivateMetadata` (would violate the
+   * preserve-audit-trail contract).
+   */
+  saleorDeactivateClient: SaleorCustomerDeactivateClient;
   resolveConnectionForEvent: ResolveConnectionForEvent;
 }
 
@@ -187,8 +201,71 @@ export const registerFiefToSaleorHandlers = (
     .registerHandler("user.updated", userUpsertHandler);
 
   /*
-   * T24 and T25 will append additional registerHandler calls below this
-   * line. Keep T23's two calls together so the boot trace is readable.
+   * T24 — `user.deleted` handler. Per PRD §F2.5: deactivate the Saleor
+   * customer (`isActive: false`), wipe public claim metadata, leave
+   * private metadata + identity_map row intact for audit. Tag origin
+   * "fief" so the Saleor→Fief loop guard (T26-T29) drops the echo.
+   *
+   * Same connection-resolution boilerplate as T23 — reuses the
+   * `resolveConnectionForEvent` callback so the wiring layer only has
+   * to supply one resolver for the whole Fief→Saleor surface.
+   */
+  const userDeleteUseCase = new UserDeleteUseCase({
+    identityMapRepo: deps.identityMapRepo,
+    saleorClient: deps.saleorDeactivateClient,
+  });
+
+  const userDeleteHandler = async (
+    payload: WebhookEventPayload,
+  ): Promise<Result<unknown, RegisterHandlersError | UserDeleteUseCaseError>> => {
+    const connectionResult = await deps.resolveConnectionForEvent(payload);
+
+    if (connectionResult.isErr()) {
+      logger.error("resolveConnectionForEvent failed for Fief user.deleted event", {
+        eventType: payload.type,
+        eventId: payload.eventId,
+        error: connectionResult.error,
+      });
+
+      return err(
+        new RegisterHandlersError.ConnectionNotResolved(
+          "Failed to resolve connection for Fief user.deleted event",
+          { cause: connectionResult.error },
+        ),
+      );
+    }
+
+    const context = connectionResult.value;
+
+    if (context === null) {
+      logger.warn("No connection matched the Fief user.deleted event — accepting without write", {
+        eventType: payload.type,
+        eventId: payload.eventId,
+      });
+
+      return err(
+        new RegisterHandlersError.ConnectionNotResolved(
+          "No connection matches this Fief user.deleted event (resolver returned null)",
+        ),
+      );
+    }
+
+    return userDeleteUseCase.execute({
+      saleorApiUrl: context.saleorApiUrl,
+      claimMapping: context.claimMapping,
+      payload,
+    });
+  };
+
+  /*
+   * Key MUST exactly match `WebhookEvent.type` from
+   * `opensensor-fief/fief/services/webhooks/models.py:UserDeleted` =
+   * `"user.deleted"`.
+   */
+  deps.eventRouter.registerHandler("user.deleted", userDeleteHandler);
+
+  /*
+   * T25 will append further registerHandler calls below this line.
    */
 
   return deps.eventRouter;
