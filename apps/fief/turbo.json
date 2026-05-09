@@ -11,6 +11,7 @@
         "APP_NAME",
         "CRON_SECRET",
         "FIEF_BASE_URL",
+        "FIEF_PLUGIN_HMAC_SECRET",
         "FIEF_SALEOR_TO_FIEF_DISABLED",
         "FIEF_SYNC_DISABLED",
         "MANIFEST_APP_ID",

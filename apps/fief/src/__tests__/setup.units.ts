@@ -6,6 +6,7 @@ import { vi } from "vitest";
  * any module without booting a real config.
  */
 vi.stubEnv("SECRET_KEY", "test_secret_key");
+vi.stubEnv("FIEF_PLUGIN_HMAC_SECRET", "test_plugin_hmac_secret");
 
 process.env.TZ = "UTC";
 

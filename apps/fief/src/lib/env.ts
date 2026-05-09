@@ -87,6 +87,20 @@ export const env = createEnv({
     CRON_SECRET: z.string().optional(),
 
     /*
+     * --- Plugin auth (T58) ---
+     * Shared HMAC secret used by the Saleor `BasePlugin` (T56/T57) when calling
+     * the auth-plane endpoints (T18-T21). Per the Path A pivot, this is a
+     * single install-level secret rather than a per-connection one — the
+     * plugin signs every request with the same secret, and the apps/fief
+     * verifier (T58) uses the same value to validate. Per-connection rotation
+     * is a deliberate follow-up: at the entry point of T18-T21 the connection
+     * has not been resolved yet (channel-scope resolution happens AFTER auth),
+     * so per-connection secrets would require a chicken-and-egg dance
+     * (resolve → re-verify) that v1 trades for operational simplicity.
+     */
+    FIEF_PLUGIN_HMAC_SECRET: z.string().min(1),
+
+    /*
      * --- Build/deploy metadata (informational; not required at runtime) ---
      */
     VERCEL_ENV: z.string().optional(),
@@ -113,6 +127,7 @@ export const env = createEnv({
     CRON_SECRET: process.env.CRON_SECRET,
     ENV: process.env.ENV,
     FIEF_BASE_URL: process.env.FIEF_BASE_URL,
+    FIEF_PLUGIN_HMAC_SECRET: process.env.FIEF_PLUGIN_HMAC_SECRET,
     FIEF_SALEOR_TO_FIEF_DISABLED: process.env.FIEF_SALEOR_TO_FIEF_DISABLED,
     FIEF_SYNC_DISABLED: process.env.FIEF_SYNC_DISABLED,
     MANIFEST_APP_ID: process.env.MANIFEST_APP_ID,
