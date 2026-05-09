@@ -37,10 +37,7 @@ import {
   createStripeSubscriptionId,
   SubscriptionRecord,
 } from "../repositories/subscription-record";
-import {
-  SubscriptionRepoError,
-  type SubscriptionRepo,
-} from "../repositories/subscription-repo";
+import { type SubscriptionRepo, SubscriptionRepoError } from "../repositories/subscription-repo";
 import {
   createSaleorVariantId,
   type PriceVariantMapping,
@@ -577,7 +574,7 @@ describe("InvoiceHandler.handlePaid mint failure → DLQ (T32)", () => {
     expect(harness.failedMintDlqRepo.record).toHaveBeenCalledTimes(1);
     const [dlqAccess, dlqRecord] = harness.failedMintDlqRepo.record.mock.calls[0]!;
 
-    expect(dlqAccess).toEqual({
+    expect(dlqAccess).toStrictEqual({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: "app_test_T14",
     });
@@ -594,9 +591,7 @@ describe("InvoiceHandler.handlePaid mint failure → DLQ (T32)", () => {
     expect(dlqRecord.lastAttemptAt).toBe(NOW);
     // First failure → next retry in 5 min per DLQ_BACKOFF_SECONDS[0]
     expect(dlqRecord.nextRetryAt).toBe(NOW + 5 * 60);
-    expect(dlqRecord.errorClass).toBe(
-      "SaleorOrderFromInvoice.DraftOrderCreateFailedError",
-    );
+    expect(dlqRecord.errorClass).toBe("SaleorOrderFromInvoice.DraftOrderCreateFailedError");
     expect(dlqRecord.invoicePayload).toContain(TEST_INVOICE_ID);
 
     // Cache must NOT be updated post-mint (only the T31 claim happened, no follow-up upsert)
@@ -609,9 +604,7 @@ describe("InvoiceHandler.handlePaid mint failure → DLQ (T32)", () => {
     const harness = makeHarness({
       initialRecord: buildSubscriptionRecord(),
       mapping: buildMapping(),
-      mintResult: err(
-        new SaleorOrderFromInvoiceError.DraftOrderCreateFailedError("network blip"),
-      ),
+      mintResult: err(new SaleorOrderFromInvoiceError.DraftOrderCreateFailedError("network blip")),
       withDlqRepo: true,
       dlqRecordResult: err(new Error("DynamoDB throttled")),
     });
@@ -765,8 +758,10 @@ describe("InvoiceHandler.handlePaid (T31 — idempotency hardening)", () => {
     const [, claimRecord] = harness.subscriptionRepo.markInvoiceProcessed.mock.calls[0]!;
 
     expect(claimRecord.lastInvoiceId).toBe(TEST_INVOICE_ID);
-    // Previous order id MUST be preserved on the claim — post-mint upsert is
-    // what swaps in the freshly-minted id.
+    /*
+     * Previous order id MUST be preserved on the claim — post-mint upsert is
+     * what swaps in the freshly-minted id.
+     */
     expect(claimRecord.lastSaleorOrderId).toBe(previousOrderId);
 
     // Mint runs after claim; final upsert carries the new MINTED_ORDER_ID.
@@ -781,8 +776,10 @@ describe("InvoiceHandler.handlePaid (T31 — idempotency hardening)", () => {
   it("Layer A — markInvoiceProcessed → 'already_processed' short-circuits Ok WITHOUT mint, upsert, or notify", async () => {
     const previousOrderId = "T3JkZXI6QUxSRUFEWQ==";
     const subscriptionRecord = buildSubscriptionRecord({
-      // Layer 1 in-memory check still misses (different lastInvoiceId), so
-      // we proceed to Layer A.
+      /*
+       * Layer 1 in-memory check still misses (different lastInvoiceId), so
+       * we proceed to Layer A.
+       */
       lastInvoiceId: "in_DIFFERENT_PREVIOUS",
       lastSaleorOrderId: previousOrderId,
     });
@@ -797,9 +794,11 @@ describe("InvoiceHandler.handlePaid (T31 — idempotency hardening)", () => {
     const value = expectOk<InvoiceHandlerSuccess, InvoiceHandlerError>(result);
 
     expect(value.stripeInvoiceId).toBe(TEST_INVOICE_ID);
-    // Returns the previous mint id since we don't know what the winner minted
-    // (their own write succeeded post-mint and is the source of truth on the
-    // next cache read).
+    /*
+     * Returns the previous mint id since we don't know what the winner minted
+     * (their own write succeeded post-mint and is the source of truth on the
+     * next cache read).
+     */
     expect(value.mintedSaleorOrderId).toBe(previousOrderId);
 
     expect(harness.subscriptionRepo.markInvoiceProcessed).toHaveBeenCalledTimes(1);
@@ -883,16 +882,16 @@ describe("InvoiceHandler.handlePaid (T31 — idempotency hardening)", () => {
     });
 
     const results = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        harness.handler.handlePaid(buildPaidEvent(), buildContext()),
-      ),
+      Array.from({ length: 5 }, () => harness.handler.handlePaid(buildPaidEvent(), buildContext())),
     );
 
     expect(results).toHaveLength(5);
     results.forEach((r) => expect(r.isOk()).toBe(true));
 
-    // The hard invariant: exactly ONE Saleor order minted across all 5
-    // concurrent deliveries. This is the central T31 contract.
+    /*
+     * The hard invariant: exactly ONE Saleor order minted across all 5
+     * concurrent deliveries. This is the central T31 contract.
+     */
     expect(harness.mintFn).toHaveBeenCalledTimes(1);
     expect(harness.subscriptionRepo.upsert).toHaveBeenCalledTimes(1);
     expect(harness.notifier.notify).toHaveBeenCalledTimes(1);

@@ -29,12 +29,12 @@ import {
 } from "@/modules/subscriptions/repositories/subscription-record";
 import { SaleorOrderFromInvoiceError } from "@/modules/subscriptions/saleor-bridge/saleor-order-from-invoice";
 import {
+  computeNextRetryAt,
   DLQ_BACKOFF_SECONDS,
   MAX_DLQ_ATTEMPTS,
-  computeNextRetryAt,
 } from "@/modules/subscriptions/webhooks/dlq-backoff";
 
-import { executeRetryCron, __testing } from "./route";
+import { __testing, executeRetryCron } from "./route";
 
 const TEST_AUTH_DATA: AuthData = {
   saleorApiUrl: mockedSaleorApiUrl,
@@ -90,7 +90,14 @@ const buildEntry = (overrides?: Partial<FailedMintRecord>): FailedMintRecord => 
 });
 
 interface DepsHarness {
-  apl: { getAll: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>; isReady?: ReturnType<typeof vi.fn>; isConfigured?: ReturnType<typeof vi.fn> };
+  apl: {
+    getAll: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    isReady?: ReturnType<typeof vi.fn>;
+    isConfigured?: ReturnType<typeof vi.fn>;
+  };
   failedMintDlqRepo: {
     record: ReturnType<typeof vi.fn>;
     getById: ReturnType<typeof vi.fn>;
@@ -327,8 +334,10 @@ describe("executeRetryCron — sweeper logic", () => {
     expect(ctx.tags.stripeInvoiceId).toBe(entry.stripeInvoiceId);
     expect(ctx.tags.attemptCount).toBe(String(MAX_DLQ_ATTEMPTS));
 
-    // We must NOT re-record on final failure (the markFinalFailure path
-    // handles the schema update with finalFailureAlertedAt set).
+    /*
+     * We must NOT re-record on final failure (the markFinalFailure path
+     * handles the schema update with finalFailureAlertedAt set).
+     */
     expect(deps.failedMintDlqRepo.record).not.toHaveBeenCalled();
   });
 
@@ -350,7 +359,7 @@ describe("executeRetryCron — sweeper logic", () => {
 
     const summary = await executeRetryCron(buildExecuteDeps(deps));
 
-    expect(summary).toEqual({
+    expect(summary).toStrictEqual({
       processed: 0,
       succeeded: 0,
       failedRetries: 0,
@@ -362,7 +371,7 @@ describe("executeRetryCron — sweeper logic", () => {
 
 describe("DLQ_BACKOFF_SECONDS + computeNextRetryAt", () => {
   it("schedule constants match the documented spec", () => {
-    expect(DLQ_BACKOFF_SECONDS).toEqual([5 * 60, 30 * 60, 4 * 60 * 60, 24 * 60 * 60]);
+    expect(DLQ_BACKOFF_SECONDS).toStrictEqual([5 * 60, 30 * 60, 4 * 60 * 60, 24 * 60 * 60]);
     expect(MAX_DLQ_ATTEMPTS).toBe(4);
   });
 
