@@ -77,6 +77,9 @@ const buildStubSubscriptionsApi = (
   retrieveSubscription: vi.fn().mockImplementation(() => {
     throw new Error("retrieveSubscription should not be called from billing-portal handler");
   }),
+  retrievePrice: vi.fn().mockImplementation(() => {
+    throw new Error("retrievePrice should not be called from billing-portal handler");
+  }),
   ...overrides,
 });
 

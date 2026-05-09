@@ -18,7 +18,10 @@ import { BillingPortalTrpcHandler } from "./billing-portal";
 import { CancelSubscriptionHandler } from "./cancel-subscription";
 import { ChangePlanHandler } from "./change-plan";
 import { CreateSubscriptionHandler } from "./create-subscription";
+import { DeleteMappingHandler } from "./delete-mapping";
 import { GetStatusTrpcHandler } from "./get-status";
+import { ListMappingsHandler } from "./list-mappings";
+import { UpsertMappingHandler } from "./upsert-mapping";
 
 export const subscriptionsRouter = router({
   /**
@@ -51,4 +54,23 @@ export const subscriptionsRouter = router({
    * Body implemented in T23 — delegates to {@link GetStatusTrpcHandler}.
    */
   getStatus: new GetStatusTrpcHandler().getTrpcProcedure(),
+
+  /**
+   * List all Stripe-price ↔ Saleor-variant mappings for the current installation.
+   * Powers the dashboard config UI (T25). Delegates to {@link ListMappingsHandler}.
+   */
+  listMappings: new ListMappingsHandler().getTrpcProcedure(),
+
+  /**
+   * Upsert a Stripe-price ↔ Saleor-variant mapping. Validates the
+   * `stripePriceId` against Stripe before persisting. T25 dashboard mutation.
+   * Delegates to {@link UpsertMappingHandler}.
+   */
+  upsertMapping: new UpsertMappingHandler().getTrpcProcedure(),
+
+  /**
+   * Hard-delete a Stripe-price ↔ Saleor-variant mapping by `stripePriceId`.
+   * T25 dashboard mutation. Delegates to {@link DeleteMappingHandler}.
+   */
+  deleteMapping: new DeleteMappingHandler().getTrpcProcedure(),
 });

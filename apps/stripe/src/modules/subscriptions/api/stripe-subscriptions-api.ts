@@ -53,6 +53,10 @@ export interface RetrieveSubscriptionArgs {
   subscriptionId: string;
 }
 
+export interface RetrievePriceArgs {
+  priceId: string;
+}
+
 export interface CreateBillingPortalSessionArgs {
   customerId: string;
   returnUrl: string;
@@ -71,15 +75,25 @@ export interface IStripeSubscriptionsApi {
   retrieveSubscription(
     args: RetrieveSubscriptionArgs,
   ): Promise<Result<Stripe.Subscription, StripeApiError>>;
+  /**
+   * Retrieve a Stripe Price by ID. Used by T25's `subscriptions.upsertMapping`
+   * to validate that an admin-supplied `stripePriceId` actually exists in the
+   * connected Stripe account before persisting it as a price↔variant mapping.
+   * On unknown price ID Stripe returns a 404 which `mapStripeErrorToApiError`
+   * surfaces as `StripeInvalidRequestError`.
+   */
+  retrievePrice(args: RetrievePriceArgs): Promise<Result<Stripe.Price, StripeApiError>>;
   createBillingPortalSession(
     args: CreateBillingPortalSessionArgs,
   ): Promise<Result<Stripe.BillingPortal.Session, StripeApiError>>;
 }
 
 export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
-  private stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal">;
+  private stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices">;
 
-  private constructor(stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal">) {
+  private constructor(
+    stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices">,
+  ) {
     this.stripeApiWrapper = stripeApiWrapper;
   }
 
@@ -175,6 +189,12 @@ export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
     return ResultAsync.fromPromise(
       this.stripeApiWrapper.subscriptions.retrieve(args.subscriptionId),
       (error) => mapStripeErrorToApiError(error),
+    );
+  }
+
+  async retrievePrice(args: RetrievePriceArgs): Promise<Result<Stripe.Price, StripeApiError>> {
+    return ResultAsync.fromPromise(this.stripeApiWrapper.prices.retrieve(args.priceId), (error) =>
+      mapStripeErrorToApiError(error),
     );
   }
 
