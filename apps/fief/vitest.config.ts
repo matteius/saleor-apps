@@ -15,7 +15,7 @@ export default defineConfig({
           sequence: {
             shuffle: true,
           },
-          include: ["src/**/*.test.ts"],
+          include: ["src/**/*.test.{ts,tsx}"],
           exclude: ["src/__tests__/integration/**"],
           name: "unit",
           setupFiles: "./src/__tests__/setup.units.ts",
