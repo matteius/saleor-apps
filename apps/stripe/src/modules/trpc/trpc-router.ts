@@ -16,11 +16,13 @@ if (typeof window !== "undefined") {
 
 /* eslint-disable import/first */
 import { appConfigRouter } from "@/modules/app-config/trpc-handlers/app-config-router";
+import { subscriptionsRouter } from "@/modules/subscriptions/trpc/subscriptions-router";
 
 import { router } from "./trpc-server";
 
 export const trpcRouter = router({
   appConfig: appConfigRouter,
+  subscriptions: subscriptionsRouter,
 });
 
 export type TrpcRouter = typeof trpcRouter;
