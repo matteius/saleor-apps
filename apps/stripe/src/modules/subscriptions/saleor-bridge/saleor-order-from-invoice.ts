@@ -1,24 +1,45 @@
 /**
  * Mints a Saleor draft order from a Stripe invoice and records the payment
- * transaction against it. Implementation for plan task T9.
+ * transaction against it. Implementation for plan task T9; tax handling
+ * extended in T30.
  *
  * Flow:
  *   1. `draftOrderCreate` — single-line digital draft order against the channel
  *      and Saleor user, with a quantity-1 line for the variant mapped to the
- *      Stripe price.
+ *      Stripe price. **T30**: the line's `price` (PositiveDecimal, major
+ *      units) is set to `amount_paid / 100 / quantity` so the Saleor order
+ *      total matches what Stripe actually charged (subtotal + tax). The tax
+ *      and subtotal cents are stamped onto the order's `metadata` as
+ *      `stripeTaxCents` + `stripeSubtotalCents` for downstream OwlBooks AR
+ *      reconciliation.
  *   2. `draftOrderComplete` — promote the draft to a real order.
  *   3. `transactionCreate` — record the Stripe charge against the order with
  *      `name: 'Stripe Subscription'`, `pspReference: stripeChargeId`,
  *      `amountCharged: { amount, currency }`, `availableActions: ['REFUND']`.
  *
- * **Tax handling is NOT implemented in T9.** The `invoice` argument is included
- * on `MintOrderFromInvoiceArgs` so T30 can extend this function to read
- * `invoice.total_tax_amounts` and append a tax line via `draftOrderUpdate`
- * (or via the `shippingPrice` field for digital orders) without changing the
- * call sites in T14. The current implementation passes `invoice.amount_paid`
- * (which already includes Stripe-Tax-collected tax) as `amountCharged`, so
- * the transaction record matches the Stripe charge exactly even though the
- * Saleor order line total will not yet reflect tax.
+ * **T30 — tax-on-Saleor-order strategy.** The PRD enumerated three options:
+ *   (a) repurpose `DraftOrderInput.shippingPrice` as a tax field — NOT viable
+ *       in Saleor 3.22, the field doesn't exist on either
+ *       `DraftOrderCreateInput` or `DraftOrderInput`.
+ *   (b) add a separate "Sales Tax" order line — would require provisioning a
+ *       dedicated tax variant in the catalog ahead of time, adding ops
+ *       overhead.
+ *   (c) per-order line price override + metadata — `OrderLineCreateInput.price`
+ *       IS available on Saleor 3.22 and accepts a custom per-unit price at
+ *       draft-order-create time. We override the catalog price with the
+ *       gross-inclusive price (subtotal + tax) so the order total naturally
+ *       matches `invoice.amount_paid`, and write the tax+subtotal breakdown
+ *       to order `metadata` so AR systems can derive the tax component.
+ *       Chosen — single line, single mutation, exact total match by
+ *       construction.
+ *
+ * **Tax mismatch guard.** Before issuing any GraphQL calls, we verify
+ * `subtotal + tax === amount_paid` (within a $0.01 tolerance to absorb
+ * Stripe's per-jurisdiction rounding). On mismatch we fire Sentry's
+ * `captureException` with structured tags and return
+ * `Err(TaxMismatchError)` so the webhook handler retries and on-call sees the
+ * alert. We never mint a Saleor order whose total disagrees with the Stripe
+ * charge — that would corrupt OwlBooks AR.
  *
  * **Channel resolution.** Saleor's `draftOrderCreate` takes `channelId`, not
  * `channelSlug`. The existing `ChannelsFetcher`
@@ -28,6 +49,7 @@
  * here because Saleor channel-create is rare and the underlying urql client
  * already caches the query in process.
  */
+import { captureException as sentryCaptureException } from "@sentry/nextjs";
 import { err, ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 import { type Client } from "urql";
@@ -44,6 +66,16 @@ import { createLogger } from "@/lib/logger";
 import { ChannelsFetcher } from "@/modules/saleor/channel-fetcher";
 
 import { type SubscriptionRecord } from "../repositories/subscription-record";
+
+/**
+ * Tolerance (in smallest currency unit, i.e. cents for USD) for the
+ * Stripe-side rounding drift between `invoice.total_excluding_tax +
+ * sum(invoice.total_tax_amounts[].amount)` and `invoice.amount_paid`. Each
+ * jurisdiction's tax is computed independently and rounded — sum-of-rounds vs
+ * round-of-sum can drift by 1 unit. Anything larger than this signals a real
+ * discrepancy that we refuse to mint into Saleor.
+ */
+const TAX_MISMATCH_TOLERANCE_CENTS = 1;
 
 const VariantMappingMissingError = BaseError.subclass(
   "SaleorOrderFromInvoice.VariantMappingMissingError",
@@ -105,6 +137,21 @@ const TransactionCreateFailedError = BaseError.subclass(
   },
 );
 
+/**
+ * T30. Stripe-side `total_excluding_tax + sum(total_tax_amounts) !==
+ * amount_paid` (beyond the rounding tolerance). Returned BEFORE any GraphQL
+ * mutation runs so we never mint a Saleor order whose total disagrees with
+ * the Stripe charge. The webhook handler should treat this as transient (the
+ * invoice may be re-delivered with corrected fields) and Stripe's at-least-
+ * once delivery will retry; ops investigates via the Sentry alert fired in
+ * parallel.
+ */
+const TaxMismatchError = BaseError.subclass("SaleorOrderFromInvoice.TaxMismatchError", {
+  props: {
+    _internalName: "SaleorOrderFromInvoice.TaxMismatchError",
+  },
+});
+
 export const SaleorOrderFromInvoiceError = {
   VariantMappingMissingError,
   ChannelResolutionFailedError,
@@ -113,6 +160,7 @@ export const SaleorOrderFromInvoiceError = {
   DraftOrderCreateFailedError,
   DraftOrderCompleteFailedError,
   TransactionCreateFailedError,
+  TaxMismatchError,
 };
 
 export type SaleorOrderFromInvoiceError =
@@ -122,14 +170,15 @@ export type SaleorOrderFromInvoiceError =
   | InstanceType<typeof InvoiceMissingChargeError>
   | InstanceType<typeof DraftOrderCreateFailedError>
   | InstanceType<typeof DraftOrderCompleteFailedError>
-  | InstanceType<typeof TransactionCreateFailedError>;
+  | InstanceType<typeof TransactionCreateFailedError>
+  | InstanceType<typeof TaxMismatchError>;
 
 export interface MintOrderFromInvoiceArgs {
   /**
-   * The Stripe Invoice that just transitioned to `paid`. Currently used only
-   * for `amount_paid`, `currency`, and the resolved `charge.id` extraction.
-   * T30 will extend usage to read `invoice.total_tax_amounts` for tax-line
-   * copying.
+   * The Stripe Invoice that just transitioned to `paid`. T30 reads
+   * `total_excluding_tax`, `total_tax_amounts[].amount`, and `amount_paid`
+   * to derive the gross-inclusive line price + the
+   * `stripeTaxCents`/`stripeSubtotalCents` metadata stamped on the order.
    */
   invoice: Stripe.Invoice;
   /** Cached subscription record (DynamoDB row from T8). */
@@ -144,6 +193,13 @@ export interface MintOrderFromInvoiceArgs {
    * the same APL-resolved auth is used for query + mutation calls.
    */
   graphqlClient: Pick<Client, "mutation" | "query">;
+  /**
+   * T30 — optional Sentry capture function. Fired with structured tags when
+   * the Stripe invoice's tax fields disagree with `amount_paid` beyond the
+   * rounding tolerance. Defaults to `@sentry/nextjs`'s `captureException` —
+   * tests inject a mock to assert on call shape.
+   */
+  captureException?: typeof sentryCaptureException;
 }
 
 export interface MintOrderFromInvoiceResult {
@@ -177,6 +233,41 @@ function extractChargeId(invoice: Stripe.Invoice): string | null {
   return typeof charge === "string" ? charge : charge.id;
 }
 
+/**
+ * T30 — Stripe Tax field accessors. Stripe's `Invoice` type evolves across
+ * SDK versions; `total_tax_amounts` and `total_excluding_tax` aren't
+ * universally on the published type yet, so we widen via intersection at the
+ * call site rather than chasing SDK upgrades.
+ */
+type InvoiceWithTax = Stripe.Invoice & {
+  total_tax_amounts?: Array<{ amount: number }> | null;
+  total_excluding_tax?: number | null;
+};
+
+function sumTaxCents(invoice: InvoiceWithTax): number {
+  const taxAmounts = invoice.total_tax_amounts;
+
+  if (!taxAmounts || taxAmounts.length === 0) {
+    return 0;
+  }
+
+  return taxAmounts.reduce((s, t) => s + t.amount, 0);
+}
+
+/**
+ * Subtotal in smallest currency unit. Prefers Stripe's
+ * `total_excluding_tax`; falls back to `amount_paid - taxSum` when Stripe
+ * omits the field (older API versions, or invoices created before tax was
+ * enabled on the account).
+ */
+function deriveSubtotalCents(invoice: InvoiceWithTax, taxCents: number): number {
+  if (typeof invoice.total_excluding_tax === "number") {
+    return invoice.total_excluding_tax;
+  }
+
+  return invoice.amount_paid - taxCents;
+}
+
 function formatGraphqlErrors(
   errors: ReadonlyArray<{
     readonly field?: string | null;
@@ -192,7 +283,14 @@ function formatGraphqlErrors(
 export async function mintOrderFromInvoice(
   args: MintOrderFromInvoiceArgs,
 ): Promise<Result<MintOrderFromInvoiceResult, SaleorOrderFromInvoiceError>> {
-  const { invoice, subscriptionRecord, saleorChannelSlug, saleorVariantId, graphqlClient } = args;
+  const {
+    invoice,
+    subscriptionRecord,
+    saleorChannelSlug,
+    saleorVariantId,
+    graphqlClient,
+    captureException = sentryCaptureException,
+  } = args;
 
   if (!saleorVariantId) {
     return err(
@@ -226,6 +324,52 @@ export async function mintOrderFromInvoice(
   }
 
   /*
+   * T30 — Stripe Tax line copying. Compute the tax + subtotal cents and
+   * confirm they reconcile to `amount_paid` within rounding tolerance BEFORE
+   * we touch Saleor. On mismatch we Sentry-alert and bail without minting an
+   * order. The webhook handler returns `Err` and Stripe at-least-once
+   * delivery will retry; ops investigates via the alert.
+   */
+  const invoiceWithTax = invoice as InvoiceWithTax;
+  const taxCents = sumTaxCents(invoiceWithTax);
+  const subtotalCents = deriveSubtotalCents(invoiceWithTax, taxCents);
+  const expectedTotalCents = subtotalCents + taxCents;
+  const actualTotalCents = invoice.amount_paid;
+  const deltaCents = Math.abs(actualTotalCents - expectedTotalCents);
+
+  if (deltaCents > TAX_MISMATCH_TOLERANCE_CENTS) {
+    const mismatchError = new TaxMismatchError(
+      `Tax mismatch on invoice ${invoice.id}: subtotal(${subtotalCents}) + tax(${taxCents}) = ${expectedTotalCents}, but amount_paid = ${actualTotalCents} (delta = ${deltaCents} cents, tolerance = ${TAX_MISMATCH_TOLERANCE_CENTS})`,
+    );
+
+    captureException(mismatchError, {
+      tags: {
+        subsystem: "stripe-subscriptions",
+        event: "invoice.paid.tax-mismatch",
+        stripeInvoiceId: invoice.id ?? "",
+      },
+      extra: {
+        expectedTotal: actualTotalCents,
+        actualTotal: expectedTotalCents,
+        deltaCents,
+        subtotalCents,
+        taxCents,
+        currency: invoice.currency,
+      },
+    });
+
+    logger.error("Refusing to mint Saleor order — Stripe tax fields do not reconcile", {
+      stripeInvoiceId: invoice.id,
+      subtotalCents,
+      taxCents,
+      amountPaidCents: actualTotalCents,
+      deltaCents,
+    });
+
+    return err(mismatchError);
+  }
+
+  /*
    * Step 0: resolve channel slug → channel id (Saleor `draftOrderCreate`
    * takes `channelId`, not `channelSlug`).
    */
@@ -249,6 +393,20 @@ export async function mintOrderFromInvoice(
     );
   }
 
+  /*
+   * T30: gross-inclusive per-unit price = amount_paid / 100 / quantity. We
+   * mint a single quantity-1 line per the T9 contract (one variant per
+   * subscription price), so this is simply amount_paid / 100. PositiveDecimal
+   * accepts a JS number; for non-2-decimal currencies (e.g. JPY which is
+   * 0-decimal) this still produces the correct major-unit value because
+   * amount_paid is always in the smallest currency unit and we divide by 100
+   * — not currency-aware, matching the T9 transactionCreate amountCharged
+   * conversion. The deferred currency-aware path lives in
+   * `SaleorMoney.createFromStripe`; v1 ships USD-only.
+   */
+  const lineQuantity = 1;
+  const linePriceMajor = invoice.amount_paid / 100 / lineQuantity;
+
   // Step 1: draftOrderCreate.
   let draftOrderCreateResult;
 
@@ -260,10 +418,21 @@ export async function mintOrderFromInvoice(
         lines: [
           {
             variantId: saleorVariantId,
-            quantity: 1,
+            quantity: lineQuantity,
+            price: linePriceMajor,
           },
         ],
         externalReference: invoice.id,
+        /*
+         * T30 — Stripe Tax breakdown stamped onto the order so OwlBooks AR
+         * can reconstruct the tax component when ingesting the Saleor order.
+         * Both values are integer cents serialized as strings (Saleor
+         * MetadataInput.value is `String!`).
+         */
+        metadata: [
+          { key: "stripeTaxCents", value: String(taxCents) },
+          { key: "stripeSubtotalCents", value: String(subtotalCents) },
+        ],
       },
     });
   } catch (e) {

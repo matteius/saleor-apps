@@ -22,6 +22,19 @@ import {
   SaleorOrderFromInvoiceError,
 } from "./saleor-order-from-invoice";
 
+/**
+ * T30: Stripe Tax line copying. The implementation uses option (c) from the
+ * task brief — set the draft-order line's `price` (PositiveDecimal, major
+ * units) to `amount_paid / 100 / quantity` so the Saleor order total matches
+ * the Stripe charge exactly, and stamp `stripeTaxCents` + `stripeSubtotalCents`
+ * onto the order's metadata for downstream OwlBooks AR reconciliation. The
+ * Sales Tax-as-shipping option (a) is not viable on Saleor 3.22 because
+ * `DraftOrderInput` has no `shippingPrice` field, and the dedicated tax
+ * variant option (b) would require provisioning a special variant ahead of
+ * time. Option (c) keeps a single line, matches order total to invoice total
+ * by construction, and surfaces the breakdown via metadata.
+ */
+
 const buildSubscriptionRecord = (
   overrides?: Partial<ConstructorParameters<typeof SubscriptionRecord>[0]>,
 ) =>
@@ -51,6 +64,13 @@ const buildInvoice = (overrides?: Record<string, unknown>): Stripe.Invoice =>
     amount_paid: 4900,
     currency: "usd",
     charge: "ch_test_001",
+    /*
+     * T30: tax-aware invoice fields. Default fixture has NO tax — subtotal
+     * equals amount_paid. Tests that exercise tax handling override
+     * `total_tax_amounts`, `total_excluding_tax`, and `amount_paid` together.
+     */
+    total_excluding_tax: 4900,
+    total_tax_amounts: [],
     ...overrides,
   }) as unknown as Stripe.Invoice;
 
@@ -145,12 +165,21 @@ describe("mintOrderFromInvoice", () => {
     const [draftCreateDoc, draftCreateVars] = client.mutation.mock.calls[0];
 
     expect(draftCreateDoc).toBe(SubscriptionDraftOrderCreateDocument);
+    /*
+     * T30: line carries an explicit `price` set to `amount_paid / 100 / qty`
+     * so the Saleor order total matches what Stripe charged. With no tax,
+     * 4900 / 100 / 1 = 49. Metadata stamps stripeTaxCents=0 + subtotal=4900.
+     */
     expect(draftCreateVars).toStrictEqual({
       input: {
         channelId: "Q2hhbm5lbDox",
         user: "VXNlcjox",
-        lines: [{ variantId: "UHJvZHVjdFZhcmlhbnQ6MQ==", quantity: 1 }],
+        lines: [{ variantId: "UHJvZHVjdFZhcmlhbnQ6MQ==", quantity: 1, price: 49 }],
         externalReference: "in_test_001",
+        metadata: [
+          { key: "stripeTaxCents", value: "0" },
+          { key: "stripeSubtotalCents", value: "4900" },
+        ],
       },
     });
 
@@ -392,5 +421,190 @@ describe("mintOrderFromInvoice", () => {
 
     expect(result.isOk()).toBe(true);
     expect(result._unsafeUnwrap().saleorOrderId).toBe("T3JkZXI6MQ==");
+  });
+
+  /*
+   * -------------------------------------------------------------------------
+   * T30: Stripe Tax → Saleor order line
+   * -------------------------------------------------------------------------
+   */
+  describe("T30 — Stripe Tax line copying", () => {
+    it("invoice with single-jurisdiction tax: line price = (subtotal+tax)/qty, metadata stamps tax+subtotal cents", async () => {
+      const client = buildFakeClient({});
+
+      const result = await mintOrderFromInvoice({
+        invoice: buildInvoice({
+          amount_paid: 5290, // 4900 subtotal + 390 tax
+          total_excluding_tax: 4900,
+          total_tax_amounts: [{ amount: 390 }],
+        }),
+        subscriptionRecord: buildSubscriptionRecord(),
+        saleorChannelSlug: "owlbooks",
+        saleorVariantId: "UHJvZHVjdFZhcmlhbnQ6MQ==",
+        graphqlClient: client,
+      });
+
+      expect(result.isOk()).toBe(true);
+
+      const [, draftCreateVars] = client.mutation.mock.calls[0] as [
+        unknown,
+        {
+          input: {
+            lines: Array<{ price: number }>;
+            metadata: Array<{ key: string; value: string }>;
+          };
+        },
+      ];
+
+      // 5290 / 100 / 1 = 52.9
+      expect(draftCreateVars.input.lines[0].price).toBe(52.9);
+      expect(draftCreateVars.input.metadata).toStrictEqual(
+        expect.arrayContaining([
+          { key: "stripeTaxCents", value: "390" },
+          { key: "stripeSubtotalCents", value: "4900" },
+        ]),
+      );
+
+      // amountCents on the result (and downstream transactionCreate) still equals invoice.amount_paid.
+      expect(result._unsafeUnwrap().amountCents).toBe(5290);
+    });
+
+    it("invoice with NO tax (empty total_tax_amounts): order line price = subtotal/qty, taxCents metadata = 0", async () => {
+      const client = buildFakeClient({});
+
+      const result = await mintOrderFromInvoice({
+        invoice: buildInvoice({
+          amount_paid: 4900,
+          total_excluding_tax: 4900,
+          total_tax_amounts: [],
+        }),
+        subscriptionRecord: buildSubscriptionRecord(),
+        saleorChannelSlug: "owlbooks",
+        saleorVariantId: "UHJvZHVjdFZhcmlhbnQ6MQ==",
+        graphqlClient: client,
+      });
+
+      expect(result.isOk()).toBe(true);
+
+      const [, draftCreateVars] = client.mutation.mock.calls[0] as [
+        unknown,
+        {
+          input: {
+            lines: Array<{ price: number }>;
+            metadata: Array<{ key: string; value: string }>;
+          };
+        },
+      ];
+
+      expect(draftCreateVars.input.lines[0].price).toBe(49);
+      expect(draftCreateVars.input.metadata).toStrictEqual(
+        expect.arrayContaining([
+          { key: "stripeTaxCents", value: "0" },
+          { key: "stripeSubtotalCents", value: "4900" },
+        ]),
+      );
+    });
+
+    it("invoice with multi-jurisdiction tax (2 entries): sums correctly, line price reflects total", async () => {
+      const client = buildFakeClient({});
+
+      const result = await mintOrderFromInvoice({
+        invoice: buildInvoice({
+          amount_paid: 5300, // 5000 subtotal + 200 + 100 tax = 5300
+          total_excluding_tax: 5000,
+          total_tax_amounts: [{ amount: 200 }, { amount: 100 }],
+        }),
+        subscriptionRecord: buildSubscriptionRecord(),
+        saleorChannelSlug: "owlbooks",
+        saleorVariantId: "UHJvZHVjdFZhcmlhbnQ6MQ==",
+        graphqlClient: client,
+      });
+
+      expect(result.isOk()).toBe(true);
+
+      const [, draftCreateVars] = client.mutation.mock.calls[0] as [
+        unknown,
+        {
+          input: {
+            lines: Array<{ price: number }>;
+            metadata: Array<{ key: string; value: string }>;
+          };
+        },
+      ];
+
+      // 5300 / 100 / 1 = 53
+      expect(draftCreateVars.input.lines[0].price).toBe(53);
+      expect(draftCreateVars.input.metadata).toStrictEqual(
+        expect.arrayContaining([
+          { key: "stripeTaxCents", value: "300" },
+          { key: "stripeSubtotalCents", value: "5000" },
+        ]),
+      );
+    });
+
+    it("mismatch path: synthetic invoice where amount_paid != subtotal+tax (delta > 1 cent) → returns TaxMismatchError, fires Sentry captureException with structured tags, performs ZERO mutations", async () => {
+      const client = buildFakeClient({});
+      const captureExceptionMock = vi.fn();
+
+      const result = await mintOrderFromInvoice({
+        invoice: buildInvoice({
+          amount_paid: 5500, // claimed paid
+          total_excluding_tax: 4900,
+          total_tax_amounts: [{ amount: 390 }], // 4900 + 390 = 5290 != 5500 → 210-cent delta
+        }),
+        subscriptionRecord: buildSubscriptionRecord(),
+        saleorChannelSlug: "owlbooks",
+        saleorVariantId: "UHJvZHVjdFZhcmlhbnQ6MQ==",
+        graphqlClient: client,
+        captureException: captureExceptionMock,
+      });
+
+      expect(result.isErr()).toBe(true);
+      expect(result._unsafeUnwrapErr()).toBeInstanceOf(
+        SaleorOrderFromInvoiceError.TaxMismatchError,
+      );
+
+      // No order mutations should have been issued.
+      expect(client.mutation).not.toHaveBeenCalled();
+
+      expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+      const [capturedError, captureContext] = captureExceptionMock.mock.calls[0] as [
+        Error,
+        { tags?: Record<string, unknown>; extra?: Record<string, unknown> },
+      ];
+
+      expect(capturedError).toBeInstanceOf(SaleorOrderFromInvoiceError.TaxMismatchError);
+      expect(captureContext.tags).toMatchObject({
+        subsystem: "stripe-subscriptions",
+        event: "invoice.paid.tax-mismatch",
+        stripeInvoiceId: "in_test_001",
+      });
+      expect(captureContext.extra).toMatchObject({
+        expectedTotal: 5500,
+        actualTotal: 5290,
+        deltaCents: 210,
+      });
+    });
+
+    it("mismatch path: 1-cent delta is tolerated (within $0.01 threshold) → succeeds, no Sentry", async () => {
+      const client = buildFakeClient({});
+      const captureExceptionMock = vi.fn();
+
+      const result = await mintOrderFromInvoice({
+        invoice: buildInvoice({
+          amount_paid: 4901, // off-by-one rounding
+          total_excluding_tax: 4900,
+          total_tax_amounts: [{ amount: 0 }], // 4900+0=4900, delta=1 cent → tolerated
+        }),
+        subscriptionRecord: buildSubscriptionRecord(),
+        saleorChannelSlug: "owlbooks",
+        saleorVariantId: "UHJvZHVjdFZhcmlhbnQ6MQ==",
+        graphqlClient: client,
+        captureException: captureExceptionMock,
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(captureExceptionMock).not.toHaveBeenCalled();
+    });
   });
 });
