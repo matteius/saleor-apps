@@ -86,17 +86,17 @@ export class RotatingFiefEncryptor {
    * Cached primitives so repeated encrypt/decrypt calls don't reallocate
    * `Encryptor` instances per call. `Encryptor` itself stores only the secret
    * string; the actual `crypto.createCipheriv` instance is per-call.
+   *
+   * Lazy: built on first encrypt/decrypt rather than in the constructor, so
+   * `next build`'s page-data collection can construct this without
+   * SECRET_KEY set in the build environment. Runtime first-use still throws
+   * loudly if secretKey is missing — same error, just deferred to the first
+   * actual cipher call.
    */
-  private readonly currentEncryptor: Encryptor;
-  private readonly newEncryptor: Encryptor | undefined;
+  private currentEncryptorInstance: Encryptor | undefined;
+  private newEncryptorInstance: Encryptor | undefined;
 
   constructor(input: RotatingFiefEncryptorInput) {
-    if (!input.secretKey) {
-      throw new EncryptionError("RotatingFiefEncryptor requires a non-empty secretKey", {
-        props: { _brand: "FiefApp.EncryptionError" as const },
-      });
-    }
-
     if (input.newSecretKey !== undefined && input.newSecretKey.length === 0) {
       throw new EncryptionError(
         "RotatingFiefEncryptor: newSecretKey must be either omitted or a non-empty string",
@@ -106,8 +106,32 @@ export class RotatingFiefEncryptor {
 
     this.currentKey = input.secretKey;
     this.newKey = input.newSecretKey;
-    this.currentEncryptor = new Encryptor(this.currentKey);
-    this.newEncryptor = this.newKey ? new Encryptor(this.newKey) : undefined;
+  }
+
+  private get currentEncryptor(): Encryptor {
+    if (!this.currentKey) {
+      throw new EncryptionError("RotatingFiefEncryptor requires a non-empty secretKey", {
+        props: { _brand: "FiefApp.EncryptionError" as const },
+      });
+    }
+
+    if (this.currentEncryptorInstance === undefined) {
+      this.currentEncryptorInstance = new Encryptor(this.currentKey);
+    }
+
+    return this.currentEncryptorInstance;
+  }
+
+  private get newEncryptor(): Encryptor | undefined {
+    if (!this.newKey) {
+      return undefined;
+    }
+
+    if (this.newEncryptorInstance === undefined) {
+      this.newEncryptorInstance = new Encryptor(this.newKey);
+    }
+
+    return this.newEncryptorInstance;
   }
 
   /**

@@ -158,9 +158,16 @@ describe("RotatingFiefEncryptor", () => {
     });
   });
 
-  describe("constructor validation", () => {
-    it("throws when secretKey is empty", () => {
-      expect(() => new RotatingFiefEncryptor({ secretKey: "" })).toThrow();
+  describe("validation", () => {
+    /*
+     * SecretKey is validated lazily (on first encrypt/decrypt) so `next build`
+     * route-collection can construct this without SECRET_KEY in env. The throw
+     * still surfaces at runtime first-use with the same error type.
+     */
+    it("throws on first encrypt when secretKey is empty", () => {
+      const encryptor = new RotatingFiefEncryptor({ secretKey: "" });
+
+      expect(() => encryptor.encrypt("plaintext")).toThrow();
     });
 
     it("throws when newSecretKey is provided as an empty string", () => {
