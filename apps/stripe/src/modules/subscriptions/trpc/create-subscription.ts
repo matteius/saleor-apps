@@ -50,11 +50,22 @@
 import { TRPCError } from "@trpc/server";
 import type Stripe from "stripe";
 import { type Client } from "urql";
+import { z } from "zod";
 
 import { createLogger } from "@/lib/logger";
+import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
+import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
+import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
+import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
 import { type IStripeCustomerApi } from "../api/stripe-customer-api";
 import { type IStripeSubscriptionsApi } from "../api/stripe-subscriptions-api";
+import {
+  type IStripeSubscriptionsApiFactory,
+  StripeSubscriptionsApiFactory,
+} from "../api/stripe-subscriptions-api-factory";
+import { DynamoDbPriceVariantMapRepo } from "../repositories/dynamodb/dynamodb-price-variant-map-repo";
+import { DynamoDbSubscriptionRepo } from "../repositories/dynamodb/dynamodb-subscription-repo";
 import {
   createFiefUserId,
   createStripeCustomerId,
@@ -70,7 +81,45 @@ import {
   createStripePriceId as createPriceVariantStripePriceId,
   type PriceVariantMapRepo,
 } from "../saleor-bridge/price-variant-map";
-import { type ISaleorCustomerResolver } from "../saleor-bridge/saleor-customer-resolver";
+import {
+  type ISaleorCustomerResolver,
+  SaleorCustomerResolver,
+} from "../saleor-bridge/saleor-customer-resolver";
+
+/**
+ * Re-declared here so the router can wire `new CreateSubscriptionHandler().getTrpcProcedure()`
+ * directly (mirrors the T22/T23 pattern). The dashboard router file used to
+ * own these inline; they now live with the handler.
+ *
+ * `.strict()` so unknown keys throw at validation. Storefront / dashboard
+ * callers MUST NOT pass `promoCode`, `couponId`, or `discount` — the
+ * existing OwlBooks `PromoCode` model is for AI-credit redemption and does
+ * not apply to subscriptions in v1 (T20). The strict mode surfaces these
+ * as a Zod error naming the offending key so the integration misuse is
+ * obvious from the error message alone.
+ */
+const billingAddressSchema = z.object({
+  line1: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  postalCode: z.string().min(1),
+  country: z.string().length(2, "ISO-3166-1 alpha-2 country code (e.g. 'US')"),
+});
+
+export const createInputSchema = z
+  .object({
+    fiefUserId: z.string().min(1),
+    email: z.string().email(),
+    stripePriceId: z.string().min(1).startsWith("price_"),
+    billingAddress: billingAddressSchema.optional(),
+  })
+  .strict();
+
+export const createOutputSchema = z.object({
+  stripeSubscriptionId: z.string(),
+  stripeCustomerId: z.string(),
+  clientSecret: z.string(),
+});
 
 export interface CreateSubscriptionInput {
   fiefUserId: string;
@@ -110,6 +159,22 @@ export interface CreateSubscriptionHandlerDeps {
    * don't pass it on every invocation.
    */
   accessPattern: SubscriptionRepoAccess;
+}
+
+/**
+ * Optional deps for the parameterless / lazy-resolution path used by the
+ * tRPC procedure. When the handler is instantiated WITHOUT a fully-built
+ * `CreateSubscriptionHandlerDeps`, `getTrpcProcedure()` lazily resolves
+ * the missing pieces from the procedure ctx (saleorApiUrl + appId +
+ * apiClient + Stripe restricted key from `appConfigRepo`). Mirrors the T22
+ * `BillingPortalTrpcHandler` shape.
+ */
+export interface CreateSubscriptionTrpcLazyDeps {
+  stripeSubscriptionsApiFactory: IStripeSubscriptionsApiFactory;
+  appConfigRepo: AppConfigRepo;
+  customerResolver: ISaleorCustomerResolver;
+  subscriptionRepo: SubscriptionRepo;
+  priceVariantMapRepo: PriceVariantMapRepo;
 }
 
 /**
@@ -168,16 +233,115 @@ function extractPeriodBoundaries(sub: Stripe.Subscription): {
   };
 }
 
+const trpcLogger = createLogger("CreateSubscriptionTrpcHandler");
+
 export class CreateSubscriptionHandler {
-  private readonly deps: CreateSubscriptionHandlerDeps;
+  baseProcedure = protectedClientProcedure;
+
+  private readonly deps?: CreateSubscriptionHandlerDeps;
+
+  private readonly lazyDeps: CreateSubscriptionTrpcLazyDeps;
 
   private readonly logger = createLogger("CreateSubscriptionHandler");
 
-  constructor(deps: CreateSubscriptionHandlerDeps) {
-    this.deps = deps;
+  /**
+   * Two construction modes:
+   *  - Pass `CreateSubscriptionHandlerDeps` for direct `execute()` use
+   *    (unit tests + the deferred T29 orchestration code path).
+   *  - Pass `Partial<CreateSubscriptionTrpcLazyDeps>` (or no arg) for the
+   *    `getTrpcProcedure()` path — missing deps default to production
+   *    impls; tests that want to exercise the procedure can swap them.
+   *
+   * Discriminated by the presence of `accessPattern` on the input — only
+   * the eager-deps shape carries it.
+   */
+  constructor(deps?: CreateSubscriptionHandlerDeps | Partial<CreateSubscriptionTrpcLazyDeps>) {
+    if (deps && "accessPattern" in deps && deps.accessPattern) {
+      this.deps = deps;
+    }
+
+    const lazy = (deps as Partial<CreateSubscriptionTrpcLazyDeps> | undefined) ?? {};
+
+    this.lazyDeps = {
+      stripeSubscriptionsApiFactory:
+        lazy.stripeSubscriptionsApiFactory ?? new StripeSubscriptionsApiFactory(),
+      appConfigRepo: lazy.appConfigRepo ?? appConfigRepoImpl,
+      customerResolver: lazy.customerResolver ?? new SaleorCustomerResolver(),
+      subscriptionRepo: lazy.subscriptionRepo ?? new DynamoDbSubscriptionRepo(),
+      priceVariantMapRepo: lazy.priceVariantMapRepo ?? new DynamoDbPriceVariantMapRepo(),
+    };
+  }
+
+  getTrpcProcedure() {
+    return this.baseProcedure
+      .input(createInputSchema)
+      .output(createOutputSchema)
+      .mutation(async ({ input, ctx }): Promise<CreateSubscriptionOutput> => {
+        const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
+
+        if (saleorApiUrl.isErr()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Malformed saleorApiUrl",
+          });
+        }
+
+        const rootConfigResult = await this.lazyDeps.appConfigRepo.getRootConfig({
+          saleorApiUrl: saleorApiUrl.value,
+          appId: ctx.appId,
+        });
+
+        if (rootConfigResult.isErr()) {
+          trpcLogger.error("Failed to load root config", { error: rootConfigResult.error });
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to load Stripe configuration",
+          });
+        }
+
+        const stripeConfigs = rootConfigResult.value.getAllConfigsAsList();
+
+        if (stripeConfigs.length === 0) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No Stripe configuration is installed for this Saleor app",
+          });
+        }
+
+        const stripeSubscriptionsApi =
+          this.lazyDeps.stripeSubscriptionsApiFactory.createSubscriptionsApi({
+            key: stripeConfigs[0].restrictedKey,
+          });
+        const stripeCustomerApi = this.lazyDeps.stripeSubscriptionsApiFactory.createCustomerApi({
+          key: stripeConfigs[0].restrictedKey,
+        });
+
+        const handler = new CreateSubscriptionHandler({
+          stripeSubscriptionsApi,
+          stripeCustomerApi,
+          customerResolver: this.lazyDeps.customerResolver,
+          subscriptionRepo: this.lazyDeps.subscriptionRepo,
+          priceVariantMapRepo: this.lazyDeps.priceVariantMapRepo,
+          graphqlClient: ctx.apiClient,
+          accessPattern: { saleorApiUrl: saleorApiUrl.value, appId: ctx.appId },
+        });
+
+        return handler.execute(input);
+      });
   }
 
   async execute(input: CreateSubscriptionInput): Promise<CreateSubscriptionOutput> {
+    if (!this.deps) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          "CreateSubscriptionHandler.execute() called on a handler instance without eager deps. " +
+          "Either construct with full `CreateSubscriptionHandlerDeps` or invoke via `.getTrpcProcedure()`.",
+      });
+    }
+
+    const deps = this.deps;
     const { fiefUserId, email, stripePriceId } = input;
 
     /*
@@ -188,10 +352,7 @@ export class CreateSubscriptionHandler {
      * draft a Saleor order. A missing mapping is a config error from T25.
      */
     const brandedPriceId = createPriceVariantStripePriceId(stripePriceId);
-    const mappingResult = await this.deps.priceVariantMapRepo.get(
-      this.deps.accessPattern,
-      brandedPriceId,
-    );
+    const mappingResult = await deps.priceVariantMapRepo.get(deps.accessPattern, brandedPriceId);
 
     if (mappingResult.isErr()) {
       this.logger.error("Failed to read price→variant mapping", {
@@ -228,10 +389,10 @@ export class CreateSubscriptionHandler {
      * Errors here block the chain since we cannot mint orders for a
      * subscription that has no Saleor counterpart.
      */
-    const saleorUserResult = await this.deps.customerResolver.resolveSaleorUser({
+    const saleorUserResult = await deps.customerResolver.resolveSaleorUser({
       fiefUserId,
       email,
-      graphqlClient: this.deps.graphqlClient,
+      graphqlClient: deps.graphqlClient,
     });
 
     if (saleorUserResult.isErr()) {
@@ -256,8 +417,8 @@ export class CreateSubscriptionHandler {
      * A read error is NON-FATAL — we proceed without `existingStripeCustomerId`
      * and the resolver will create a fresh customer (which is the safe default).
      */
-    const existingResult = await this.deps.subscriptionRepo.getByFiefUserId(
-      this.deps.accessPattern,
+    const existingResult = await deps.subscriptionRepo.getByFiefUserId(
+      deps.accessPattern,
       createFiefUserId(fiefUserId),
     );
 
@@ -280,11 +441,11 @@ export class CreateSubscriptionHandler {
      * `retrieveCustomer(existingStripeCustomerId)` first; on miss / deleted
      * it creates a fresh one with `fiefUserId` + `saleorUserId` in metadata.
      */
-    const stripeCustomerResult = await this.deps.customerResolver.resolveStripeCustomer({
+    const stripeCustomerResult = await deps.customerResolver.resolveStripeCustomer({
       fiefUserId,
       email,
       saleorUserId,
-      stripeCustomerApi: this.deps.stripeCustomerApi,
+      stripeCustomerApi: deps.stripeCustomerApi,
       existingStripeCustomerId,
     });
 
@@ -318,7 +479,7 @@ export class CreateSubscriptionHandler {
      */
     const idempotencyKey = `signup-${fiefUserId}-${stripePriceId}`;
 
-    const createResult = await this.deps.stripeSubscriptionsApi.createSubscription({
+    const createResult = await deps.stripeSubscriptionsApi.createSubscription({
       customerId: stripeCustomerId,
       priceId: stripePriceId,
       metadata: {
@@ -390,7 +551,7 @@ export class CreateSubscriptionHandler {
       updatedAt: new Date(),
     });
 
-    const upsertResult = await this.deps.subscriptionRepo.upsert(this.deps.accessPattern, record);
+    const upsertResult = await deps.subscriptionRepo.upsert(deps.accessPattern, record);
 
     if (upsertResult.isErr()) {
       this.logger.warn(

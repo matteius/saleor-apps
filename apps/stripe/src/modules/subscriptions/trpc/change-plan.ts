@@ -22,10 +22,20 @@
  */
 import { TRPCError } from "@trpc/server";
 import type Stripe from "stripe";
+import { z } from "zod";
 
 import { createLogger } from "@/lib/logger";
+import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
+import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
+import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
+import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
 import { type IStripeSubscriptionsApi } from "../api/stripe-subscriptions-api";
+import {
+  type IStripeSubscriptionsApiFactory,
+  StripeSubscriptionsApiFactory,
+} from "../api/stripe-subscriptions-api-factory";
+import { DynamoDbSubscriptionRepo } from "../repositories/dynamodb/dynamodb-subscription-repo";
 import {
   createStripePriceId,
   createStripeSubscriptionId,
@@ -35,6 +45,22 @@ import {
   type SubscriptionRepo,
   type SubscriptionRepoAccess,
 } from "../repositories/subscription-repo";
+
+/**
+ * Re-declared here so the router can wire `new ChangePlanHandler().getTrpcProcedure()`
+ * directly (mirrors the T22/T23 pattern). The dashboard router file used to
+ * own these inline; they now live with the handler.
+ */
+export const changePlanInputSchema = z.object({
+  stripeSubscriptionId: z.string().min(1).startsWith("sub_"),
+  newStripePriceId: z.string().min(1).startsWith("price_"),
+  prorationBehavior: z.enum(["create_prorations", "none"]).optional(),
+});
+
+export const changePlanOutputSchema = z.object({
+  status: z.string(),
+  currentPeriodEnd: z.string().datetime().nullable(),
+});
 
 export interface ChangePlanInput {
   stripeSubscriptionId: string;
@@ -51,6 +77,16 @@ export interface ChangePlanHandlerDeps {
   stripeSubscriptionsApi: IStripeSubscriptionsApi;
   subscriptionRepo: SubscriptionRepo;
   accessPattern: SubscriptionRepoAccess;
+}
+
+/**
+ * Optional deps for the tRPC procedure path (parameterless construction).
+ * See `cancel-subscription.ts` for the same pattern's rationale.
+ */
+export interface ChangePlanTrpcLazyDeps {
+  stripeSubscriptionsApiFactory: IStripeSubscriptionsApiFactory;
+  appConfigRepo: AppConfigRepo;
+  subscriptionRepo: SubscriptionRepo;
 }
 
 const DEFAULT_PRORATION_BEHAVIOR: Stripe.SubscriptionUpdateParams.ProrationBehavior =
@@ -87,16 +123,96 @@ function readNewPriceId(sub: Stripe.Subscription, fallback: string): string {
   return fallback;
 }
 
+const trpcLogger = createLogger("ChangePlanTrpcHandler");
+
 export class ChangePlanHandler {
-  private readonly deps: ChangePlanHandlerDeps;
+  baseProcedure = protectedClientProcedure;
+
+  private readonly deps?: ChangePlanHandlerDeps;
+
+  private readonly lazyDeps: ChangePlanTrpcLazyDeps;
 
   private readonly logger = createLogger("ChangePlanHandler");
 
-  constructor(deps: ChangePlanHandlerDeps) {
-    this.deps = deps;
+  constructor(deps?: ChangePlanHandlerDeps | Partial<ChangePlanTrpcLazyDeps>) {
+    if (deps && "accessPattern" in deps && deps.accessPattern) {
+      this.deps = deps;
+    }
+
+    const lazy = (deps as Partial<ChangePlanTrpcLazyDeps> | undefined) ?? {};
+
+    this.lazyDeps = {
+      stripeSubscriptionsApiFactory:
+        lazy.stripeSubscriptionsApiFactory ?? new StripeSubscriptionsApiFactory(),
+      appConfigRepo: lazy.appConfigRepo ?? appConfigRepoImpl,
+      subscriptionRepo: lazy.subscriptionRepo ?? new DynamoDbSubscriptionRepo(),
+    };
+  }
+
+  getTrpcProcedure() {
+    return this.baseProcedure
+      .input(changePlanInputSchema)
+      .output(changePlanOutputSchema)
+      .mutation(async ({ input, ctx }): Promise<ChangePlanOutput> => {
+        const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
+
+        if (saleorApiUrl.isErr()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Malformed saleorApiUrl",
+          });
+        }
+
+        const rootConfigResult = await this.lazyDeps.appConfigRepo.getRootConfig({
+          saleorApiUrl: saleorApiUrl.value,
+          appId: ctx.appId,
+        });
+
+        if (rootConfigResult.isErr()) {
+          trpcLogger.error("Failed to load root config", { error: rootConfigResult.error });
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to load Stripe configuration",
+          });
+        }
+
+        const stripeConfigs = rootConfigResult.value.getAllConfigsAsList();
+
+        if (stripeConfigs.length === 0) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No Stripe configuration is installed for this Saleor app",
+          });
+        }
+
+        const stripeSubscriptionsApi =
+          this.lazyDeps.stripeSubscriptionsApiFactory.createSubscriptionsApi({
+            key: stripeConfigs[0].restrictedKey,
+          });
+
+        const handler = new ChangePlanHandler({
+          stripeSubscriptionsApi,
+          subscriptionRepo: this.lazyDeps.subscriptionRepo,
+          accessPattern: { saleorApiUrl: saleorApiUrl.value, appId: ctx.appId },
+        });
+
+        return handler.execute(input);
+      });
   }
 
   async execute(input: ChangePlanInput): Promise<ChangePlanOutput> {
+    if (!this.deps) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          "ChangePlanHandler.execute() called on a handler instance without eager deps. " +
+          "Either construct with `new ChangePlanHandler({stripeSubscriptionsApi, subscriptionRepo, accessPattern})` " +
+          "or invoke via `.getTrpcProcedure()`.",
+      });
+    }
+
+    const deps = this.deps;
     const { stripeSubscriptionId, newStripePriceId } = input;
     const prorationBehavior = input.prorationBehavior ?? DEFAULT_PRORATION_BEHAVIOR;
 
@@ -108,8 +224,8 @@ export class ChangePlanHandler {
      * known subscription in this installation should not be able to
      * trigger Stripe price-swap calls.
      */
-    const existingResult = await this.deps.subscriptionRepo.getBySubscriptionId(
-      this.deps.accessPattern,
+    const existingResult = await deps.subscriptionRepo.getBySubscriptionId(
+      deps.accessPattern,
       brandedSubId,
     );
 
@@ -142,7 +258,7 @@ export class ChangePlanHandler {
      * surface INTERNAL_SERVER_ERROR with the underlying Stripe error
      * attached as `cause`.
      */
-    const updateResult = await this.deps.stripeSubscriptionsApi.updateSubscription({
+    const updateResult = await deps.stripeSubscriptionsApi.updateSubscription({
       subscriptionId: stripeSubscriptionId,
       newPriceId: newStripePriceId,
       prorationBehavior,
@@ -191,10 +307,7 @@ export class ChangePlanHandler {
       updatedAt: new Date(),
     });
 
-    const upsertResult = await this.deps.subscriptionRepo.upsert(
-      this.deps.accessPattern,
-      updatedRecord,
-    );
+    const upsertResult = await deps.subscriptionRepo.upsert(deps.accessPattern, updatedRecord);
 
     if (upsertResult.isErr()) {
       this.logger.warn(
