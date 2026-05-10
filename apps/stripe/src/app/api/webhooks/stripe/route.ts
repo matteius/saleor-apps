@@ -22,10 +22,10 @@ import { StripeWebhookSignatureValidator } from "@/modules/stripe/stripe-webhook
 import { StripeChargesApiFactory } from "@/modules/subscriptions/api/stripe-charges-api";
 import { StripeSubscriptionsApiFactory } from "@/modules/subscriptions/api/stripe-subscriptions-api-factory";
 import { HttpOwlBooksWebhookNotifier } from "@/modules/subscriptions/notifiers/owlbooks-notifier";
-import { DynamoDbFailedMintDlqRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-failed-mint-dlq-repo";
-import { DynamoDbPriceVariantMapRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-price-variant-map-repo";
-import { DynamoDbRefundDlqRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-refund-dlq-repo";
-import { DynamoDbSubscriptionRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-subscription-repo";
+import { failedMintDlqRepo } from "@/modules/subscriptions/repositories/failed-mint-dlq-repo-impl";
+import { priceVariantMapRepo } from "@/modules/subscriptions/repositories/price-variant-map-repo-impl";
+import { refundDlqRepo } from "@/modules/subscriptions/repositories/refund-dlq-repo-impl";
+import { subscriptionRepo } from "@/modules/subscriptions/repositories/subscription-repo-impl";
 import { SaleorCustomerResolver } from "@/modules/subscriptions/saleor-bridge/saleor-customer-resolver";
 import { type ISaleorGraphqlClientFactory } from "@/modules/subscriptions/webhooks/charge-refund-handler";
 import { SubscriptionWebhookUseCase } from "@/modules/subscriptions/webhooks/subscription-webhook-use-case";
@@ -62,13 +62,13 @@ const saleorGraphqlClientFactory: ISaleorGraphqlClientFactory = {
 const subscriptionWebhookUseCase = new SubscriptionWebhookUseCase({
   apl: saleorApp.apl,
   appConfigRepo: appConfigRepoImpl,
-  subscriptionRepo: new DynamoDbSubscriptionRepo(),
-  priceVariantMapRepo: new DynamoDbPriceVariantMapRepo(),
+  subscriptionRepo,
+  priceVariantMapRepo,
   customerResolver: new SaleorCustomerResolver(),
   stripeSubscriptionsApiFactory: new StripeSubscriptionsApiFactory(),
   stripeChargesApiFactory: new StripeChargesApiFactory(),
-  refundDlqRepo: new DynamoDbRefundDlqRepo(),
-  failedMintDlqRepo: new DynamoDbFailedMintDlqRepo(),
+  refundDlqRepo,
+  failedMintDlqRepo,
   saleorGraphqlClientFactory,
   /*
    * `HttpOwlBooksWebhookNotifier` tolerates undefined env vars at construction

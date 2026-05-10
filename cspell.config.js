@@ -70,6 +70,7 @@ export default {
     "unobfuscated",
     "upserted",
     "upserting",
+    "upserts",
     "upstash",
     "urql",
     "BYOA",

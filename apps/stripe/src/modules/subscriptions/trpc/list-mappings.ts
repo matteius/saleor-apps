@@ -20,7 +20,7 @@ import { createLogger } from "@/lib/logger";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
-import { DynamoDbPriceVariantMapRepo } from "../repositories/dynamodb/dynamodb-price-variant-map-repo";
+import { priceVariantMapRepo as defaultPriceVariantMapRepo } from "../repositories/price-variant-map-repo-impl";
 import { type PriceVariantMapRepo } from "../saleor-bridge/price-variant-map";
 
 const logger = createLogger("listMappingsTrpcHandler");
@@ -50,7 +50,7 @@ export class ListMappingsHandler {
   private readonly priceVariantMapRepo: PriceVariantMapRepo;
 
   constructor(deps?: Partial<ListMappingsHandlerDeps>) {
-    this.priceVariantMapRepo = deps?.priceVariantMapRepo ?? new DynamoDbPriceVariantMapRepo();
+    this.priceVariantMapRepo = deps?.priceVariantMapRepo ?? defaultPriceVariantMapRepo;
   }
 
   getTrpcProcedure() {

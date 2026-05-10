@@ -32,7 +32,6 @@ import { createLogger } from "@/lib/logger";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
-import { DynamoDbSubscriptionRepo } from "../repositories/dynamodb/dynamodb-subscription-repo";
 import {
   createFiefUserId,
   createStripeSubscriptionId,
@@ -43,6 +42,7 @@ import {
   type SubscriptionRepoAccess,
   type SubscriptionRepoError,
 } from "../repositories/subscription-repo";
+import { subscriptionRepo as defaultSubscriptionRepo } from "../repositories/subscription-repo-impl";
 
 const logger = createLogger("getStatusTrpcHandler");
 
@@ -112,7 +112,7 @@ export class GetStatusTrpcHandler {
   private readonly subscriptionRepo: SubscriptionRepo;
 
   constructor(deps?: Partial<GetStatusTrpcHandlerDeps>) {
-    this.subscriptionRepo = deps?.subscriptionRepo ?? new DynamoDbSubscriptionRepo();
+    this.subscriptionRepo = deps?.subscriptionRepo ?? defaultSubscriptionRepo;
   }
 
   getTrpcProcedure() {

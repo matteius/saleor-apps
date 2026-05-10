@@ -35,7 +35,7 @@ import {
   type IStripeSubscriptionsApiFactory,
   StripeSubscriptionsApiFactory,
 } from "../api/stripe-subscriptions-api-factory";
-import { DynamoDbPriceVariantMapRepo } from "../repositories/dynamodb/dynamodb-price-variant-map-repo";
+import { priceVariantMapRepo as defaultPriceVariantMapRepo } from "../repositories/price-variant-map-repo-impl";
 import {
   createSaleorChannelSlug,
   createSaleorVariantId,
@@ -74,7 +74,7 @@ export class UpsertMappingHandler {
     this.stripeSubscriptionsApiFactory =
       deps?.stripeSubscriptionsApiFactory ?? new StripeSubscriptionsApiFactory();
     this.appConfigRepo = deps?.appConfigRepo ?? appConfigRepoImpl;
-    this.priceVariantMapRepo = deps?.priceVariantMapRepo ?? new DynamoDbPriceVariantMapRepo();
+    this.priceVariantMapRepo = deps?.priceVariantMapRepo ?? defaultPriceVariantMapRepo;
   }
 
   getTrpcProcedure() {

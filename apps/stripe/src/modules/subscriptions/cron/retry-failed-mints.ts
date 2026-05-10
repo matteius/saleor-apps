@@ -44,17 +44,17 @@ import {
   type OwlBooksWebhookNotifier,
   type OwlBooksWebhookPayload,
 } from "@/modules/subscriptions/notifiers/owlbooks-notifier";
-import { DynamoDbFailedMintDlqRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-failed-mint-dlq-repo";
-import { DynamoDbSubscriptionRepo } from "@/modules/subscriptions/repositories/dynamodb/dynamodb-subscription-repo";
 import {
   type FailedMintDlqRepo,
   type FailedMintRecord,
 } from "@/modules/subscriptions/repositories/failed-mint-dlq-repo";
+import { failedMintDlqRepo } from "@/modules/subscriptions/repositories/failed-mint-dlq-repo-impl";
 import {
   createStripeSubscriptionId,
   type SubscriptionRecord,
 } from "@/modules/subscriptions/repositories/subscription-record";
 import { type SubscriptionRepo } from "@/modules/subscriptions/repositories/subscription-repo";
+import { subscriptionRepo } from "@/modules/subscriptions/repositories/subscription-repo-impl";
 import {
   mintOrderFromInvoice as defaultMintOrderFromInvoice,
   type MintOrderFromInvoiceArgs,
@@ -469,8 +469,8 @@ async function escalateOrReschedule(args: {
 
 export const productionDeps = (): RetryCronDeps => ({
   apl: saleorApp.apl,
-  failedMintDlqRepo: new DynamoDbFailedMintDlqRepo(),
-  subscriptionRepo: new DynamoDbSubscriptionRepo(),
+  failedMintDlqRepo,
+  subscriptionRepo,
   owlbooksWebhookNotifier: new HttpOwlBooksWebhookNotifier({
     url: env.OWLBOOKS_WEBHOOK_URL,
     secret: env.OWLBOOKS_WEBHOOK_SECRET,

@@ -35,7 +35,6 @@ import {
   type IStripeSubscriptionsApiFactory,
   StripeSubscriptionsApiFactory,
 } from "../api/stripe-subscriptions-api-factory";
-import { DynamoDbSubscriptionRepo } from "../repositories/dynamodb/dynamodb-subscription-repo";
 import {
   createStripePriceId,
   createStripeSubscriptionId,
@@ -45,6 +44,7 @@ import {
   type SubscriptionRepo,
   type SubscriptionRepoAccess,
 } from "../repositories/subscription-repo";
+import { subscriptionRepo as defaultSubscriptionRepo } from "../repositories/subscription-repo-impl";
 
 /**
  * Re-declared here so the router can wire `new ChangePlanHandler().getTrpcProcedure()`
@@ -145,7 +145,7 @@ export class ChangePlanHandler {
       stripeSubscriptionsApiFactory:
         lazy.stripeSubscriptionsApiFactory ?? new StripeSubscriptionsApiFactory(),
       appConfigRepo: lazy.appConfigRepo ?? appConfigRepoImpl,
-      subscriptionRepo: lazy.subscriptionRepo ?? new DynamoDbSubscriptionRepo(),
+      subscriptionRepo: lazy.subscriptionRepo ?? defaultSubscriptionRepo,
     };
   }
 

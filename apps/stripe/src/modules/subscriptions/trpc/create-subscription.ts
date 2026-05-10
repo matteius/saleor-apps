@@ -64,8 +64,7 @@ import {
   type IStripeSubscriptionsApiFactory,
   StripeSubscriptionsApiFactory,
 } from "../api/stripe-subscriptions-api-factory";
-import { DynamoDbPriceVariantMapRepo } from "../repositories/dynamodb/dynamodb-price-variant-map-repo";
-import { DynamoDbSubscriptionRepo } from "../repositories/dynamodb/dynamodb-subscription-repo";
+import { priceVariantMapRepo as defaultPriceVariantMapRepo } from "../repositories/price-variant-map-repo-impl";
 import {
   createFiefUserId,
   createStripeCustomerId,
@@ -77,6 +76,7 @@ import {
   type SubscriptionRepo,
   type SubscriptionRepoAccess,
 } from "../repositories/subscription-repo";
+import { subscriptionRepo as defaultSubscriptionRepo } from "../repositories/subscription-repo-impl";
 import {
   createStripePriceId as createPriceVariantStripePriceId,
   type PriceVariantMapRepo,
@@ -267,8 +267,8 @@ export class CreateSubscriptionHandler {
         lazy.stripeSubscriptionsApiFactory ?? new StripeSubscriptionsApiFactory(),
       appConfigRepo: lazy.appConfigRepo ?? appConfigRepoImpl,
       customerResolver: lazy.customerResolver ?? new SaleorCustomerResolver(),
-      subscriptionRepo: lazy.subscriptionRepo ?? new DynamoDbSubscriptionRepo(),
-      priceVariantMapRepo: lazy.priceVariantMapRepo ?? new DynamoDbPriceVariantMapRepo(),
+      subscriptionRepo: lazy.subscriptionRepo ?? defaultSubscriptionRepo,
+      priceVariantMapRepo: lazy.priceVariantMapRepo ?? defaultPriceVariantMapRepo,
     };
   }
 
