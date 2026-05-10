@@ -30,7 +30,15 @@ const handler = createManifestHandler({
         },
       },
       dataPrivacyUrl: "https://saleor.io/legal/privacy/",
-      extensions: [],
+      extensions: [
+        {
+          label: "Subscription mappings",
+          mount: "NAVIGATION_CATALOG",
+          target: "APP_PAGE",
+          permissions: ["HANDLE_PAYMENTS"],
+          url: "/subscriptions",
+        },
+      ],
       homepageUrl: "https://github.com/saleor/apps",
       id: env.MANIFEST_APP_ID,
       /**
