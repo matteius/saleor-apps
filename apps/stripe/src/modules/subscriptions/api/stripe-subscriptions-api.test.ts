@@ -35,7 +35,7 @@ describe("StripeSubscriptionsApi", () => {
           payment_behavior: "default_incomplete",
           payment_settings: { save_default_payment_method: "on_subscription" },
           automatic_tax: { enabled: true },
-          expand: ["latest_invoice.payment_intent"],
+          expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
           metadata: { fiefUserId: "fief-abc" },
         },
         { idempotencyKey: "sub-IK" },
@@ -59,6 +59,27 @@ describe("StripeSubscriptionsApi", () => {
       const callArgs = vi.mocked(clientWrapper.nativeClient.subscriptions.create).mock.calls[0];
 
       expect(callArgs[0]).not.toHaveProperty("metadata");
+    });
+
+    it("passes an explicit trial end for deferred payment-method setup", async () => {
+      const clientWrapper = StripeClient.createFromRestrictedKey(mockedStripeRestrictedKey);
+      const instance = StripeSubscriptionsApi.createFromClient(clientWrapper);
+
+      vi.spyOn(clientWrapper.nativeClient.subscriptions, "create").mockResolvedValue(
+        // @ts-expect-error - test stub
+        { id: "sub_TEST" },
+      );
+
+      await instance.createSubscription({
+        customerId: "cus_TEST",
+        priceId: "price_TEST",
+        trialEnd: 1_800_000_000,
+      });
+
+      expect(clientWrapper.nativeClient.subscriptions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ trial_end: 1_800_000_000 }),
+        expect.anything(),
+      );
     });
 
     it("Returns Err on Stripe SDK error", async () => {
@@ -217,6 +238,7 @@ describe("StripeSubscriptionsApi", () => {
 
       expect(clientWrapper.nativeClient.subscriptions.retrieve).toHaveBeenCalledExactlyOnceWith(
         "sub_TEST",
+        { expand: ["latest_invoice.payment_intent", "pending_setup_intent"] },
       );
     });
 
@@ -279,6 +301,40 @@ describe("StripeSubscriptionsApi", () => {
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripeInvalidRequestError);
+    });
+  });
+
+  describe("createMeterEvent", () => {
+    it("sends rated micro-USD usage with a deterministic identifier", async () => {
+      const clientWrapper = StripeClient.createFromRestrictedKey(mockedStripeRestrictedKey);
+      const instance = StripeSubscriptionsApi.createFromClient(clientWrapper);
+
+      vi.spyOn(clientWrapper.nativeClient.billing.meterEvents, "create").mockResolvedValue(
+        // @ts-expect-error - test stub
+        { identifier: "lnvr-interval-1", event_name: "lightnvr_cloud_usage" },
+      );
+
+      await instance.createMeterEvent({
+        customerId: "cus_TEST",
+        eventName: "lightnvr_cloud_usage",
+        value: 34247,
+        identifier: "lnvr-interval-1",
+        timestamp: 1_800_000_000,
+        dimensions: { lightnvr_tenant_id: "tenant-1" },
+      });
+
+      expect(clientWrapper.nativeClient.billing.meterEvents.create).toHaveBeenCalledExactlyOnceWith(
+        {
+          event_name: "lightnvr_cloud_usage",
+          payload: {
+            stripe_customer_id: "cus_TEST",
+            value: "34247",
+            lightnvr_tenant_id: "tenant-1",
+          },
+          identifier: "lnvr-interval-1",
+          timestamp: 1_800_000_000,
+        },
+      );
     });
   });
 

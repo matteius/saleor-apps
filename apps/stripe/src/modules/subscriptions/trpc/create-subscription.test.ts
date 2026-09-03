@@ -279,6 +279,7 @@ describe("CreateSubscriptionHandler.execute", () => {
       stripeSubscriptionId: "sub_T20_new",
       stripeCustomerId: "cus_T20_new",
       clientSecret: "pi_secret_xyz",
+      intentType: "payment",
     });
   });
 
@@ -310,6 +311,76 @@ describe("CreateSubscriptionHandler.execute", () => {
     );
   });
 
+  it("normalizes and forwards the billing address to the Stripe customer resolver", async () => {
+    const h = buildHarness();
+
+    await h.handler.execute({
+      ...TEST_INPUT,
+      billingAddress: {
+        line1: "1 Main St",
+        city: "Springfield",
+        state: "IL",
+        postalCode: "62704",
+        country: "us",
+      },
+    });
+
+    expect(h.customerResolver.resolveStripeCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingAddress: {
+          line1: "1 Main St",
+          city: "Springfield",
+          state: "IL",
+          postal_code: "62704",
+          country: "US",
+        },
+      }),
+    );
+  });
+
+  it("resumes a pending setup intent without creating a duplicate subscription", async () => {
+    const existing = new SubscriptionRecord({
+      stripeSubscriptionId: "sub_pending" as never,
+      stripeCustomerId: "cus_existing_for_fief" as never,
+      saleorChannelSlug: createSaleorChannelSlug("owlbooks"),
+      saleorUserId: "saleor_user_T20",
+      fiefUserId: TEST_INPUT.fiefUserId as never,
+      stripePriceId: "price_T20_basic" as never,
+      status: "trialing",
+      currentPeriodStart: new Date(0),
+      currentPeriodEnd: new Date(0),
+      cancelAtPeriodEnd: false,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    });
+    const pending = buildStripeSubscription({
+      id: "sub_pending",
+      customer: "cus_existing_for_fief",
+    });
+
+    pending.status = "trialing";
+    pending.pending_setup_intent = {
+      id: "seti_pending",
+      object: "setup_intent",
+      client_secret: "seti_secret_pending",
+    } as Stripe.SetupIntent;
+    pending.latest_invoice = null;
+    const h = buildHarness({ existingFiefSubscription: existing });
+
+    h.stripeSubscriptionsApi.retrieveSubscription.mockResolvedValue(ok(pending));
+
+    const result = await h.handler.execute(TEST_INPUT);
+
+    expect(result).toMatchObject({
+      stripeSubscriptionId: "sub_pending",
+      stripeCustomerId: "cus_existing_for_fief",
+      clientSecret: "seti_secret_pending",
+      intentType: "setup",
+    });
+    expect(h.stripeSubscriptionsApi.createSubscription).not.toHaveBeenCalled();
+    expect(h.customerResolver.resolveStripeCustomer).not.toHaveBeenCalled();
+  });
+
   it("forwards `signup-${fiefUserId}-${stripePriceId}` as the Stripe idempotency key", async () => {
     const h = buildHarness();
 
@@ -321,6 +392,28 @@ describe("CreateSubscriptionHandler.execute", () => {
     expect(subArgs.idempotencyKey).toBe(
       `signup-${TEST_INPUT.fiefUserId}-${TEST_INPUT.stripePriceId}`,
     );
+  });
+
+  it("forwards trialEnd and returns the pending SetupIntent secret", async () => {
+    const subscription = buildStripeSubscription();
+
+    subscription.pending_setup_intent = {
+      id: "seti_T20",
+      object: "setup_intent",
+      client_secret: "seti_secret_xyz",
+    } as Stripe.SetupIntent;
+    subscription.latest_invoice = null;
+    const h = buildHarness({ createSubResult: ok(subscription) });
+
+    const result = await h.handler.execute({ ...TEST_INPUT, trialEnd: 1_800_000_000 });
+
+    expect(h.stripeSubscriptionsApi.createSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ trialEnd: 1_800_000_000 }),
+    );
+    expect(result).toMatchObject({
+      clientSecret: "seti_secret_xyz",
+      intentType: "setup",
+    });
   });
 
   it("passes fiefUserId, saleorUserId, saleorChannelSlug as Stripe metadata for webhook routing", async () => {

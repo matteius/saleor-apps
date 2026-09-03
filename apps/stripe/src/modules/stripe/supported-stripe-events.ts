@@ -9,6 +9,7 @@ export const supportedStripeEvents: Array<Stripe.WebhookEndpointCreateParams.Ena
   "payment_intent.canceled",
 
   "charge.refund.updated",
+  "charge.refunded",
 
   /*
    * T18a: subscription billing events

@@ -10,25 +10,23 @@
  *      the Stripe object — silently minting against a default would corrupt
  *      multi-channel installs.
  *   2. Resolve / create the Saleor user via T11's `SaleorCustomerResolver`.
- *   3. Look up the existing `SubscriptionRecord` for this Fief user (if any)
- *      so we can reuse a previously-created Stripe customer rather than
- *      creating a duplicate on every retry.
+ *   3. Look up the existing `SubscriptionRecord` for this Fief user. Resume
+ *      any pending SetupIntent/PaymentIntent, fail closed on cache errors,
+ *      and reuse the Stripe customer when a terminal subscription is replaced.
  *   4. Resolve / create the Stripe customer via T11.
  *   5. Call T7's `IStripeSubscriptionsApi.createSubscription` with the
- *      OwlBooks-required options (default_incomplete, automatic_tax,
- *      `expand: ['latest_invoice.payment_intent']`). Pass an idempotency key
- *      of `signup-${fiefUserId}-${stripePriceId}` so storefront retries
- *      collapse to one Stripe object even under duplicate clicks.
+ *      shared subscription options (default_incomplete, automatic_tax, and
+ *      expanded PaymentIntent/SetupIntent state). A stable idempotency key
+ *      collapses concurrent storefront retries into one Stripe object.
  *   6. Upsert the `SubscriptionRecord` into the DynamoDB cache (T8) with the
- *      Stripe-supplied status (typically `incomplete` until the first PI
- *      confirms). The `customer.subscription.created` webhook (T15) will
+ *      Stripe-supplied status (typically `incomplete` or `trialing` until
+ *      payment authorization completes). The subscription webhook will
  *      overwrite this shortly after with the authoritative state. A failed
  *      cache write is NON-FATAL: the Stripe subscription already exists and
  *      the webhook reconciler is the durable system of record.
- *   7. Return `{stripeSubscriptionId, stripeCustomerId, clientSecret}` from
- *      the expanded `latest_invoice.payment_intent.client_secret` so the
- *      storefront can confirm the first invoice's PaymentIntent client-side
- *      via Stripe's Payment Element.
+ *   7. Return the subscription/customer IDs, intent type, and client secret
+ *      so the storefront can confirm either deferred SetupIntent or initial
+ *      PaymentIntent authorization with Stripe's Payment Element.
  *
  * ## Promo codes
  *
@@ -39,19 +37,18 @@
  *
  * ## Wiring
  *
- * Wave-6 deps-injected handler class — same shape as T21
- * (`CancelSubscriptionHandler`) and T22/T23. The dashboard tRPC router (T19)
- * and the internal storefront router (T19a) instantiate this with their own
+ * The dashboard tRPC router and internal storefront route instantiate this
+ * deps-injected handler with their own
  * `IStripeSubscriptionsApi`, `IStripeCustomerApi`, GraphQL client, and
- * Saleor-installation `accessPattern`. Production wiring (resolving the
- * Saleor APL entry → Stripe restricted key) lives in T29 (orchestration)
- * since it spans multiple subscription procedures.
+ * Saleor-installation `accessPattern`. Public-route production wiring resolves
+ * the Saleor APL entry and installed Stripe configuration at request time.
  */
 import { TRPCError } from "@trpc/server";
 import type Stripe from "stripe";
 import { type Client } from "urql";
 import { z } from "zod";
 
+import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
@@ -85,6 +82,7 @@ import {
   type ISaleorCustomerResolver,
   SaleorCustomerResolver,
 } from "../saleor-bridge/saleor-customer-resolver";
+import { selectSubscriptionStripeConfig } from "../subscription-stripe-config-selector";
 
 /**
  * Re-declared here so the router can wire `new CreateSubscriptionHandler().getTrpcProcedure()`
@@ -101,7 +99,7 @@ import {
 const billingAddressSchema = z.object({
   line1: z.string().min(1),
   city: z.string().min(1),
-  state: z.string().min(1),
+  state: z.string().min(1).optional(),
   postalCode: z.string().min(1),
   country: z.string().length(2, "ISO-3166-1 alpha-2 country code (e.g. 'US')"),
 });
@@ -111,6 +109,7 @@ export const createInputSchema = z
     fiefUserId: z.string().min(1),
     email: z.string().email(),
     stripePriceId: z.string().min(1).startsWith("price_"),
+    trialEnd: z.number().int().positive().optional(),
     billingAddress: billingAddressSchema.optional(),
   })
   .strict();
@@ -119,16 +118,18 @@ export const createOutputSchema = z.object({
   stripeSubscriptionId: z.string(),
   stripeCustomerId: z.string(),
   clientSecret: z.string(),
+  intentType: z.enum(["payment", "setup"]),
 });
 
 export interface CreateSubscriptionInput {
   fiefUserId: string;
   email: string;
   stripePriceId: string;
+  trialEnd?: number;
   billingAddress?: {
     line1: string;
     city: string;
-    state: string;
+    state?: string;
     postalCode: string;
     country: string;
   };
@@ -138,6 +139,7 @@ export interface CreateSubscriptionOutput {
   stripeSubscriptionId: string;
   stripeCustomerId: string;
   clientSecret: string;
+  intentType: "payment" | "setup";
 }
 
 export interface CreateSubscriptionHandlerDeps {
@@ -178,13 +180,23 @@ export interface CreateSubscriptionTrpcLazyDeps {
 }
 
 /**
- * Pull the expanded `latest_invoice.payment_intent.client_secret` off a
- * Stripe Subscription. Returns `null` if the chain is missing — the caller
- * (this handler) treats that as an INTERNAL_SERVER_ERROR since
- * `payment_behavior: default_incomplete` MUST yield a payment_intent on
- * cycle 1, and the storefront cannot confirm without the secret.
+ * Prefer the expanded pending SetupIntent used by trials and other deferred
+ * starts, then fall back to the first invoice's PaymentIntent. Returns null
+ * when there is no customer-confirmable authorization left to complete.
  */
-function extractClientSecret(sub: Stripe.Subscription): string | null {
+function extractClientSecret(
+  sub: Stripe.Subscription,
+): { clientSecret: string; intentType: "payment" | "setup" } | null {
+  const pendingSetupIntent = sub.pending_setup_intent;
+
+  if (pendingSetupIntent && typeof pendingSetupIntent !== "string") {
+    const setupClientSecret = pendingSetupIntent.client_secret;
+
+    if (typeof setupClientSecret === "string" && setupClientSecret.length > 0) {
+      return { clientSecret: setupClientSecret, intentType: "setup" };
+    }
+  }
+
   const latestInvoice = (
     sub as Stripe.Subscription & {
       latest_invoice?: string | (Stripe.Invoice & { payment_intent?: unknown }) | null;
@@ -203,7 +215,9 @@ function extractClientSecret(sub: Stripe.Subscription): string | null {
 
   const clientSecret = (paymentIntent as { client_secret?: string | null }).client_secret;
 
-  return typeof clientSecret === "string" && clientSecret.length > 0 ? clientSecret : null;
+  return typeof clientSecret === "string" && clientSecret.length > 0
+    ? { clientSecret, intentType: "payment" }
+    : null;
 }
 
 /**
@@ -300,21 +314,17 @@ export class CreateSubscriptionHandler {
           });
         }
 
-        const stripeConfigs = rootConfigResult.value.getAllConfigsAsList();
-
-        if (stripeConfigs.length === 0) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "No Stripe configuration is installed for this Saleor app",
-          });
-        }
+        const stripeConfig = selectSubscriptionStripeConfig(
+          rootConfigResult.value.getAllConfigsAsList(),
+          env.SUBSCRIPTIONS_STRIPE_CONFIG_ID,
+        );
 
         const stripeSubscriptionsApi =
           this.lazyDeps.stripeSubscriptionsApiFactory.createSubscriptionsApi({
-            key: stripeConfigs[0].restrictedKey,
+            key: stripeConfig.restrictedKey,
           });
         const stripeCustomerApi = this.lazyDeps.stripeSubscriptionsApiFactory.createCustomerApi({
-          key: stripeConfigs[0].restrictedKey,
+          key: stripeConfig.restrictedKey,
         });
 
         const handler = new CreateSubscriptionHandler({
@@ -342,7 +352,7 @@ export class CreateSubscriptionHandler {
     }
 
     const deps = this.deps;
-    const { fiefUserId, email, stripePriceId } = input;
+    const { fiefUserId, email, stripePriceId, trialEnd, billingAddress } = input;
 
     /*
      * Step 1 — resolve price → Saleor channel mapping. We MUST have this
@@ -414,26 +424,73 @@ export class CreateSubscriptionHandler {
      * Step 3 — look up the existing subscription record for this Fief user
      * so we can reuse the prior Stripe customer id. Without this, every
      * retry on `default_incomplete` would create a duplicate Stripe customer.
-     * A read error is NON-FATAL — we proceed without `existingStripeCustomerId`
-     * and the resolver will create a fresh customer (which is the safe default).
+     * A cache read error fails closed: proceeding could create duplicate Stripe
+     * customers and subscriptions while the existing state is merely hidden.
      */
     const existingResult = await deps.subscriptionRepo.getByFiefUserId(
       deps.accessPattern,
       createFiefUserId(fiefUserId),
     );
 
+    const existingRecord = existingResult.isOk() ? existingResult.value : null;
     let existingStripeCustomerId: string | undefined;
+    let replacesSubscriptionId: string | undefined;
 
-    if (existingResult.isOk() && existingResult.value) {
-      existingStripeCustomerId = existingResult.value.stripeCustomerId;
+    if (existingRecord) {
+      existingStripeCustomerId = existingRecord.stripeCustomerId;
     } else if (existingResult.isErr()) {
-      this.logger.warn(
-        "getByFiefUserId failed — proceeding without existing Stripe customer reuse",
-        {
-          fiefUserId,
-          error: existingResult.error,
-        },
-      );
+      this.logger.error("getByFiefUserId failed", {
+        fiefUserId,
+        error: existingResult.error,
+      });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to check for an existing subscription",
+        cause: existingResult.error,
+      });
+    }
+
+    if (existingRecord && existingRecord.stripePriceId === stripePriceId) {
+      if (existingRecord.status === "canceled" || existingRecord.status === "incomplete_expired") {
+        replacesSubscriptionId = existingRecord.stripeSubscriptionId;
+      } else {
+        const retrieveResult = await deps.stripeSubscriptionsApi.retrieveSubscription({
+          subscriptionId: existingRecord.stripeSubscriptionId,
+        });
+
+        if (retrieveResult.isErr()) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to resume the existing subscription setup",
+            cause: retrieveResult.error,
+          });
+        }
+
+        const existingSubscription = retrieveResult.value;
+
+        if (
+          existingSubscription.status === "canceled" ||
+          existingSubscription.status === "incomplete_expired"
+        ) {
+          replacesSubscriptionId = existingRecord.stripeSubscriptionId;
+        } else {
+          const existingIntent = extractClientSecret(existingSubscription);
+
+          if (existingIntent) {
+            return {
+              stripeSubscriptionId: existingSubscription.id,
+              stripeCustomerId: existingRecord.stripeCustomerId,
+              clientSecret: existingIntent.clientSecret,
+              intentType: existingIntent.intentType,
+            };
+          }
+
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "The existing subscription is already ready for billing",
+          });
+        }
+      }
     }
 
     /*
@@ -447,6 +504,15 @@ export class CreateSubscriptionHandler {
       saleorUserId,
       stripeCustomerApi: deps.stripeCustomerApi,
       existingStripeCustomerId,
+      ...(billingAddress && {
+        billingAddress: {
+          line1: billingAddress.line1,
+          city: billingAddress.city,
+          postal_code: billingAddress.postalCode,
+          country: billingAddress.country.toUpperCase(),
+          ...(billingAddress.state && { state: billingAddress.state }),
+        },
+      }),
     });
 
     if (stripeCustomerResult.isErr()) {
@@ -469,7 +535,7 @@ export class CreateSubscriptionHandler {
      * Step 5 — call Stripe via T7's wrapper. The wrapper supplies
      * `payment_behavior: default_incomplete`, `automatic_tax: enabled`,
      * `payment_settings.save_default_payment_method`, and
-     * `expand: ['latest_invoice.payment_intent']`. We only have to pass the
+     * expanded PaymentIntent and SetupIntent state. We only have to pass the
      * customer + price + metadata + idempotency key.
      *
      * Idempotency key shape: `signup-${fiefUserId}-${stripePriceId}` — pinned
@@ -477,7 +543,12 @@ export class CreateSubscriptionHandler {
      * storefront network collapse to a single Stripe object, but a genuine
      * second sign-up to a different plan still creates a new subscription.
      */
-    const idempotencyKey = `signup-${fiefUserId}-${stripePriceId}`;
+    const idempotencyKey = [
+      `signup-${fiefUserId}-${stripePriceId}`,
+      replacesSubscriptionId ? `after-${replacesSubscriptionId}` : null,
+    ]
+      .filter(Boolean)
+      .join("-");
 
     const createResult = await deps.stripeSubscriptionsApi.createSubscription({
       customerId: stripeCustomerId,
@@ -488,6 +559,7 @@ export class CreateSubscriptionHandler {
         saleorChannelSlug,
       },
       idempotencyKey,
+      trialEnd,
     });
 
     if (createResult.isErr()) {
@@ -505,11 +577,11 @@ export class CreateSubscriptionHandler {
     }
 
     const stripeSub = createResult.value;
-    const clientSecret = extractClientSecret(stripeSub);
+    const intent = extractClientSecret(stripeSub);
 
-    if (!clientSecret) {
+    if (!intent) {
       this.logger.error(
-        "Stripe subscription is missing latest_invoice.payment_intent.client_secret",
+        "Stripe subscription is missing a confirmable SetupIntent or PaymentIntent",
         {
           stripeSubscriptionId: stripeSub.id,
           fiefUserId,
@@ -564,15 +636,15 @@ export class CreateSubscriptionHandler {
     }
 
     /*
-     * Step 7 — return the storefront-facing trio. The clientSecret drives
-     * Stripe's Payment Element on the storefront; on confirm the
-     * customer.subscription.updated → invoice.paid chain promotes the
-     * subscription out of `incomplete`.
+     * Step 7 — return the storefront-facing authorization details. The
+     * intentType tells the storefront whether to call confirmSetup (deferred
+     * billing) or confirmPayment (an immediately payable first invoice).
      */
     return {
       stripeSubscriptionId: stripeSub.id,
       stripeCustomerId,
-      clientSecret,
+      clientSecret: intent.clientSecret,
+      intentType: intent.intentType,
     };
   }
 }

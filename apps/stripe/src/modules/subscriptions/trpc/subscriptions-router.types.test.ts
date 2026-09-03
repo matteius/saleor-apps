@@ -36,10 +36,11 @@ describe("subscriptionsRouter (type-level wiring)", () => {
       fiefUserId: string;
       email: string;
       stripePriceId: string;
+      trialEnd?: number;
       billingAddress?: {
         line1: string;
         city: string;
-        state: string;
+        state?: string;
         postalCode: string;
         country: string;
       };
@@ -49,6 +50,7 @@ describe("subscriptionsRouter (type-level wiring)", () => {
       stripeSubscriptionId: string;
       stripeCustomerId: string;
       clientSecret: string;
+      intentType: "payment" | "setup";
     }>();
 
     expectTypeOf<Inputs["subscriptions"]["cancel"]>().toEqualTypeOf<{

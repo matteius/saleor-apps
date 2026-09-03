@@ -80,6 +80,7 @@ export class StripeCustomerApi implements IStripeCustomerApi {
         ...args.extraMetadata,
       },
       ...(args.address && { address: args.address }),
+      ...(args.address && { tax: { validate_location: "immediately" as const } }),
     };
 
     return ResultAsync.fromPromise(

@@ -1,10 +1,12 @@
 /**
  * GET /api/public/subscriptions/status
  *
- * Reads subscription state from the DynamoDB cache (T19a).
+ * Reads subscription state from the subscription cache and can verify the
+ * payment-method setup against Stripe.
  *
  * Query: ?stripeSubscriptionId=sub_...  OR  ?fiefUserId=...
- * Returns: { status, currentPeriodEnd, cancelAtPeriodEnd, lastSaleorOrderId, planName }
+ * Returns: { status, currentPeriodEnd, cancelAtPeriodEnd, lastSaleorOrderId,
+ *            planName, billingReady }
  *
  * GET request — there's no JSON body, so the HMAC payload uses the empty
  * string. The HMAC must still be computed over `${path}\n${timestamp}\n`
@@ -30,14 +32,20 @@ const querySchema = z.discriminatedUnion("by", [
   z.object({
     by: z.literal("stripeSubscriptionId"),
     stripeSubscriptionId: z.string().min(1).startsWith("sub_"),
+    verifyPaymentMethod: z.boolean().optional(),
   }),
-  z.object({ by: z.literal("fiefUserId"), fiefUserId: z.string().min(1) }),
+  z.object({
+    by: z.literal("fiefUserId"),
+    fiefUserId: z.string().min(1),
+    verifyPaymentMethod: z.boolean().optional(),
+  }),
 ]);
 
 const parseQuery = (request: Request): z.infer<typeof querySchema> | { error: string } => {
   const url = new URL(request.url);
   const subId = url.searchParams.get("stripeSubscriptionId");
   const fiefId = url.searchParams.get("fiefUserId");
+  const verifyPaymentMethod = url.searchParams.get("verifyPaymentMethod") === "true";
 
   if (subId && fiefId) {
     return { error: "Provide exactly one of `stripeSubscriptionId` or `fiefUserId`" };
@@ -47,13 +55,18 @@ const parseQuery = (request: Request): z.infer<typeof querySchema> | { error: st
     const parsed = querySchema.safeParse({
       by: "stripeSubscriptionId",
       stripeSubscriptionId: subId,
+      verifyPaymentMethod,
     });
 
     return parsed.success ? parsed.data : { error: parsed.error.message };
   }
 
   if (fiefId) {
-    const parsed = querySchema.safeParse({ by: "fiefUserId", fiefUserId: fiefId });
+    const parsed = querySchema.safeParse({
+      by: "fiefUserId",
+      fiefUserId: fiefId,
+      verifyPaymentMethod,
+    });
 
     return parsed.success ? parsed.data : { error: parsed.error.message };
   }
@@ -82,7 +95,7 @@ export const GET = async (request: Request): Promise<Response> => {
   /*
    * Defense-in-depth: when looking up by fiefUserId, the body claim must
    * match the JWT sub. Lookups by stripeSubscriptionId rely on the internal
-   * handler (T23) to verify ownership.
+   * handler to verify ownership.
    */
   if (queryResult.by === "fiefUserId" && queryResult.fiefUserId !== auth.claims.fiefUserId) {
     return withCorsHeaders(

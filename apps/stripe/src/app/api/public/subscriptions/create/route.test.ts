@@ -3,19 +3,23 @@
  *
  * HTTP integration test for POST /api/public/subscriptions/create (T19a).
  * Confirms the route wires through the auth helper into the internal tRPC
- * caller, which currently throws NOT_IMPLEMENTED — we expect a 501 to bubble
- * up. T20 will replace the stub and this test will start asserting 200.
+ * caller and returns its setup-intent response.
  */
 import { createHmac } from "node:crypto";
 
 import { generateKeyPair, type KeyLike, SignJWT } from "jose";
 import { testApiHandler } from "next-test-api-route-handler";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as createHandlers from "./route";
 
 const TEST_SECRET = "x".repeat(32);
 const ROUTE_PATH = "/api/public/subscriptions/create";
+const { createSubscription } = vi.hoisted(() => ({ createSubscription: vi.fn() }));
+
+vi.mock("@/modules/trpc/internal-caller", () => ({
+  createInternalSubscriptionsCaller: () => ({ create: createSubscription }),
+}));
 
 vi.mock("@/lib/env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/env")>();
@@ -42,6 +46,17 @@ beforeAll(async () => {
   publicKey = pair.publicKey;
 });
 
+beforeEach(() => {
+  createSubscription.mockReset();
+  createSubscription.mockResolvedValue({
+    stripeSubscriptionId: "sub_abc123",
+    stripeCustomerId: "cus_abc123",
+    clientSecret: "seti_secret_abc123",
+    intentType: "setup",
+    publishableKey: "pk_test_abc123",
+  });
+});
+
 vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/subscriptions/public-api/auth")>();
 
@@ -56,11 +71,12 @@ vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
 });
 
 describe("POST /api/public/subscriptions/create", () => {
-  it("bubbles up 501 NOT_IMPLEMENTED from the internal stub when auth passes", async () => {
+  it("creates a trial subscription and returns its setup intent", async () => {
     const body = JSON.stringify({
       fiefUserId: "user-1",
       email: "alice@example.com",
       stripePriceId: "price_abc123",
+      trialEnd: 1_800_000_000,
     });
     const timestamp = String(Math.floor(Date.now() / 1000));
     const hmac = createHmac("sha256", TEST_SECRET)
@@ -87,12 +103,23 @@ describe("POST /api/public/subscriptions/create", () => {
           body,
         });
 
-        expect(response.status).toBe(501);
+        expect(response.status).toBe(200);
 
         const json = await response.json();
 
-        expect(json).toMatchObject({ error: "not_implemented" });
-        expect(String(json.message)).toMatch(/T20/);
+        expect(json).toStrictEqual({
+          stripeSubscriptionId: "sub_abc123",
+          stripeCustomerId: "cus_abc123",
+          clientSecret: "seti_secret_abc123",
+          intentType: "setup",
+          publishableKey: "pk_test_abc123",
+        });
+        expect(createSubscription).toHaveBeenCalledExactlyOnceWith({
+          fiefUserId: "user-1",
+          email: "alice@example.com",
+          stripePriceId: "price_abc123",
+          trialEnd: 1_800_000_000,
+        });
       },
     });
   });

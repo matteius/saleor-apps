@@ -18,6 +18,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   HMAC_REPLAY_WINDOW_SECONDS,
+  verifyLightNvrMeterRequest,
   verifyPublicApiRequest,
 } from "@/modules/subscriptions/public-api/auth";
 
@@ -31,6 +32,7 @@ vi.mock("@/lib/env", async (importOriginal) => {
     env: new Proxy(actual.env, {
       get(target, prop) {
         if (prop === "STOREFRONT_BRIDGE_SECRET") return TEST_SECRET;
+        if (prop === "LIGHTNVR_METER_BRIDGE_SECRET") return TEST_SECRET;
         if (prop === "FIEF_JWKS_URL") return "https://test.fief.example/.well-known/jwks.json";
 
         return Reflect.get(target, prop);
@@ -307,5 +309,44 @@ describe("verifyPublicApiRequest — Fief JWT layer", () => {
 
       expect(String(json.message)).toMatch(/fiefUserId.*does not match.*sub/);
     }
+  });
+});
+
+describe("verifyLightNvrMeterRequest", () => {
+  const path = "/api/public/subscriptions/meter-event";
+  const body = JSON.stringify({ identifier: "lnvr-interval-1" });
+
+  it("accepts a current service signature without a user JWT", () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = computeTestHmac(path, timestamp, body);
+    const request = new Request(`https://app.example${path}`, {
+      method: "POST",
+      headers: {
+        "x-lightnvr-auth": signature,
+        "x-storefront-timestamp": timestamp,
+      },
+      body,
+    });
+
+    expect(verifyLightNvrMeterRequest({ request, rawBody: body, path })).toStrictEqual({
+      ok: true,
+    });
+  });
+
+  it("rejects an invalid service signature", () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const request = new Request(`https://app.example${path}`, {
+      method: "POST",
+      headers: {
+        "x-lightnvr-auth": "0".repeat(64),
+        "x-storefront-timestamp": timestamp,
+      },
+      body,
+    });
+
+    const result = verifyLightNvrMeterRequest({ request, rawBody: body, path });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
   });
 });

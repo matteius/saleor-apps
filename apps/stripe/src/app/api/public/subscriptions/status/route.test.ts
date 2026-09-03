@@ -7,12 +7,17 @@ import { createHmac } from "node:crypto";
 
 import { generateKeyPair, type KeyLike, SignJWT } from "jose";
 import { testApiHandler } from "next-test-api-route-handler";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as statusHandlers from "./route";
 
 const TEST_SECRET = "x".repeat(32);
 const ROUTE_PATH = "/api/public/subscriptions/status";
+const { getSubscriptionStatus } = vi.hoisted(() => ({ getSubscriptionStatus: vi.fn() }));
+
+vi.mock("@/modules/trpc/internal-caller", () => ({
+  createInternalSubscriptionsCaller: () => ({ getStatus: getSubscriptionStatus }),
+}));
 
 vi.mock("@/lib/env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/env")>();
@@ -39,6 +44,18 @@ beforeAll(async () => {
   publicKey = pair.publicKey;
 });
 
+beforeEach(() => {
+  getSubscriptionStatus.mockReset();
+  getSubscriptionStatus.mockResolvedValue({
+    status: "trialing",
+    currentPeriodEnd: "2026-09-16T00:00:00.000Z",
+    cancelAtPeriodEnd: false,
+    lastSaleorOrderId: null,
+    planName: "LightNVR Cloud Usage",
+    billingReady: true,
+  });
+});
+
 vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/subscriptions/public-api/auth")>();
 
@@ -53,7 +70,7 @@ vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
 });
 
 describe("GET /api/public/subscriptions/status", () => {
-  it("bubbles up 501 NOT_IMPLEMENTED from the internal stub when looking up by stripeSubscriptionId", async () => {
+  it("returns verified billing readiness by stripeSubscriptionId", async () => {
     const timestamp = String(Math.floor(Date.now() / 1000));
     // GET signs over an empty body
     const hmac = createHmac("sha256", TEST_SECRET)
@@ -67,7 +84,7 @@ describe("GET /api/public/subscriptions/status", () => {
 
     await testApiHandler({
       appHandler: statusHandlers,
-      url: `${ROUTE_PATH}?stripeSubscriptionId=sub_abc123`,
+      url: `${ROUTE_PATH}?stripeSubscriptionId=sub_abc123&verifyPaymentMethod=true`,
       async test({ fetch }) {
         const response = await fetch({
           method: "GET",
@@ -78,11 +95,16 @@ describe("GET /api/public/subscriptions/status", () => {
           },
         });
 
-        expect(response.status).toBe(501);
+        expect(response.status).toBe(200);
 
         const json = await response.json();
 
-        expect(String(json.message)).toMatch(/T23/);
+        expect(json).toMatchObject({ status: "trialing", billingReady: true });
+        expect(getSubscriptionStatus).toHaveBeenCalledExactlyOnceWith({
+          by: "stripeSubscriptionId",
+          stripeSubscriptionId: "sub_abc123",
+          verifyPaymentMethod: true,
+        });
       },
     });
   });

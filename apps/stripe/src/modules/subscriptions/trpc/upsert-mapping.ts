@@ -25,6 +25,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
@@ -42,6 +43,7 @@ import {
   createStripePriceId,
   type PriceVariantMapRepo,
 } from "../saleor-bridge/price-variant-map";
+import { selectSubscriptionStripeConfig } from "../subscription-stripe-config-selector";
 
 const logger = createLogger("upsertMappingTrpcHandler");
 
@@ -105,20 +107,10 @@ export class UpsertMappingHandler {
           });
         }
 
-        const stripeConfigs = rootConfigResult.value.getAllConfigsAsList();
-
-        if (stripeConfigs.length === 0) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "No Stripe configuration is installed for this Saleor app",
-          });
-        }
-
-        /*
-         * Single-tenant subscription model: pick the first config (same
-         * convention as T22 BillingPortalTrpcHandler).
-         */
-        const stripeConfig = stripeConfigs[0];
+        const stripeConfig = selectSubscriptionStripeConfig(
+          rootConfigResult.value.getAllConfigsAsList(),
+          env.SUBSCRIPTIONS_STRIPE_CONFIG_ID,
+        );
 
         const stripeSubscriptionsApi = this.stripeSubscriptionsApiFactory.createSubscriptionsApi({
           key: stripeConfig.restrictedKey,

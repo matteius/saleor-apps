@@ -11,8 +11,8 @@
  *  - `payment_settings.save_default_payment_method: 'on_subscription'` so the
  *    confirmed payment method is reused for renewals
  *  - `automatic_tax: { enabled: true }` so Stripe Tax computes line-item tax
- *  - `expand: ['latest_invoice.payment_intent']` so the response includes the
- *    client secret without a second round trip.
+ *  - expand both the initial PaymentIntent and deferred-payment SetupIntent
+ *    so either billing mode returns a client secret without another request.
  *
  * `updateSubscription` swaps the price on `items[0]` — Stripe requires the
  * existing subscription-item id to do an in-place price replacement, so we
@@ -34,6 +34,7 @@ export interface CreateSubscriptionArgs {
   priceId: string;
   metadata?: Record<string, string>;
   idempotencyKey?: string;
+  trialEnd?: number;
 }
 
 export interface UpdateSubscriptionArgs {
@@ -62,6 +63,15 @@ export interface CreateBillingPortalSessionArgs {
   returnUrl: string;
 }
 
+export interface CreateMeterEventArgs {
+  customerId: string;
+  eventName: string;
+  value: number;
+  identifier: string;
+  timestamp: number;
+  dimensions?: Record<string, string>;
+}
+
 export interface IStripeSubscriptionsApi {
   createSubscription(
     args: CreateSubscriptionArgs,
@@ -86,13 +96,16 @@ export interface IStripeSubscriptionsApi {
   createBillingPortalSession(
     args: CreateBillingPortalSessionArgs,
   ): Promise<Result<Stripe.BillingPortal.Session, StripeApiError>>;
+  createMeterEvent?(
+    args: CreateMeterEventArgs,
+  ): Promise<Result<Stripe.Billing.MeterEvent, StripeApiError>>;
 }
 
 export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
-  private stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices">;
+  private stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices" | "billing">;
 
   private constructor(
-    stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices">,
+    stripeApiWrapper: Pick<Stripe, "subscriptions" | "billingPortal" | "prices" | "billing">,
   ) {
     this.stripeApiWrapper = stripeApiWrapper;
   }
@@ -116,7 +129,8 @@ export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       automatic_tax: { enabled: true },
-      expand: ["latest_invoice.payment_intent"],
+      expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
+      ...(args.trialEnd && { trial_end: args.trialEnd }),
       ...(args.metadata && { metadata: args.metadata }),
     };
 
@@ -187,7 +201,9 @@ export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
     args: RetrieveSubscriptionArgs,
   ): Promise<Result<Stripe.Subscription, StripeApiError>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.subscriptions.retrieve(args.subscriptionId),
+      this.stripeApiWrapper.subscriptions.retrieve(args.subscriptionId, {
+        expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
+      }),
       (error) => mapStripeErrorToApiError(error),
     );
   }
@@ -205,6 +221,24 @@ export class StripeSubscriptionsApi implements IStripeSubscriptionsApi {
       this.stripeApiWrapper.billingPortal.sessions.create({
         customer: args.customerId,
         return_url: args.returnUrl,
+      }),
+      (error) => mapStripeErrorToApiError(error),
+    );
+  }
+
+  async createMeterEvent(
+    args: CreateMeterEventArgs,
+  ): Promise<Result<Stripe.Billing.MeterEvent, StripeApiError>> {
+    return ResultAsync.fromPromise(
+      this.stripeApiWrapper.billing.meterEvents.create({
+        event_name: args.eventName,
+        payload: {
+          stripe_customer_id: args.customerId,
+          value: String(args.value),
+          ...args.dimensions,
+        },
+        identifier: args.identifier,
+        timestamp: args.timestamp,
       }),
       (error) => mapStripeErrorToApiError(error),
     );

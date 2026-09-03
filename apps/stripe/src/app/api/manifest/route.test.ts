@@ -47,7 +47,17 @@ describe("Manifest handler", async () => {
               },
             },
             "dataPrivacyUrl": "https://saleor.io/legal/privacy/",
-            "extensions": [],
+            "extensions": [
+              {
+                "label": "Subscription mappings",
+                "mount": "NAVIGATION_CATALOG",
+                "permissions": [
+                  "HANDLE_PAYMENTS",
+                ],
+                "target": "APP_PAGE",
+                "url": "/subscriptions",
+              },
+            ],
             "homepageUrl": "https://github.com/saleor/apps",
             "id": "saleor.app.payment.stripe",
             "name": "Stripe",

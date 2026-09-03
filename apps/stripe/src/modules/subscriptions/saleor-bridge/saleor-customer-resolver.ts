@@ -26,7 +26,7 @@ import {
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 
-import { type IStripeCustomerApi } from "../api/stripe-customer-api";
+import { type CustomerAddress, type IStripeCustomerApi } from "../api/stripe-customer-api";
 
 const SaleorUserResolverError = BaseError.subclass(
   "SaleorCustomerResolver.SaleorUserResolverError",
@@ -72,6 +72,7 @@ export interface ResolveStripeCustomerArgs {
   email: string;
   saleorUserId: string;
   stripeCustomerApi: IStripeCustomerApi;
+  billingAddress?: CustomerAddress;
   /**
    * Pre-existing Stripe Customer ID (typically read off
    * `userSubscription.stripeCustomerId` in the OwlBooks DB). When provided the
@@ -221,7 +222,14 @@ export class SaleorCustomerResolver implements ISaleorCustomerResolver {
   async resolveStripeCustomer(
     args: ResolveStripeCustomerArgs,
   ): Promise<Result<ResolveStripeCustomerResult, StripeCustomerResolverError>> {
-    const { fiefUserId, email, saleorUserId, stripeCustomerApi, existingStripeCustomerId } = args;
+    const {
+      fiefUserId,
+      email,
+      saleorUserId,
+      stripeCustomerApi,
+      billingAddress,
+      existingStripeCustomerId,
+    } = args;
 
     if (existingStripeCustomerId) {
       const retrieveResult = await stripeCustomerApi.retrieveCustomer({
@@ -238,6 +246,25 @@ export class SaleorCustomerResolver implements ISaleorCustomerResolver {
         const isDeleted = (customer as { deleted?: boolean }).deleted === true;
 
         if (!isDeleted) {
+          if (billingAddress) {
+            const updateResult = await stripeCustomerApi.updateCustomer({
+              customerId: customer.id,
+              patch: {
+                address: billingAddress,
+                tax: { validate_location: "immediately" },
+              },
+            });
+
+            if (updateResult.isErr()) {
+              return err(
+                new StripeCustomerResolverError(
+                  `Failed to update billing address for Stripe customer ${customer.id}`,
+                  { cause: updateResult.error },
+                ),
+              );
+            }
+          }
+
           logger.info("Reused existing Stripe customer", {
             stripeCustomerId: customer.id,
             fiefUserId,
@@ -254,6 +281,7 @@ export class SaleorCustomerResolver implements ISaleorCustomerResolver {
       email,
       fiefUserId,
       saleorUserId,
+      ...(billingAddress && { address: billingAddress }),
     });
 
     if (createResult.isErr()) {

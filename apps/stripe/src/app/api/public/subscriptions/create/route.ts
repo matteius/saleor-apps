@@ -4,14 +4,16 @@
  * Storefront-facing entry point for new subscription sign-ups (T19a).
  *
  * Body: { fiefUserId, email, stripePriceId, billingAddress? }
- * Returns: { stripeSubscriptionId, stripeCustomerId, clientSecret }
+ * Returns: { stripeSubscriptionId, stripeCustomerId, clientSecret, intentType,
+ *            publishableKey }
  *
  * Auth: HMAC (`X-Storefront-Auth` + `X-Storefront-Timestamp`) AND Fief JWT
  * (`Authorization: Bearer ...`). The body's `fiefUserId` and `email` must
  * match the Fief JWT's `sub` and `email` claims; mismatch returns 401.
  *
- * Calls into the internal subscriptions tRPC router; T20 fills in the
- * actual Stripe + Saleor wiring. Until then this returns 501 NOT_IMPLEMENTED.
+ * Calls into the installed Saleor app's subscription runtime. Trial sign-ups
+ * normally return a SetupIntent client secret; paid starts return a
+ * PaymentIntent client secret.
  */
 import { z } from "zod";
 
@@ -33,11 +35,12 @@ const bodySchema = z.object({
   fiefUserId: z.string().min(1),
   email: z.string().email(),
   stripePriceId: z.string().min(1).startsWith("price_"),
+  trialEnd: z.number().int().positive().optional(),
   billingAddress: z
     .object({
       line1: z.string().min(1),
       city: z.string().min(1),
-      state: z.string().min(1),
+      state: z.string().min(1).optional(),
       postalCode: z.string().min(1),
       country: z.string().length(2),
     })

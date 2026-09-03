@@ -46,6 +46,7 @@ describe("StripeCustomerApi", () => {
             postal_code: "62704",
             country: "US",
           },
+          tax: { validate_location: "immediately" },
         },
         { idempotencyKey: "create-cus-IK" },
       );
@@ -70,6 +71,7 @@ describe("StripeCustomerApi", () => {
       const callArgs = vi.mocked(clientWrapper.nativeClient.customers.create).mock.calls[0];
 
       expect(callArgs[0]).not.toHaveProperty("address");
+      expect(callArgs[0]).not.toHaveProperty("tax");
     });
 
     it("Returns Err with mapped Stripe API error when SDK throws", async () => {

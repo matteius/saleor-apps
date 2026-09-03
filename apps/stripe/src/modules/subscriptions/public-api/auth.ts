@@ -44,6 +44,7 @@ export const HMAC_REPLAY_WINDOW_SECONDS = 5 * 60;
 export const HEADER_HMAC = "x-storefront-auth";
 export const HEADER_TIMESTAMP = "x-storefront-timestamp";
 export const HEADER_AUTHORIZATION = "authorization";
+export const HEADER_LIGHTNVR_HMAC = "x-lightnvr-auth";
 
 export interface VerifiedFiefClaims {
   fiefUserId: string;
@@ -276,4 +277,46 @@ export const verifyPublicApiRequest = async (input: AuthInput): Promise<AuthResu
   }
 
   return { ok: true, claims: fiefResult };
+};
+
+/** Verify the service-only LightNVR meter exporter (HMAC, no user JWT). */
+export const verifyLightNvrMeterRequest = (input: {
+  request: Request;
+  rawBody: string;
+  path: string;
+  nowSeconds?: () => number;
+}): AuthFailure | { ok: true } => {
+  if (!env.LIGHTNVR_METER_BRIDGE_SECRET) {
+    return serverConfigError("LIGHTNVR_METER_BRIDGE_SECRET not configured");
+  }
+
+  const signature = input.request.headers.get(HEADER_LIGHTNVR_HMAC);
+  const timestamp = input.request.headers.get(HEADER_TIMESTAMP);
+
+  if (!signature || !timestamp) {
+    return unauthorized(`Missing required header(s): ${HEADER_LIGHTNVR_HMAC}, ${HEADER_TIMESTAMP}`);
+  }
+
+  const parsedTimestamp = Number(timestamp);
+  const now = input.nowSeconds ? input.nowSeconds() : Math.floor(Date.now() / 1000);
+
+  if (
+    !Number.isFinite(parsedTimestamp) ||
+    parsedTimestamp <= 0 ||
+    Math.abs(now - parsedTimestamp) > HMAC_REPLAY_WINDOW_SECONDS
+  ) {
+    return unauthorized("Meter request timestamp is invalid or stale");
+  }
+
+  const expected = computeHmac(env.LIGHTNVR_METER_BRIDGE_SECRET, {
+    path: input.path,
+    timestamp,
+    rawBody: input.rawBody,
+  });
+
+  if (!safeEqualHex(expected, signature)) {
+    return unauthorized("HMAC signature mismatch");
+  }
+
+  return { ok: true };
 };

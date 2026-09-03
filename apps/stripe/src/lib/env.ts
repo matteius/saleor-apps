@@ -47,6 +47,15 @@ export const env = createEnv({
     OWLBOOKS_WEBHOOK_SECRET: z.string().min(32).optional(),
     // HMAC-SHA256 secret shared with the storefront for the public subscription API in T19a.
     STOREFRONT_BRIDGE_SECRET: z.string().min(32).optional(),
+    // Dedicated service-to-service secret for LightNVR meter events.
+    LIGHTNVR_METER_BRIDGE_SECRET: z.string().min(32).optional(),
+    // Restrict that credential to one LightNVR Stripe meter and Price.
+    LIGHTNVR_METER_EVENT_NAME: z.string().min(1).max(100).default("lightnvr_usage_microusd"),
+    LIGHTNVR_METER_PRICE_ID: z.string().startsWith("price_").optional(),
+    // Saleor installation used by public subscription bridge routes.
+    SUBSCRIPTIONS_SALEOR_API_URL: z.string().url().optional(),
+    // Explicit Stripe configuration used when an installation has multiple configs.
+    SUBSCRIPTIONS_STRIPE_CONFIG_ID: z.string().uuid().optional(),
     /*
      * Fief JWKS URL used by the public subscriptions API to verify storefront-issued
      * Fief access tokens (T19a Layer 2 auth). Example:
@@ -101,6 +110,11 @@ export const env = createEnv({
     OWLBOOKS_WEBHOOK_URL: process.env.OWLBOOKS_WEBHOOK_URL,
     OWLBOOKS_WEBHOOK_SECRET: process.env.OWLBOOKS_WEBHOOK_SECRET,
     STOREFRONT_BRIDGE_SECRET: process.env.STOREFRONT_BRIDGE_SECRET,
+    LIGHTNVR_METER_BRIDGE_SECRET: process.env.LIGHTNVR_METER_BRIDGE_SECRET,
+    LIGHTNVR_METER_EVENT_NAME: process.env.LIGHTNVR_METER_EVENT_NAME,
+    LIGHTNVR_METER_PRICE_ID: process.env.LIGHTNVR_METER_PRICE_ID,
+    SUBSCRIPTIONS_SALEOR_API_URL: process.env.SUBSCRIPTIONS_SALEOR_API_URL,
+    SUBSCRIPTIONS_STRIPE_CONFIG_ID: process.env.SUBSCRIPTIONS_STRIPE_CONFIG_ID,
     FIEF_JWKS_URL: process.env.FIEF_JWKS_URL,
     STOREFRONT_PUBLIC_URL: process.env.STOREFRONT_PUBLIC_URL,
     CRON_SECRET: process.env.CRON_SECRET,

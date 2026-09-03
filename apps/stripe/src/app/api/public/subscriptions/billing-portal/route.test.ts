@@ -7,12 +7,21 @@ import { createHmac } from "node:crypto";
 
 import { generateKeyPair, type KeyLike, SignJWT } from "jose";
 import { testApiHandler } from "next-test-api-route-handler";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as billingPortalHandlers from "./route";
 
 const TEST_SECRET = "x".repeat(32);
 const ROUTE_PATH = "/api/public/subscriptions/billing-portal";
+const { createBillingPortalSession } = vi.hoisted(() => ({
+  createBillingPortalSession: vi.fn(),
+}));
+
+vi.mock("@/modules/trpc/internal-caller", () => ({
+  createInternalSubscriptionsCaller: () => ({
+    createBillingPortalSession,
+  }),
+}));
 
 vi.mock("@/lib/env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/env")>();
@@ -39,6 +48,13 @@ beforeAll(async () => {
   publicKey = pair.publicKey;
 });
 
+beforeEach(() => {
+  createBillingPortalSession.mockReset();
+  createBillingPortalSession.mockResolvedValue({
+    url: "https://billing.stripe.com/session/test",
+  });
+});
+
 vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/subscriptions/public-api/auth")>();
 
@@ -53,7 +69,7 @@ vi.mock("@/modules/subscriptions/public-api/auth", async (importOriginal) => {
 });
 
 describe("POST /api/public/subscriptions/billing-portal", () => {
-  it("bubbles up 501 NOT_IMPLEMENTED from the internal stub", async () => {
+  it("returns the customer-owned billing portal session", async () => {
     const body = JSON.stringify({
       stripeCustomerId: "cus_test_1",
       returnUrl: "https://owlbooks.ai/account",
@@ -83,11 +99,15 @@ describe("POST /api/public/subscriptions/billing-portal", () => {
           body,
         });
 
-        expect(response.status).toBe(501);
+        expect(response.status).toBe(200);
 
         const json = await response.json();
 
-        expect(String(json.message)).toMatch(/T22/);
+        expect(json).toStrictEqual({ url: "https://billing.stripe.com/session/test" });
+        expect(createBillingPortalSession).toHaveBeenCalledExactlyOnceWith({
+          stripeCustomerId: "cus_test_1",
+          returnUrl: "https://owlbooks.ai/account",
+        });
       },
     });
   });

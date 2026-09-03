@@ -318,6 +318,40 @@ describe("SaleorCustomerResolver.resolveStripeCustomer", () => {
     expect(stripeApi.createCustomer).not.toHaveBeenCalled();
   });
 
+  it("validates and updates the billing address when reusing a Stripe customer", async () => {
+    const stripeApi = buildFakeStripeCustomerApi({
+      retrieveCustomer: vi.fn(async () =>
+        ok({ id: "cus_existing_777" } as unknown as Stripe.Customer),
+      ),
+    });
+    const billingAddress = {
+      line1: "1 Main St",
+      city: "Springfield",
+      state: "IL",
+      postal_code: "62704",
+      country: "US",
+    };
+
+    const result = await new SaleorCustomerResolver().resolveStripeCustomer({
+      fiefUserId: "fief-abc",
+      email: "user@example.com",
+      saleorUserId: "VXNlcjoxMjM=",
+      stripeCustomerApi: stripeApi,
+      existingStripeCustomerId: "cus_existing_777",
+      billingAddress,
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(stripeApi.updateCustomer).toHaveBeenCalledExactlyOnceWith({
+      customerId: "cus_existing_777",
+      patch: {
+        address: billingAddress,
+        tax: { validate_location: "immediately" },
+      },
+    });
+    expect(stripeApi.createCustomer).not.toHaveBeenCalled();
+  });
+
   it("falls through to createCustomer when retrieve returns a DeletedCustomer", async () => {
     const stripeApi = buildFakeStripeCustomerApi({
       retrieveCustomer: vi.fn(async () =>
@@ -384,6 +418,35 @@ describe("SaleorCustomerResolver.resolveStripeCustomer", () => {
       email: "new@example.com",
       fiefUserId: "fief-zzz",
       saleorUserId: "VXNlcjpuZXc=",
+    });
+  });
+
+  it("passes a supplied billing address when creating a Stripe customer", async () => {
+    const stripeApi = buildFakeStripeCustomerApi({
+      createCustomer: vi.fn(async () => ok({ id: "cus_brand_new" } as unknown as Stripe.Customer)),
+    });
+    const billingAddress = {
+      line1: "1 Main St",
+      city: "Springfield",
+      state: "IL",
+      postal_code: "62704",
+      country: "US",
+    };
+
+    const result = await new SaleorCustomerResolver().resolveStripeCustomer({
+      fiefUserId: "fief-zzz",
+      email: "new@example.com",
+      saleorUserId: "VXNlcjpuZXc=",
+      stripeCustomerApi: stripeApi,
+      billingAddress,
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(stripeApi.createCustomer).toHaveBeenCalledExactlyOnceWith({
+      email: "new@example.com",
+      fiefUserId: "fief-zzz",
+      saleorUserId: "VXNlcjpuZXc=",
+      address: billingAddress,
     });
   });
 

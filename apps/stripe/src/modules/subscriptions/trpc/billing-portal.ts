@@ -19,11 +19,8 @@
  *    `NewStripeConfigTrpcHandler` (and the future T20/T21 handlers): the
  *    Stripe Subscriptions API factory and the app config repo are passed
  *    in via deps so unit tests can swap them out wholesale.
- *  - The Stripe restricted key is resolved from `AppRootConfig`. The
- *    subscriptions surface is single-tenant per Saleor app installation
- *    (one Stripe restricted key per install), so we select the first
- *    config. If/when multi-Stripe-config-per-install is needed for
- *    subscriptions, the input schema gains a `configId` (TODO).
+ *  - The Stripe restricted key is resolved from `AppRootConfig` using the
+ *    explicitly configured subscription Stripe configuration ID.
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -39,6 +36,7 @@ import {
   type IStripeSubscriptionsApiFactory,
   StripeSubscriptionsApiFactory,
 } from "../api/stripe-subscriptions-api-factory";
+import { selectSubscriptionStripeConfig } from "../subscription-stripe-config-selector";
 
 const logger = createLogger("billingPortalTrpcHandler");
 
@@ -190,20 +188,10 @@ export class BillingPortalTrpcHandler {
           });
         }
 
-        const stripeConfigs = rootConfigResult.value.getAllConfigsAsList();
-
-        if (stripeConfigs.length === 0) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "No Stripe configuration is installed for this Saleor app",
-          });
-        }
-
-        /*
-         * Single-tenant subscription model: pick the first config. See file
-         * header for the upgrade path.
-         */
-        const stripeConfig = stripeConfigs[0];
+        const stripeConfig = selectSubscriptionStripeConfig(
+          rootConfigResult.value.getAllConfigsAsList(),
+          env.SUBSCRIPTIONS_STRIPE_CONFIG_ID,
+        );
 
         const stripeSubscriptionsApi = this.stripeSubscriptionsApiFactory.createSubscriptionsApi({
           key: stripeConfig.restrictedKey,

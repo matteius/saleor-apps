@@ -166,6 +166,7 @@ describe("StripeWebhookManager", () => {
             "payment_intent.succeeded",
             "payment_intent.canceled",
             "charge.refund.updated",
+            "charge.refunded",
             "customer.subscription.created",
             "customer.subscription.updated",
             "customer.subscription.deleted",
@@ -207,7 +208,7 @@ describe("StripeWebhookManager", () => {
       }
     });
 
-    it("preserves the legacy payment_intent.* and charge.refund.updated events", async () => {
+    it("preserves payment and refund events", async () => {
       const { supportedStripeEvents } = await import("@/modules/stripe/supported-stripe-events");
 
       const legacy = [
@@ -218,6 +219,7 @@ describe("StripeWebhookManager", () => {
         "payment_intent.succeeded",
         "payment_intent.canceled",
         "charge.refund.updated",
+        "charge.refunded",
       ] as const;
 
       for (const evt of legacy) {
