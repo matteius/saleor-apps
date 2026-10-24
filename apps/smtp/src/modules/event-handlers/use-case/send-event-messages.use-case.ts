@@ -155,65 +155,64 @@ export class SendEventMessagesUseCase {
       senderName: config.senderName,
     });
 
-    if (preparedEmailResult.isErr()) {
-      this.logger.warn("Failed to compile email template");
+    return preparedEmailResult
+      .mapErr(
+        (error) =>
+          new SendEventMessagesUseCase.EmailCompilationError("Failed to compile email", {
+            errors: [error],
+            props: { channelSlug, event },
+          }),
+      )
+      .andThen((preparedEmail) => {
+        this.logger.info("Successfully compiled email template", {
+          bodyTemplateSizeKb: bytesToKb(new Blob([eventSettings.template]).size),
+          subjectTemplateSizeKb: bytesToKb(new Blob([eventSettings.subject]).size),
+        });
 
-      return errAsync(
-        new SendEventMessagesUseCase.EmailCompilationError("Failed to compile error", {
-          errors: [preparedEmailResult.error],
-          props: {
-            channelSlug,
-            event,
-          },
-        }),
-      );
-    }
+        const smtpSettings: SendMailArgs["smtpSettings"] = {
+          host: config.smtpHost,
+          port: parseInt(config.smtpPort, 10),
+          encryption: config.encryption,
+        };
 
-    this.logger.info("Successfully compiled email template", {
-      bodyTemplateSizeKb: bytesToKb(new Blob([eventSettings.template]).size),
-      subjectTemplateSizeKb: bytesToKb(new Blob([eventSettings.subject]).size),
-    });
+        if (config.smtpUser) {
+          this.logger.debug("Detected SMTP user config. Applying to configuration.");
 
-    const smtpSettings: SendMailArgs["smtpSettings"] = {
-      host: config.smtpHost,
-      port: parseInt(config.smtpPort, 10),
-      encryption: config.encryption,
-    };
-
-    if (config.smtpUser) {
-      this.logger.debug("Detected SMTP user config. Applying to configuration.");
-
-      smtpSettings.auth = {
-        user: config.smtpUser,
-        pass: config.smtpPassword,
-      };
-    }
-
-    return ResultAsync.fromPromise(
-      this.deps.emailSender.sendEmailWithSmtp({
-        mailData: { ...preparedEmailResult.value, ...(headers && { headers }) },
-        smtpSettings,
-      }),
-      (err) => {
-        this.logger.debug("Error sending email with SMTP", { error: err });
-
-        if (typeof err === "object" && err && "responseCode" in err) {
-          /**
-           * Wrong configuration, server config, ssl etc
-           * https://stackoverflow.com/questions/221416/smtp-error-554-message-does-not-conform-to-standards
-           */
-          if (err.responseCode === 554) {
-            return new SendEventMessagesUseCase.ClientError("Failed to send email via SMTP - 554", {
-              cause: err,
-            });
-          }
+          smtpSettings.auth = {
+            user: config.smtpUser,
+            pass: config.smtpPassword,
+          };
         }
 
-        return new SendEventMessagesUseCase.ServerError("Failed to send email via SMTP", {
-          cause: err,
-        });
-      },
-    );
+        return ResultAsync.fromPromise(
+          this.deps.emailSender.sendEmailWithSmtp({
+            mailData: { ...preparedEmail, ...(headers && { headers }) },
+            smtpSettings,
+          }),
+          (err) => {
+            this.logger.debug("Error sending email with SMTP", { error: err });
+
+            if (typeof err === "object" && err && "responseCode" in err) {
+              /**
+               * Wrong configuration, server config, ssl etc
+               * https://stackoverflow.com/questions/221416/smtp-error-554-message-does-not-conform-to-standards
+               */
+              if (err.responseCode === 554) {
+                return new SendEventMessagesUseCase.ClientError(
+                  "Failed to send email via SMTP - 554",
+                  {
+                    cause: err,
+                  },
+                );
+              }
+            }
+
+            return new SendEventMessagesUseCase.ServerError("Failed to send email via SMTP", {
+              cause: err,
+            });
+          },
+        );
+      });
   }
 
   private async sendWithFallback({

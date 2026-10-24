@@ -33,8 +33,8 @@ describe("EmailCompiler", () => {
     );
   });
 
-  it("Returns EmptyEmailSubjectError error if subject is empty", () => {
-    const result = compiler.compile({
+  it("Returns EmptyEmailSubjectError error if subject is empty", async () => {
+    const result = await compiler.compile({
       event: "ACCOUNT_CHANGE_EMAIL_CONFIRM",
       recipientEmail: "foo@bar.com",
       payload: {},
@@ -47,7 +47,7 @@ describe("EmailCompiler", () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(EmailCompiler.EmptyEmailSubjectError);
   });
 
-  it("Returns CompilationFailedError if underlying template compiler fails to compile", () => {
+  it("Returns CompilationFailedError if underlying template compiler fails to compile", async () => {
     const compiler = new EmailCompiler(
       {
         compile(): Result<
@@ -65,7 +65,7 @@ describe("EmailCompiler", () => {
       new MjmlCompiler(),
     );
 
-    const result = compiler.compile({
+    const result = await compiler.compile({
       payload: { foo: 1 },
       recipientEmail: "recipien@test.com",
       event: "ACCOUNT_DELETE",
@@ -78,8 +78,8 @@ describe("EmailCompiler", () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(EmailCompiler.CompilationFailedError);
   });
 
-  it("Returns EmptyEmailBodyError if body of email is empty", () => {
-    const result = compiler.compile({
+  it("Returns EmptyEmailBodyError if body of email is empty", async () => {
+    const result = await compiler.compile({
       payload: { foo: 1 },
       recipientEmail: "recipien@test.com",
       event: "ACCOUNT_DELETE",
@@ -92,8 +92,8 @@ describe("EmailCompiler", () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(EmailCompiler.EmptyEmailBodyError);
   });
 
-  it("Returns valid compilation result", () => {
-    const result = compiler.compile({
+  it("Returns valid compilation result", async () => {
+    const result = await compiler.compile({
       payload: { foo: 2137 },
       recipientEmail: "recipien@test.com",
       event: "ACCOUNT_DELETE",
@@ -122,16 +122,16 @@ describe("EmailCompiler", () => {
   });
 
   describe("validate", () => {
-    it("Returns success for valid subject and MJML templates", () => {
-      const result = compiler.validate("Order {{order.number}}", getMjmlTemplate("test"), {
+    it("Returns success for valid subject and MJML templates", async () => {
+      const result = await compiler.validate("Order {{order.number}}", getMjmlTemplate("test"), {
         order: { number: "123" },
       });
 
       expect(result.isOk()).toBe(true);
     });
 
-    it("Returns error with errorContext SUBJECT for invalid Handlebars in subject", () => {
-      const result = compiler.validate("Order {{#if}}", getMjmlTemplate("test"), {});
+    it("Returns error with errorContext SUBJECT for invalid Handlebars in subject", async () => {
+      const result = await compiler.validate("Order {{#if}}", getMjmlTemplate("test"), {});
 
       expect(result.isErr()).toBe(true);
       const error = result._unsafeUnwrapErr() as InstanceType<
@@ -142,7 +142,7 @@ describe("EmailCompiler", () => {
       expect(error.errorContext).toBe("SUBJECT");
     });
 
-    it("Returns error with errorContext BODY_TEMPLATE for invalid Handlebars in body", () => {
+    it("Returns error with errorContext BODY_TEMPLATE for invalid Handlebars in body", async () => {
       const invalidHandlebarsTemplate = `<mjml>
   <mj-body>
     <mj-section>
@@ -153,7 +153,7 @@ describe("EmailCompiler", () => {
   </mj-body>
 </mjml>`;
 
-      const result = compiler.validate("Valid subject", invalidHandlebarsTemplate, {});
+      const result = await compiler.validate("Valid subject", invalidHandlebarsTemplate, {});
 
       expect(result.isErr()).toBe(true);
       const error = result._unsafeUnwrapErr() as InstanceType<
@@ -164,14 +164,14 @@ describe("EmailCompiler", () => {
       expect(error.errorContext).toBe("BODY_TEMPLATE");
     });
 
-    it("Returns error with errorContext BODY_MJML for invalid MJML syntax", () => {
+    it("Returns error with errorContext BODY_MJML for invalid MJML syntax", async () => {
       const invalidMjmlTemplate = `<mjml>
   <mj-body>
     <mj-invalid-tag>Test</mj-invalid-tag>
   </mj-body>
 </mjml>`;
 
-      const result = compiler.validate("Valid subject", invalidMjmlTemplate, {});
+      const result = await compiler.validate("Valid subject", invalidMjmlTemplate, {});
 
       expect(result.isErr()).toBe(true);
       const error = result._unsafeUnwrapErr() as InstanceType<
@@ -182,8 +182,8 @@ describe("EmailCompiler", () => {
       expect(error.errorContext).toBe("BODY_MJML");
     });
 
-    it("Returns error for empty subject", () => {
-      const result = compiler.validate("", getMjmlTemplate("test"), {});
+    it("Returns error for empty subject", async () => {
+      const result = await compiler.validate("", getMjmlTemplate("test"), {});
 
       expect(result.isErr()).toBe(true);
       const error = result._unsafeUnwrapErr();

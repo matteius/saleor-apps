@@ -191,6 +191,8 @@ minimumReleaseAgeExclude:
 - yaml@2.8.3
 - nodemailer@10.2.1
 - '@types/nodemailer@7.0.11'
+- '@types/mjml@5.4.0'
+- '@types/mjml-core@5.1.0'
 onlyBuiltDependencies:
 - '@sentry/cli'
 - core-js
@@ -248,6 +250,7 @@ overrides:
   postcss-selector-parser: 7.1.7
   fast-copy@^2: 2.2.0
   fast-copy@^3: 3.1.0
+  '@types/mjml-core': 5.1.0
 packageExtensions:
   '@hookform/resolvers':
     peerDependencies:

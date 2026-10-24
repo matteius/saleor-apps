@@ -164,6 +164,64 @@ export type AddressInput = {
   readonly streetAddress2?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type AttributeValueInput = {
+  /** Represents the boolean value of the attribute value. */
+  readonly boolean?: InputMaybe<Scalars['Boolean']['input']>;
+  /** File content type. */
+  readonly contentType?: InputMaybe<Scalars['String']['input']>;
+  /** Represents the date value of the attribute value. */
+  readonly date?: InputMaybe<Scalars['Date']['input']>;
+  /** Represents the date/time value of the attribute value. */
+  readonly dateTime?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Attribute value ID or external reference. */
+  readonly dropdown?: InputMaybe<AttributeValueSelectableTypeInput>;
+  /** External ID of this attribute. */
+  readonly externalReference?: InputMaybe<Scalars['String']['input']>;
+  /** URL of the file attribute. Every time, a new value is created. */
+  readonly file?: InputMaybe<Scalars['String']['input']>;
+  /** ID of the selected attribute. */
+  readonly id?: InputMaybe<Scalars['ID']['input']>;
+  /** List of attribute value IDs or external references. */
+  readonly multiselect?: InputMaybe<ReadonlyArray<AttributeValueSelectableTypeInput>>;
+  /** Numeric value of an attribute. */
+  readonly numeric?: InputMaybe<Scalars['String']['input']>;
+  /** Plain text content. */
+  readonly plainText?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * ID of the referenced entity for single reference attribute.
+   *
+   * Added in Saleor 3.22.
+   */
+  readonly reference?: InputMaybe<Scalars['ID']['input']>;
+  /** List of entity IDs that will be used as references. */
+  readonly references?: InputMaybe<ReadonlyArray<Scalars['ID']['input']>>;
+  /** Text content in JSON format. */
+  readonly richText?: InputMaybe<Scalars['JSONString']['input']>;
+  /** Attribute value ID or external reference. */
+  readonly swatch?: InputMaybe<AttributeValueSelectableTypeInput>;
+  /**
+   * The value or slug of an attribute to resolve. If the passed value is non-existent, it will be created.
+   * @deprecated Field no longer supported
+   */
+  readonly values?: InputMaybe<ReadonlyArray<Scalars['String']['input']>>;
+};
+
+/**
+ * Represents attribute value.
+ * 1. If ID is provided, then attribute value will be resolved by ID.
+ * 2. If externalReference is provided, then attribute value will be resolved by external reference.
+ * 3. If value is provided, then attribute value will be resolved by value. If this attribute value doesn't exist, then it will be created.
+ * 4. If externalReference and value is provided then new attribute value will be created.
+ */
+export type AttributeValueSelectableTypeInput = {
+  /** External reference of an attribute value. */
+  readonly externalReference?: InputMaybe<Scalars['String']['input']>;
+  /** ID of an attribute value. */
+  readonly id?: InputMaybe<Scalars['ID']['input']>;
+  /** The value or slug of an attribute to resolve. If the passed value is non-existent, it will be created. */
+  readonly value?: InputMaybe<Scalars['String']['input']>;
+};
+
 /**
  * Represents country codes defined by the ISO 3166-1 alpha-2 standard.
  *
@@ -693,6 +751,18 @@ export type CustomerBulkUpdateInput = {
 };
 
 export type CustomerInput = {
+  /**
+   * List of attribute values to assign to the user. The attributes must belong to the customer type the user ends up with.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly attributes?: InputMaybe<ReadonlyArray<AttributeValueInput>>;
+  /**
+   * ID of the customer type to assign to the user. If not provided when creating a customer, the default customer type is assigned.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly customerType?: InputMaybe<Scalars['ID']['input']>;
   /** Billing address of the customer. */
   readonly defaultBillingAddress?: InputMaybe<AddressInput>;
   /** Shipping address of the customer. */
@@ -2311,8 +2381,20 @@ export type MetadataInput = {
 };
 
 export type UserCreateInput = {
+  /**
+   * List of attribute values to assign to the user. The attributes must belong to the customer type the user ends up with.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly attributes?: InputMaybe<ReadonlyArray<AttributeValueInput>>;
   /** Slug of a channel which will be used for notify user. Optional when only one channel exists. */
   readonly channel?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * ID of the customer type to assign to the user. If not provided when creating a customer, the default customer type is assigned.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly customerType?: InputMaybe<Scalars['ID']['input']>;
   /** Billing address of the customer. */
   readonly defaultBillingAddress?: InputMaybe<AddressInput>;
   /** Shipping address of the customer. */

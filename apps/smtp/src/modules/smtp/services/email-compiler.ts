@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, ok, Result, ResultAsync, okAsync } from "neverthrow";
 
 import { BaseError } from "../../../errors";
 import { createLogger } from "../../../logger";
@@ -37,7 +37,7 @@ interface EmptyEmailSubjectProps {
 }
 
 export interface IEmailCompiler {
-  compile(args: CompileArgs): Result<CompiledEmail, InstanceType<typeof BaseError>>;
+  compile(args: CompileArgs): ResultAsync<CompiledEmail, InstanceType<typeof BaseError>>;
 }
 
 export class EmailCompiler implements IEmailCompiler {
@@ -170,7 +170,7 @@ export class EmailCompiler implements IEmailCompiler {
     );
 
   private resolveBodyTemplateAndMjml(bodyTemplate: string, payload: unknown) {
-    return this.resolveBodyTemplate(bodyTemplate, payload).andThen((value) => {
+    return this.resolveBodyTemplate(bodyTemplate, payload).asyncAndThen((value) => {
       return this.resolveBodyMjml(value.template);
     });
   }
@@ -183,7 +183,7 @@ export class EmailCompiler implements IEmailCompiler {
     subjectTemplate: string,
     bodyTemplate: string,
     payload: unknown,
-  ): Result<
+  ): ResultAsync<
     void,
     | InstanceType<typeof EmailCompiler.EmailCompilerError>
     | InstanceType<typeof EmailCompiler.CompilationFailedError>
@@ -195,7 +195,10 @@ export class EmailCompiler implements IEmailCompiler {
     const subjectValidationResult = this.resolveEmailSubject(subjectTemplate, payload);
     const bodyValidationResult = this.resolveBodyTemplateAndMjml(bodyTemplate, payload);
 
-    return Result.combine([subjectValidationResult, bodyValidationResult]).andThen(() => {
+    return ResultAsync.combine([
+      subjectValidationResult.asyncAndThen(okAsync),
+      bodyValidationResult,
+    ]).andThen(() => {
       logger.debug("Templates validated successfully");
 
       return ok(undefined);
@@ -210,7 +213,10 @@ export class EmailCompiler implements IEmailCompiler {
     bodyTemplate,
     senderEmail,
     senderName,
-  }: CompileArgs): Result<CompiledEmail, InstanceType<typeof EmailCompiler.EmailCompilerError>> {
+  }: CompileArgs): ResultAsync<
+    CompiledEmail,
+    InstanceType<typeof EmailCompiler.EmailCompilerError>
+  > {
     const logger = createLogger("EmailCompiler", {
       event,
     });
@@ -218,20 +224,21 @@ export class EmailCompiler implements IEmailCompiler {
     const subjectCompilationResult = this.resolveEmailSubject(subjectTemplate, payload);
     const bodyCompilationInHtmlResult = this.resolveBodyTemplateAndMjml(bodyTemplate, payload);
 
-    return Result.combine([subjectCompilationResult, bodyCompilationInHtmlResult]).andThen(
-      ([subjectCompiled, bodyCompiledHtml]) => {
-        return this.resolveBodyPlainText(bodyCompiledHtml).andThen((bodyPlainText) => {
-          logger.debug("Resolved compiled email template");
+    return ResultAsync.combine([
+      subjectCompilationResult.asyncAndThen(okAsync),
+      bodyCompilationInHtmlResult,
+    ]).andThen(([subjectCompiled, bodyCompiledHtml]) => {
+      return this.resolveBodyPlainText(bodyCompiledHtml).andThen((bodyPlainText) => {
+        logger.debug("Resolved compiled email template");
 
-          return ok({
-            text: bodyPlainText,
-            html: bodyCompiledHtml,
-            from: `${senderName} <${senderEmail}>`,
-            to: recipientEmail,
-            subject: subjectCompiled.template,
-          });
+        return ok({
+          text: bodyPlainText,
+          html: bodyCompiledHtml,
+          from: `${senderName} <${senderEmail}>`,
+          to: recipientEmail,
+          subject: subjectCompiled.template,
         });
-      },
-    );
+      });
+    });
   }
 }

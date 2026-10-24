@@ -66,7 +66,7 @@
     "html-to-text": "9.0.3",
     "jsdom": "catalog:",
     "lucide-react": "catalog:",
-    "mjml": "4.15.3",
+    "mjml": "5.4.1",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
     "mongodb": "^6.3.0",
@@ -93,7 +93,6 @@
     "@saleor/typescript-config-apps": "workspace:*",
     "@types/handlebars-helpers": "0.5.6",
     "@types/html-to-text": "9.0.0",
-    "@types/mjml": "4.7.4",
     "@types/node": "catalog:",
     "@types/nodemailer": "7.0.11",
     "@types/react": "catalog:",
@@ -109,6 +108,7 @@
     "typescript": "5.8.2",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "@vitejs/plugin-react": "catalog:"
+    "@vitejs/plugin-react": "catalog:",
+    "@types/mjml": "5.4.0"
   }
 }

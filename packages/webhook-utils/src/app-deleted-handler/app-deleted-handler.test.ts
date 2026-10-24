@@ -5,10 +5,7 @@ import { type Logger } from "@saleor/apps-logger";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BaseError } from "../errors";
-import {
-  _innerAppDeletedHandler,
-  createAppDeletedHandler,
-} from "./app-deleted-handler";
+import { _innerAppDeletedHandler, createAppDeletedHandler } from "./app-deleted-handler";
 
 vi.mock("@saleor/app-sdk/handlers/next-app-router", () => ({
   SaleorAsyncWebhook: vi.fn(),
@@ -37,8 +34,6 @@ const buildLogger = () =>
     debug: vi.fn(),
   }) as unknown as Logger;
 
-
-
 describe("_innerAppDeletedHandler", () => {
   let aplDelete: ReturnType<typeof vi.fn>;
   let apl: APL;
@@ -57,8 +52,6 @@ describe("_innerAppDeletedHandler", () => {
     expect(aplDelete).toHaveBeenCalledWith(saleorApiUrl);
   });
 
-
-
   it("returns 500 when apl.delete rejects", async () => {
     aplDelete.mockRejectedValueOnce(new Error("DB connection lost"));
 
@@ -67,7 +60,6 @@ describe("_innerAppDeletedHandler", () => {
     expect(response.status).toBe(500);
     await expect(response.text()).resolves.toBe("Failed to clean up auth data.");
   });
-
 
   describe("hooks", () => {
     it("invokes onEvent hook with the webhook context", async () => {
@@ -191,13 +183,12 @@ describe("createAppDeletedHandler", () => {
       isActive: true,
     });
 
-    vi.mocked(SaleorAsyncWebhook).mockImplementation(
-      () =>
-        ({
-          createHandler: (fn: unknown) => fn,
-          getWebhookManifest: getWebhookManifestMock,
-        }) as unknown as SaleorAsyncWebhook,
-    );
+    vi.mocked(SaleorAsyncWebhook).mockImplementation(function () {
+      return {
+        createHandler: (fn: unknown) => fn,
+        getWebhookManifest: getWebhookManifestMock,
+      } as unknown as SaleorAsyncWebhook;
+    });
   });
 
   it("exposes getWebhookManifest from the underlying webhook with the full manifest shape", () => {

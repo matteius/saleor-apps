@@ -29,8 +29,8 @@ const compile = (payload: unknown) =>
   });
 
 describe("ORDER_CREATED customer template", () => {
-  it("compiles with the ORDER_CREATED example payload used by preview", () => {
-    const result = compile(examplePayloads.ORDER_CREATED);
+  it("compiles with the ORDER_CREATED example payload used by preview", async () => {
+    const result = await compile(examplePayloads.ORDER_CREATED);
 
     expect(result.isOk()).toBe(true);
 
@@ -42,8 +42,8 @@ describe("ORDER_CREATED customer template", () => {
     expect(email.text).toContain("Total (incl. tax)");
   });
 
-  it("fails against an empty payload in the same way the old save validation did", () => {
-    const result = compile({});
+  it("fails against an empty payload in the same way the old save validation did", async () => {
+    const result = await compile({});
 
     expect(result.isErr()).toBe(true);
     expect(result._unsafeUnwrapErr().message).toContain(
@@ -78,12 +78,12 @@ describe("ORDER_CREATED customer template payload assumptions", () => {
         payload.order.lines = [];
       },
     ],
-  ])("still compiles with %s", (_name, mutate) => {
+  ])("still compiles with %s", async (_name, mutate) => {
     const payload = structuredClone(examplePayloads.ORDER_CREATED);
 
     mutate(payload);
 
-    expect(compile(payload).isOk()).toBe(true);
+    expect((await compile(payload)).isOk()).toBe(true);
   });
 
   it.each([
@@ -105,11 +105,11 @@ describe("ORDER_CREATED customer template payload assumptions", () => {
         payload.order.total = null;
       },
     ],
-  ])("fails with %s because the discount helper needs totals", (_name, mutate) => {
+  ])("fails with %s because the discount helper needs totals", async (_name, mutate) => {
     const payload = structuredClone(examplePayloads.ORDER_CREATED);
 
     mutate(payload);
 
-    expect(compile(payload).isErr()).toBe(true);
+    expect((await compile(payload)).isErr()).toBe(true);
   });
 });

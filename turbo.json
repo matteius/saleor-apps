@@ -1,6 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.v2.json",
-  "globalDependencies": ["**/.env.*local", "schema.graphql"],
+  "globalDependencies": [
+    "**/.env.*local",
+    "schema.graphql"
+  ],
   "globalEnv": [
     "APP_LOG_LEVEL",
     "CI",
@@ -24,45 +27,87 @@
     "SKIP_ENV_VALIDATION",
     "VERCEL_ENV",
     "VERCEL_URL",
-    "VERCEL"
+    "VERCEL",
+    "NEXT_OUTPUT"
   ],
   "tasks": {
     "topo": {
-      "dependsOn": ["^topo"]
+      "dependsOn": [
+        "^topo"
+      ]
     },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", ".vercel/**", "!.next/cache/**"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"],
-      "env": ["GITHUB_SHA", "VERCEL_GIT_COMMIT_SHA"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        ".vercel/**",
+        "!.next/cache/**"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env"
+      ],
+      "env": [
+        "GITHUB_SHA",
+        "VERCEL_GIT_COMMIT_SHA"
+      ]
     },
     "check-types": {
-      "dependsOn": ["topo"]
+      "dependsOn": [
+        "topo"
+      ]
     },
     "deploy": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", ".vercel/**", "!.next/cache/**"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"],
-      "env": ["GITHUB_SHA", "VERCEL_GIT_COMMIT_SHA"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        ".vercel/**",
+        "!.next/cache/**"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env"
+      ],
+      "env": [
+        "GITHUB_SHA",
+        "VERCEL_GIT_COMMIT_SHA"
+      ]
     },
     "dev": {
-      "dependsOn": ["^dev"],
+      "dependsOn": [
+        "^dev"
+      ],
       "cache": false,
       "persistent": true
     },
     "generate": {
-      "dependsOn": ["topo"],
-      "outputs": ["generated/**"],
+      "dependsOn": [
+        "topo"
+      ],
+      "outputs": [
+        "generated/**"
+      ],
       "cache": false
     },
     "lint": {
-      "dependsOn": ["topo"]
+      "dependsOn": [
+        "topo"
+      ]
     },
     "lint:fix": {
-      "dependsOn": ["topo"]
+      "dependsOn": [
+        "topo"
+      ]
     },
     "start": {
-      "dependsOn": ["^build", "^start"],
+      "dependsOn": [
+        "^build",
+        "^start"
+      ],
       "cache": false,
       "persistent": true
     },
@@ -71,8 +116,12 @@
       "persistent": true
     },
     "test:ci": {
-      "dependsOn": ["topo"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "topo"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     }
   }
 }

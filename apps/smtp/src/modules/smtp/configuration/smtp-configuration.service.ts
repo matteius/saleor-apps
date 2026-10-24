@@ -296,30 +296,15 @@ export class SmtpConfigurationService implements IGetSmtpConfiguration, IGetFall
 
     const examplePayload = examplePayloads[eventConfiguration.eventType] ?? {};
 
-    const validationResult = this.emailCompiler.validate(
-      eventConfiguration.subject || "",
-      eventConfiguration.template || "",
-      examplePayload,
-    );
-
-    if (validationResult.isErr()) {
-      logger.info("Invalid template in configuration", { error: validationResult.error });
-
-      const errorContext = hasErrorContext(validationResult.error)
-        ? validationResult.error.errorContext
-        : undefined;
-
-      return err(
-        new SmtpConfigurationService.TemplateValidationError(validationResult.error.message, {
-          errors: [validationResult.error],
-          props: {
-            errorContext,
-          },
-        }),
+    return this.emailCompiler
+      .validate(eventConfiguration.subject || "", eventConfiguration.template || "", examplePayload)
+      .mapErr(
+        (error) =>
+          new SmtpConfigurationService.TemplateValidationError(error.message, {
+            errors: [error],
+            props: { errorContext: hasErrorContext(error) ? error.errorContext : undefined },
+          }),
       );
-    }
-
-    return ok(undefined);
   }
 
   /**
@@ -355,16 +340,9 @@ export class SmtpConfigurationService implements IGetSmtpConfiguration, IGetFall
       };
 
       // Validate templates before saving
-      const validationResult = this.validateEventTemplates(updatedEventConfiguration);
-
-      if (validationResult.isErr()) {
-        return errAsync(validationResult.error);
-      }
-
-      config.events[eventIndex] = updatedEventConfiguration;
-
-      return this.updateConfiguration(config).andThen(() => {
-        return okAsync(updatedEventConfiguration);
+      return this.validateEventTemplates(updatedEventConfiguration).andThen(() => {
+        config.events[eventIndex] = updatedEventConfiguration;
+        return this.updateConfiguration(config).map(() => updatedEventConfiguration);
       });
     });
   }

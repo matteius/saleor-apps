@@ -200,7 +200,7 @@ export const smtpConfigurationRouter = router({
 
       const payload = payloadResult.value;
 
-      const validationResult = emailCompiler.validate(
+      const validationResult = await emailCompiler.validate(
         input.subject || "",
         input.template || "",
         payload,
@@ -235,7 +235,7 @@ export const smtpConfigurationRouter = router({
 
         if (templateResult.isOk()) {
           const mjmlCompiler = new MjmlCompiler();
-          const compilationResult = mjmlCompiler.compile(templateResult.value.template);
+          const compilationResult = await mjmlCompiler.compile(templateResult.value.template);
 
           if (compilationResult.isOk()) {
             renderedEmail = compilationResult.value;

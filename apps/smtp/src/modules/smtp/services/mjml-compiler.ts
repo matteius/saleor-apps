@@ -1,12 +1,12 @@
 import compile from "mjml";
-import { err, fromThrowable, ok, type Result } from "neverthrow";
+import { err, ResultAsync, ok } from "neverthrow";
 
 import { BaseError } from "../../../errors";
 import { createLogger } from "../../../logger";
 import { type TemplateErrorCode, templateErrorCodes } from "./template-error-codes";
 
 export interface IMjmlCompiler {
-  compile(mjml: string): Result<string, InstanceType<typeof MjmlCompiler.MjmlCompilerError>>;
+  compile(mjml: string): ResultAsync<string, InstanceType<typeof MjmlCompiler.MjmlCompilerError>>;
 }
 
 export class MjmlCompiler implements IMjmlCompiler {
@@ -19,22 +19,27 @@ export class MjmlCompiler implements IMjmlCompiler {
 
   private logger = createLogger("MjmlCompiler");
 
-  compile(mjml: string): Result<string, InstanceType<typeof MjmlCompiler.FailedToCompileError>> {
+  compile(
+    mjml: string,
+  ): ResultAsync<string, InstanceType<typeof MjmlCompiler.FailedToCompileError>> {
     this.logger.debug("Trying to compile MJML template");
 
-    const safeCompile = fromThrowable(compile, (error) => {
-      const errorMessage = error instanceof Error ? error.message : "Failed to compile MJML";
+    const compilation = ResultAsync.fromPromise(
+      compile(mjml, { ignoreIncludes: true }),
+      (error) => {
+        const errorMessage = error instanceof Error ? error.message : "Failed to compile MJML";
 
-      return new MjmlCompiler.FailedToCompileError(errorMessage, {
-        errors: [error],
-        props: {
-          publicMessage: errorMessage,
-          errorCode: templateErrorCodes.MJML_COMPILE_ERROR,
-        },
-      });
-    });
+        return new MjmlCompiler.FailedToCompileError(errorMessage, {
+          errors: [error],
+          props: {
+            publicMessage: errorMessage,
+            errorCode: templateErrorCodes.MJML_COMPILE_ERROR,
+          },
+        });
+      },
+    );
 
-    return safeCompile(mjml).andThen((value) => {
+    return compilation.andThen((value) => {
       if (value.errors && value.errors.length > 0) {
         const errorMessage =
           value.errors[0]?.message || `MJML validation failed with ${value.errors.length} error(s)`;
