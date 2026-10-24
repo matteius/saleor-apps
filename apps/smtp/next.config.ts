@@ -17,8 +17,10 @@ const nextConfig: NextConfig = {
   },
   bundlePagesRouterDependencies: true,
   serverExternalPackages: [
-    // The local hosting guard uses the same SDK decryptor as the app.
-    // Keep its native entry point in the standalone dependency trace.
+    /*
+     * The local hosting guard uses the same SDK decryptor as the app.
+     * Keep its native entry point in the standalone dependency trace.
+     */
     "@saleor/app-sdk",
     /*
      * Share one @opentelemetry/api instance between instrumentation and routes. With a bundled
