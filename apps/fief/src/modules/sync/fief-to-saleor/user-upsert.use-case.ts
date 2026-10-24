@@ -206,7 +206,7 @@ const FiefUserEventDataSchema = z
     email_verified: z.boolean().optional(),
     is_active: z.boolean().optional(),
     tenant_id: z.string().optional(),
-    fields: z.record(z.unknown()).optional().default({}),
+    fields: z.record(z.string(), z.unknown()).optional().default({}),
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
   })

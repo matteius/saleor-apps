@@ -139,7 +139,7 @@ const exchangeResponseSchema = z
     expiresIn: z.number().optional(),
     tokenType: z.string().optional(),
     scope: z.string().optional(),
-    claims: z.record(z.unknown()).optional(),
+    claims: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 

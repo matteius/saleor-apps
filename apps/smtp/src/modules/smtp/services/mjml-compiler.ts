@@ -1,5 +1,5 @@
 import compile from "mjml";
-import { err, ResultAsync, ok } from "neverthrow";
+import { err, ok, ResultAsync } from "neverthrow";
 
 import { BaseError } from "../../../errors";
 import { createLogger } from "../../../logger";

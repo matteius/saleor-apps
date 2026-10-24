@@ -46,6 +46,7 @@ jobs:
       - name: Check linter
         run: pnpm lint
       - name: Check types
+        if: always()
         run: pnpm check-types
       - name: Check package dependencies
         run: pnpm lint:packages
@@ -71,4 +72,4 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run tests
-        run: pnpm test:ci
+        run: pnpm exec turbo run test:ci --continue

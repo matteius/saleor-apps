@@ -51,7 +51,7 @@ const rootAppConfigSchema = z.object({
     .nullable()
     .optional()
     .default(attributeMappingSchema.parse({})),
-  channelConfig: z.record(z.object({ storefrontUrls: urlConfigurationSchema })),
+  channelConfig: z.record(z.string(), z.object({ storefrontUrls: urlConfigurationSchema })),
 });
 
 export const AppConfigSchema = {

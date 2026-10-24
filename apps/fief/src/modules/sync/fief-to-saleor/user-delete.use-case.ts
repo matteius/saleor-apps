@@ -166,7 +166,7 @@ const FiefUserDeletedDataSchema = z
   .object({
     id: z.string().uuid({ message: "data.id must be a UUID" }),
     tenant_id: z.string().optional(),
-    fields: z.record(z.unknown()).optional().default({}),
+    fields: z.record(z.string(), z.unknown()).optional().default({}),
   })
   .passthrough();
 

@@ -81,7 +81,7 @@ export const FiefClientSchema = z.object({
   refresh_token_lifetime_seconds: z.number().int(),
   tenant_id: FiefTenantIdSchema,
   /* `tenant` is `TenantEmbedded`; we pass through as-is (consumer doesn't need it). */
-  tenant: z.record(z.unknown()).optional(),
+  tenant: z.record(z.string(), z.unknown()).optional(),
   encrypt_jwk: z.string().nullable().optional(),
 });
 export type FiefClient = z.infer<typeof FiefClientSchema>;
@@ -159,8 +159,8 @@ export const FiefUserSchema = z.object({
   email_verified: z.boolean(),
   is_active: z.boolean(),
   tenant_id: FiefTenantIdSchema,
-  tenant: z.record(z.unknown()).optional(),
-  fields: z.record(z.unknown()),
+  tenant: z.record(z.string(), z.unknown()).optional(),
+  fields: z.record(z.string(), z.unknown()),
 });
 export type FiefUser = z.infer<typeof FiefUserSchema>;
 
@@ -174,7 +174,7 @@ export const FiefUserCreateInputSchema = z.object({
   password: z.string().min(1),
   email_verified: z.boolean(),
   tenant_id: FiefTenantIdSchema,
-  fields: z.record(z.unknown()).optional(),
+  fields: z.record(z.string(), z.unknown()).optional(),
 });
 export type FiefUserCreateInput = z.infer<typeof FiefUserCreateInputSchema>;
 
@@ -197,7 +197,7 @@ export const FiefUserUpdateInputSchema = z.object({
   email_verified: z.boolean().optional(),
   password: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
-  fields: z.record(z.unknown()).optional(),
+  fields: z.record(z.string(), z.unknown()).optional(),
 });
 export type FiefUserUpdateInput = z.infer<typeof FiefUserUpdateInputSchema>;
 
@@ -218,6 +218,6 @@ export const FiefPaginationParamsSchema = z.object({
    * (e.g. users.list takes `query`, `tenant`). We delegate validation to the
    * server rather than enumerating them here to stay version-tolerant.
    */
-  extra: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+  extra: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 export type FiefPaginationParams = z.infer<typeof FiefPaginationParamsSchema>;

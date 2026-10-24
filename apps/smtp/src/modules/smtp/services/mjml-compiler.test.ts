@@ -19,6 +19,7 @@ describe("MjmlCompiler", () => {
     `);
 
     const html = result._unsafeUnwrap();
+
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("{{injectedValue}}");
     expect(html).toContain("</html>");

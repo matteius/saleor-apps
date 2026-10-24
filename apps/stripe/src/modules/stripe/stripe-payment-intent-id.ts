@@ -14,7 +14,7 @@ export const StripePaymentIntentValidationError = BaseError.subclass(
 
 const StripePaymentIntentIdSchema = z
   .string({
-    required_error: "Payment intent id is required",
+    error: "Payment intent id is required",
   })
   .min(1)
   .refine((v) => {

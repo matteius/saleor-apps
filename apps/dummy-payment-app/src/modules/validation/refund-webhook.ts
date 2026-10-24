@@ -7,8 +7,7 @@ export const refundRequestedInputSchema = z
     action: z.object({
       amount: z
         .number({
-          required_error: "Charge amount cannot be missing",
-          invalid_type_error: "Charge amount is not a valid number",
+          error: (issue) => issue.input === undefined ? "Charge amount cannot be missing" : "Charge amount is not a valid number",
         })
         .positive("Charge amount cannot be negative")
         .refine((n) => n > 0, {

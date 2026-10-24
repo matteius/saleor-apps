@@ -20,7 +20,7 @@ export const getByDateInputSchema = z
   .object({
     startDate: z.string().datetime(),
     endDate: z.string().datetime(),
-    lastEvaluatedKey: z.record(z.unknown()).optional(),
+    lastEvaluatedKey: z.record(z.string(), z.unknown()).optional(),
   })
   .refine((data) => new Date(data.startDate) <= new Date(data.endDate), {
     message: "startDate must be before or equal to endDate",
@@ -115,7 +115,7 @@ export const clientLogsRouter = router({
     .input(
       z.object({
         checkoutOrOrderId: z.string(),
-        lastEvaluatedKey: z.record(z.unknown()).optional(),
+        lastEvaluatedKey: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .query(

@@ -342,6 +342,7 @@ export class SmtpConfigurationService implements IGetSmtpConfiguration, IGetFall
       // Validate templates before saving
       return this.validateEventTemplates(updatedEventConfiguration).andThen(() => {
         config.events[eventIndex] = updatedEventConfiguration;
+
         return this.updateConfiguration(config).map(() => updatedEventConfiguration);
       });
     });

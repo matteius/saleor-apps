@@ -1,4 +1,4 @@
-import { err, ok, Result, ResultAsync, okAsync } from "neverthrow";
+import { err, ok, okAsync, type Result, ResultAsync } from "neverthrow";
 
 import { BaseError } from "../../../errors";
 import { createLogger } from "../../../logger";

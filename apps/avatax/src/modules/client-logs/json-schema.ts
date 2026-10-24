@@ -6,5 +6,5 @@ export type JsonLiteral = z.infer<typeof literalSchema>;
 export type Json = JsonLiteral | { [key: string]: Json } | Json[];
 
 export const jsonSchema: z.ZodType<Json> = z.lazy(() =>
-  z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)]),
+  z.union([literalSchema, z.array(jsonSchema), z.record(z.string(), jsonSchema)]),
 );
