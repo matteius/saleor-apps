@@ -69,6 +69,7 @@
     "mjml": "5.4.1",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
+    "monaco-editor": "0.57.0",
     "mongodb": "^6.3.0",
     "neverthrow": "catalog:",
     "next": "catalog:",
@@ -79,8 +80,7 @@
     "react-is": "catalog:",
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
-    "zod": "catalog:",
-    "monaco-editor": "0.57.0"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
@@ -94,10 +94,12 @@
     "@saleor/typescript-config-apps": "workspace:*",
     "@types/handlebars-helpers": "0.5.6",
     "@types/html-to-text": "9.0.0",
+    "@types/mjml": "5.4.0",
     "@types/node": "catalog:",
     "@types/nodemailer": "7.0.11",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-n": "catalog:",
@@ -108,8 +110,6 @@
     "tsx": "catalog:",
     "typescript": "5.8.2",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
-    "@types/mjml": "5.4.0"
+    "vitest": "catalog:"
   }
 }

@@ -796,10 +796,10 @@ describe("FulfillmentTrackingNumberUpdatedUseCase", () => {
       {
         "message": "[
         {
-          "received": "INVALID_CODE",
-          "code": "invalid_enum_value",
-          "options": [
+          "code": "invalid_value",
+          "values": [
             "50000",
+            "55555",
             "59010",
             "59020",
             "59030",
@@ -811,19 +811,18 @@ describe("FulfillmentTrackingNumberUpdatedUseCase", () => {
             "59060",
             "59080",
             "59090",
+            "59100",
             "59110",
             "59140",
             "59150",
-            "59100",
-            "59160",
-            "55555"
+            "59160"
           ],
           "path": [],
-          "message": "Invalid enum value. Expected '50000' | '59010' | '59020' | '59030' | '59040' | '59041' | '59042' | '59043' | '59050' | '59060' | '59080' | '59090' | '59110' | '59140' | '59150' | '59100' | '59160' | '55555', received 'INVALID_CODE'"
+          "message": "Invalid option: expected one of \\"50000\\"|\\"55555\\"|\\"59010\\"|\\"59020\\"|\\"59030\\"|\\"59040\\"|\\"59041\\"|\\"59042\\"|\\"59043\\"|\\"59050\\"|\\"59060\\"|\\"59080\\"|\\"59090\\"|\\"59100\\"|\\"59110\\"|\\"59140\\"|\\"59150\\"|\\"59160\\""
         }
       ]
-      ZodValidationError: Validation error: Invalid enum value. Expected '50000' | '59010' | '59020' | '59030' | '59040' | '59041' | '59042' | '59043' | '59050' | '59060' | '59080' | '59090' | '59110' | '59140' | '59150' | '59100' | '59160' | '55555', received 'INVALID_CODE'
-      Invalid shipping company code: Validation error: Invalid enum value. Expected '50000' | '59010' | '59020' | '59030' | '59040' | '59041' | '59042' | '59043' | '59050' | '59060' | '59080' | '59090' | '59110' | '59140' | '59150' | '59100' | '59160' | '55555', received 'INVALID_CODE'",
+      ZodValidationError: Validation error: Invalid option: expected one of "50000"|"55555"|"59010"|"59020"|"59030"|"59040"|"59041"|"59042"|"59043"|"59050"|"59060"|"59080"|"59090"|"59100"|"59110"|"59140"|"59150"|"59160"
+      Invalid shipping company code: Validation error: Invalid option: expected one of "50000"|"55555"|"59010"|"59020"|"59030"|"59040"|"59041"|"59042"|"59043"|"59050"|"59060"|"59080"|"59090"|"59100"|"59110"|"59140"|"59150"|"59160"",
       }
     `);
   });

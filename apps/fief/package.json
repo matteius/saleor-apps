@@ -41,6 +41,7 @@
     "@trpc/server": "catalog:",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
+    "lucide-react": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
     "mongodb": "^6.3.0",
@@ -53,8 +54,7 @@
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
     "zod": "catalog:",
-    "zod-validation-error": "catalog:",
-    "lucide-react": "catalog:"
+    "zod-validation-error": "catalog:"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
