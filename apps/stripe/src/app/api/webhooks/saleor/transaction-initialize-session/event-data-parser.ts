@@ -63,7 +63,10 @@ export const parseTransactionInitializeSessionEventData = (raw: unknown) => {
   }
 
   const hasInvalidUnionDiscriminator = parsingResult.error.issues.some(
-    (issue) => issue.code === "invalid_union_discriminator",
+    (issue) =>
+      issue.code === "invalid_union" &&
+      "discriminator" in issue &&
+      issue.discriminator === "paymentMethod",
   );
 
   if (hasInvalidUnionDiscriminator) {

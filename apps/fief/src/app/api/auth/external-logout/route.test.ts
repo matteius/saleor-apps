@@ -38,14 +38,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { revokeTokenMock, FiefOidcClientMock } = vi.hoisted(() => {
   const revokeToken = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({ revokeToken }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return { revokeToken };
+  });
 
   return { revokeTokenMock: revokeToken, FiefOidcClientMock: ctor };
 });
 
 const { resolveMock, ChannelResolverMock, createCacheMock } = vi.hoisted(() => {
   const resolve = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({ resolve }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return { resolve };
+  });
   const createCache = vi.fn().mockReturnValue({ get: vi.fn(), set: vi.fn() });
 
   return { resolveMock: resolve, ChannelResolverMock: ctor, createCacheMock: createCache };
@@ -209,8 +213,12 @@ describe("external-logout route — T21", () => {
     revokeTokenMock.mockReset();
     resolveMock.mockReset();
     getDecryptedSecretsMock.mockReset();
-    FiefOidcClientMock.mockImplementation(() => ({ revokeToken: revokeTokenMock }));
-    ChannelResolverMock.mockImplementation(() => ({ resolve: resolveMock }));
+    FiefOidcClientMock.mockImplementation(function () {
+      return { revokeToken: revokeTokenMock };
+    });
+    ChannelResolverMock.mockImplementation(function () {
+      return { resolve: resolveMock };
+    });
     createCacheMock.mockReturnValue({ get: vi.fn(), set: vi.fn() });
     providerConnectionRepoFactoryMock.mockImplementation(() => ({
       getDecryptedSecrets: getDecryptedSecretsMock,

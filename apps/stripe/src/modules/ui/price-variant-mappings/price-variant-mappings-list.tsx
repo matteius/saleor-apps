@@ -1,3 +1,4 @@
+import { Trash2 as TrashBinIcon } from "lucide-react";
 /**
  * List view of Stripe-price ↔ Saleor-variant mappings.
  *
@@ -9,11 +10,11 @@
  */
 import { useDashboardNotification } from "@saleor/apps-shared/use-dashboard-notification";
 import { Layout } from "@saleor/apps-ui";
-import { Box, Button, Modal, Text, TrashBinIcon } from "@saleor/macaw-ui";
+import { Box, Button, Modal, Text } from "@saleor/macaw-ui";
 import { useState } from "react";
 
 import { trpcClient } from "@/modules/trpc/trpc-client";
-import { DeleteConfigurationModalContent } from "@/modules/ui/stripe-configs/delete-configuration-modal-content";
+import { DeleteConfigurationModalContent } from "@saleor/apps-ui";
 
 type Mapping = {
   stripePriceId: string;

@@ -79,7 +79,8 @@
     "react-is": "catalog:",
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "monaco-editor": "0.57.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",

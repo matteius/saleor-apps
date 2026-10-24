@@ -35,15 +35,8 @@ export default defineConfig({
           setupFiles: "./src/__tests__/integration/setup.integration.ts",
           env: loadEnv("test", process.cwd(), ""),
           pool: "threads",
-          poolOptions: {
-            threads: {
-              /*
-               * Without a single thread, tests across the files are re-using the same dynamodb.
-               * If they become slow, we can spawn separate table per suite
-               */
-              singleThread: true,
-            },
-          },
+          fileParallelism: false,
+          maxWorkers: 1,
         },
       },
     ],

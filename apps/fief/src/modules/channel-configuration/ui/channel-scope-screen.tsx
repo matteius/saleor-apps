@@ -1,3 +1,4 @@
+import { Trash2 as TrashBinIcon } from "lucide-react";
 /**
  * T36 - `<ChannelScopeScreen />`.
  *
@@ -25,7 +26,7 @@
  * still has to click Save to persist the document.
  */
 import { useDashboardNotification } from "@saleor/apps-shared/use-dashboard-notification";
-import { Box, Button, Modal, Skeleton, Text, TrashBinIcon } from "@saleor/macaw-ui";
+import { Box, Button, Modal, Skeleton, Text } from "@saleor/macaw-ui";
 import { useEffect, useState } from "react";
 
 import { trpcClient } from "@/modules/trpc/trpc-client";

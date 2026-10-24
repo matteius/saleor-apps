@@ -76,12 +76,10 @@ export const getAdyenDropinConfig = (props: {
         envUrl,
         transactionId: dropin?.state.saleorTransactionId,
         data: state.data,
-      });
-
-      if (transactionProcessResponse?.serverError) {
+      }).catch((error: unknown) => {
         dropin?.setStatus("error");
-        throw transactionProcessResponse.serverError;
-      }
+        throw error;
+      });
 
       if (!transactionProcessResponse?.data) {
         dropin?.setStatus("error");
@@ -136,14 +134,12 @@ export const getAdyenDropinConfig = (props: {
           origin: window.location.origin,
         },
         idempotencyKey: getIdempotencyKey(),
+      }).catch((error: unknown) => {
+        dropin.setStatus("error");
+        throw error;
       });
 
       splitPaymentSaleorPriceResolver.resetAdyenSplitPaymentPrice();
-
-      if (transactionInitializeResponse?.serverError) {
-        dropin.setStatus("error");
-        throw transactionInitializeResponse.serverError;
-      }
 
       if (!transactionInitializeResponse?.data) {
         toast({

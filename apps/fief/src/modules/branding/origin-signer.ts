@@ -180,7 +180,15 @@ export const verify = (
   token: string,
   signingKey: string,
   allowedOrigins: string[],
-): Result<{ origin: string }, InstanceType<typeof BrandingOriginError>> => {
+): Result<
+  { origin: string },
+  InstanceType<
+    | typeof MalformedError
+    | typeof OriginNotAllowedError
+    | typeof ExpiredError
+    | typeof BadSignatureError
+  >
+> => {
   if (!token) {
     return err(new MalformedError("token is empty"));
   }

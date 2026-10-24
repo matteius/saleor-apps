@@ -258,7 +258,7 @@ describe("StripeWebhookUseCase - T18 subscription routing", () => {
     expect(mockEventReporter.reportTransactionEvent).not.toHaveBeenCalled();
   });
 
-  it("falls through to existing ObjectMetadataMissingError for orphan payment_intent (no metadata, no invoice)", async () => {
+  it("acknowledges unrelated payment_intent without routing it to Saleor or subscriptions", async () => {
     const event = {
       type: "payment_intent.succeeded",
       data: {
@@ -278,12 +278,8 @@ describe("StripeWebhookUseCase - T18 subscription routing", () => {
       webhookParams,
     });
 
-    expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      ObjectCreatedOutsideOfSaleorResponse {
-        "message": "Object created outside of Saleor is not processable",
-        "statusCode": 400,
-      }
-    `);
+    expect(result.isOk()).toBe(true);
+    expect(mockEventReporter.reportTransactionEvent).not.toHaveBeenCalled();
     expect(mockSubscriptionUseCase.execute).not.toHaveBeenCalled();
   });
 

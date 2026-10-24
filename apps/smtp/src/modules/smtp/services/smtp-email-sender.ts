@@ -45,7 +45,7 @@ export class SmtpEmailSender implements ISMTPEmailSender {
   async sendEmailWithSmtp({ smtpSettings, mailData }: SendMailArgs) {
     this.logger.debug("Sending an email with SMTP");
 
-    let transporter: nodemailer.Transporter;
+    let transporter: ReturnType<typeof nodemailer.createTransport>;
 
     /*
      * https://github.com/nodemailer/nodemailer/issues/1461#issuecomment-1263131029

@@ -28,7 +28,10 @@ import {
   createStripeSubscriptionId,
   SubscriptionRecord,
 } from "@/modules/subscriptions/repositories/subscription-record";
-import { SaleorOrderFromInvoiceError } from "@/modules/subscriptions/saleor-bridge/saleor-order-from-invoice";
+import {
+  type mintOrderFromInvoice,
+  SaleorOrderFromInvoiceError,
+} from "@/modules/subscriptions/saleor-bridge/saleor-order-from-invoice";
 import {
   computeNextRetryAt,
   DLQ_BACKOFF_SECONDS,
@@ -112,7 +115,7 @@ interface DepsHarness {
     getByFiefUserId: ReturnType<typeof vi.fn>;
   };
   owlbooksWebhookNotifier: { notify: ReturnType<typeof vi.fn> };
-  mintFn: ReturnType<typeof vi.fn>;
+  mintFn: ReturnType<typeof vi.fn<typeof mintOrderFromInvoice>>;
   graphqlClient: { mutation: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn> };
   graphqlClientFactory: ReturnType<typeof vi.fn>;
   captureException: ReturnType<typeof vi.fn>;

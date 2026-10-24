@@ -236,15 +236,17 @@ export class FiefAdminApiClient {
 
   // ---------- Generic request ----------
 
-  private async request<TSchema extends z.ZodTypeAny>(args: {
+  private async request<TSchema extends z.ZodType | null>(args: {
     method: "GET" | "POST" | "PATCH" | "DELETE";
     path: string;
     token: FiefAdminToken;
     /* `null` means "expect 204 / empty body and return undefined". */
-    schema: TSchema | null;
+    schema: TSchema;
     body?: unknown;
     query?: Record<string, string>;
-  }): Promise<Result<TSchema extends null ? undefined : z.infer<TSchema>, AnyFiefAdminApiError>> {
+  }): Promise<
+    Result<TSchema extends z.ZodType ? z.infer<TSchema> : undefined, AnyFiefAdminApiError>
+  > {
     const queryString = args.query ? `?${new URLSearchParams(args.query).toString()}` : "";
     const url = `${this.baseUrl}${args.path}${queryString}`;
 

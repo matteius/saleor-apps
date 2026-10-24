@@ -47,10 +47,10 @@ function compileSubject(subjectTemplate: string, payload: unknown): string {
   return fn(payload);
 }
 
-function compileBody(bodyTemplate: string, payload: unknown): string {
+async function compileBody(bodyTemplate: string, payload: unknown): Promise<string> {
   const fn = Handlebars.compile(bodyTemplate);
   const mjmlResult = fn(payload);
-  const result = mjml2html(mjmlResult, { validationLevel: "soft" });
+  const result = await mjml2html(mjmlResult, { validationLevel: "soft" });
 
   return result.html;
 }
@@ -128,7 +128,7 @@ async function main() {
     }
 
     const subject = compileSubject(subjectTemplate, payload);
-    const htmlBody = compileBody(bodyTemplate, payload);
+    const htmlBody = await compileBody(bodyTemplate, payload);
 
     const label = messageEventTypesLabels[eventType];
     const slug = eventType.toLowerCase().replace(/_/g, "-");

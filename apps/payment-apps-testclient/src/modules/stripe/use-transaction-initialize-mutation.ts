@@ -86,7 +86,7 @@ const createTransactionInitializeMutationFn = async (args: {
     throw new TransactionInitializeError(
       "Failed to parse Saleor data from initializeTransaction mutation.",
       {
-        errors: parsedSaleorDataResult.error.errors,
+        errors: parsedSaleorDataResult.error.issues,
       },
     );
   }

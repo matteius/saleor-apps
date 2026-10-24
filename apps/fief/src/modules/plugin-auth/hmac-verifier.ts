@@ -230,7 +230,14 @@ export const verifyPluginRequest = async (
   req: Request,
   secret: string,
   opts: VerifyPluginRequestOptions = {},
-): Promise<Result<VerifiedPluginRequest, InstanceType<typeof PluginAuthError>>> => {
+): Promise<
+  Result<
+    VerifiedPluginRequest,
+    InstanceType<
+      typeof MalformedError | typeof BadSignatureError | typeof ExpiredError | typeof ReplayError
+    >
+  >
+> => {
   const tsRaw = req.headers.get(HEADER_TS);
   const sigRaw = req.headers.get(HEADER_SIG);
   const saleorUrlRaw = req.headers.get(HEADER_SALEOR_URL);

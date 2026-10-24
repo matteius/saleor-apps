@@ -10,7 +10,7 @@ import { Layout } from "@saleor/apps-ui";
 import { Box, Text } from "@saleor/macaw-ui";
 import { type NextPage } from "next";
 
-import { AppHeader } from "@/modules/ui/app-header";
+import { ConfigPageShell } from "@/modules/ui/stripe-configs/config-page-shell";
 import { PriceVariantMappingsSection } from "@/modules/ui/price-variant-mappings/price-variant-mappings-section";
 import { useHasAppAccess } from "@/modules/ui/use-has-app-access";
 
@@ -22,8 +22,7 @@ const SubscriptionsConfigPage: NextPage = () => {
   }
 
   return (
-    <Box>
-      <AppHeader />
+    <ConfigPageShell>
       <Layout.AppSection
         marginBottom={14}
         heading="Subscription price mapping"
@@ -42,7 +41,7 @@ const SubscriptionsConfigPage: NextPage = () => {
       >
         <PriceVariantMappingsSection />
       </Layout.AppSection>
-    </Box>
+    </ConfigPageShell>
   );
 };
 

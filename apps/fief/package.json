@@ -53,7 +53,8 @@
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
     "zod": "catalog:",
-    "zod-validation-error": "catalog:"
+    "zod-validation-error": "catalog:",
+    "lucide-react": "catalog:"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",

@@ -50,7 +50,7 @@ const EVENT_TYPE = "ACCOUNT_DELETE" satisfies MessageEventTypes;
 
 class MockEmailCompiler implements IEmailCompiler {
   static returnSuccessCompiledEmail: IEmailCompiler["compile"] = () =>
-    ok({
+    okAsync({
       text: "html text",
       from: "email from",
       subject: "email subject",
@@ -59,7 +59,7 @@ class MockEmailCompiler implements IEmailCompiler {
     });
 
   static returnErrorCompiling: IEmailCompiler["compile"] = () => {
-    return err(new BaseError("Error compiling"));
+    return errAsync(new BaseError("Error compiling"));
   };
 
   mockEmailCompileMethod = vi.fn<(args: CompileArgs) => ReturnType<IEmailCompiler["compile"]>>();

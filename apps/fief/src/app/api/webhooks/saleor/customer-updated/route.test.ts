@@ -46,13 +46,15 @@ const enqueueMock = vi.hoisted(() =>
 );
 
 vi.mock("@/modules/queue/repositories/mongodb/mongodb-queue-repo", () => ({
-  MongodbOutboundQueueRepo: vi.fn().mockImplementation(() => ({
-    enqueue: enqueueMock,
-    lease: vi.fn(),
-    complete: vi.fn(),
-    releaseWithBackoff: vi.fn(),
-    peek: vi.fn(),
-  })),
+  MongodbOutboundQueueRepo: vi.fn().mockImplementation(function () {
+    return {
+      enqueue: enqueueMock,
+      lease: vi.fn(),
+      complete: vi.fn(),
+      releaseWithBackoff: vi.fn(),
+      peek: vi.fn(),
+    };
+  }),
 }));
 
 const isSaleorToFiefDisabledMock = vi.hoisted(() => vi.fn(() => false));
@@ -72,18 +74,20 @@ const __nextCtx = vi.hoisted(() => ({
 }));
 
 vi.mock("@saleor/app-sdk/handlers/next-app-router", () => ({
-  SaleorAsyncWebhook: vi.fn().mockImplementation(() => ({
-    createHandler: (handler: (req: Request, ctx: unknown) => Promise<Response>) => {
-      return async (req: Request) => {
-        if (!__nextCtx.current) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-        }
+  SaleorAsyncWebhook: vi.fn().mockImplementation(function () {
+    return {
+      createHandler: (handler: (req: Request, ctx: unknown) => Promise<Response>) => {
+        return async (req: Request) => {
+          if (!__nextCtx.current) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+          }
 
-        return handler(req, __nextCtx.current);
-      };
-    },
-    getWebhookManifest: () => ({ name: "Customer Updated" }),
-  })),
+          return handler(req, __nextCtx.current);
+        };
+      },
+      getWebhookManifest: () => ({ name: "Customer Updated" }),
+    };
+  }),
 }));
 
 vi.mock("@/lib/saleor-app", () => ({

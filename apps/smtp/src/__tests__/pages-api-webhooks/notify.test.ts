@@ -30,9 +30,11 @@ const { mockCreateFromAuthData } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../modules/event-handlers/use-case/send-event-messages.use-case.factory", () => ({
-  SendEventMessagesUseCaseFactory: vi.fn().mockImplementation(() => ({
-    createFromAuthData: mockCreateFromAuthData,
-  })),
+  SendEventMessagesUseCaseFactory: vi.fn().mockImplementation(function () {
+    return {
+      createFromAuthData: mockCreateFromAuthData,
+    };
+  }),
 }));
 
 vi.mock("@sentry/nextjs", () => ({

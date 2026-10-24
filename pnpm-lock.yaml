@@ -286,7 +286,6 @@ overrides:
   highlight.js: 10.7.3
   fast-xml-parser: 5.11.2
   uuid@^11: 11.1.1
-  brace-expansion: 5.0.12
   undici@^7: 7.30.1
   dompurify: 3.4.17
   uuid@^10: 11.1.1
@@ -294,6 +293,7 @@ overrides:
   vite@^6: 6.4.4
   immutable@^3: 3.8.4
   '@graphql-tools/utils': 12.0.2
+  '@urql/exchange-auth@2.1.4>@urql/core': 4.3.0
 
 packageExtensionsChecksum: sha256-7EyWhva5Lcamo6pe18OzfUc27A7xbWt39+G/ofluF9k=
 
@@ -1390,6 +1390,9 @@ importers:
       graphql-tag:
         specifier: 'catalog:'
         version: 2.12.6(graphql@16.11.0)
+      lucide-react:
+        specifier: 'catalog:'
+        version: 0.536.0(react@18.2.0)
       modern-errors:
         specifier: 'catalog:'
         version: 7.0.1
@@ -3060,6 +3063,9 @@ importers:
       modern-errors-serialize:
         specifier: 'catalog:'
         version: 6.1.0(modern-errors@7.0.1)
+      monaco-editor:
+        specifier: 0.57.0
+        version: 0.57.0
       mongodb:
         specifier: ^6.3.0
         version: 6.21.0
@@ -8631,9 +8637,6 @@ packages:
   '@urql/core@4.3.0':
     resolution: {integrity: sha512-wT+FeL8DG4x5o6RfHEnONNFVDM3616ouzATMYUClB6CB+iIu2mwfBKd7xSUxYOZmwtxna5/hDRQdMl3nbQZlnw==}
 
-  '@urql/core@6.0.3':
-    resolution: {integrity: sha512-0F39XWR21+IVLJfsqBvLShvoSzxT6h6wWXwrDhN8j9J+IEVOpQIUNHwpgjsp+2ePzn9aCH+rpDonn3HOAUnn9A==}
-
   '@urql/exchange-auth@2.1.4':
     resolution: {integrity: sha512-ijAKSgswusrProxrusX8TcYntCgMptQiirdNHwgy0EcWucxQ+1zgxiRNFKpkaRMpGk5WCFeCpsXTEYtlvuFmDg==}
 
@@ -9221,6 +9224,9 @@ packages:
     peerDependencies:
       '@babel/core': 7.29.6
 
+  balanced-match@1.0.2:
+    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
+
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
@@ -9292,6 +9298,9 @@ packages:
 
   bowser@2.14.1:
     resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
+
+  brace-expansion@1.1.21:
+    resolution: {integrity: sha512-9zeA+KLZNNzglF2TPKRQEDyx6Yby7daAkuy8MiPzpXPsYDWi/DRM8jmwUDxokQjYqBpv5DgPiwD4h4ZZSy1Ujw==}
 
   brace-expansion@5.0.12:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
@@ -9558,6 +9567,9 @@ packages:
 
   compute-scroll-into-view@3.1.1:
     resolution: {integrity: sha512-VRhuHOLoKYOy4UbilLbUzbYg93XLjv2PncJC50EuTWPA3gaja1UjBsUP/D/9/juV3vQFr6XBEzn9KCAHdUvOHw==}
+
+  concat-map@0.0.1:
+    resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
   concat-with-sourcemaps@1.1.0:
     resolution: {integrity: sha512-4gEjHJFT9e+2W/77h/DS5SGUgwDaOwprX8L/gl5+3ixnzkVJJsZWDSelmN3Oilw3LNDZjZV0yqH1hLG3k6nghg==}
@@ -19759,16 +19771,9 @@ snapshots:
     transitivePeerDependencies:
       - graphql
 
-  '@urql/core@6.0.3(graphql@16.11.0)':
-    dependencies:
-      '@0no-co/graphql.web': 1.3.4(graphql@16.11.0)
-      wonka: 6.3.6
-    transitivePeerDependencies:
-      - graphql
-
   '@urql/exchange-auth@2.1.4(graphql@16.11.0)':
     dependencies:
-      '@urql/core': 6.0.3(graphql@16.11.0)
+      '@urql/core': 4.3.0(graphql@16.11.0)
       wonka: 6.3.6
     transitivePeerDependencies:
       - graphql
@@ -20555,6 +20560,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  balanced-match@1.0.2: {}
+
   balanced-match@4.0.4: {}
 
   bare-events@2.9.2: {}
@@ -20609,6 +20616,11 @@ snapshots:
   boolbase@1.0.0: {}
 
   bowser@2.14.1: {}
+
+  brace-expansion@1.1.21:
+    dependencies:
+      balanced-match: 1.0.2
+      concat-map: 0.0.1
 
   brace-expansion@5.0.12:
     dependencies:
@@ -20921,6 +20933,8 @@ snapshots:
   component-type@2.0.0: {}
 
   compute-scroll-into-view@3.1.1: {}
+
+  concat-map@0.0.1: {}
 
   concat-with-sourcemaps@1.1.0:
     dependencies:
@@ -23458,11 +23472,11 @@ snapshots:
 
   minimatch@3.1.4:
     dependencies:
-      brace-expansion: 5.0.12
+      brace-expansion: 1.1.21
 
   minimatch@4.2.6:
     dependencies:
-      brace-expansion: 5.0.12
+      brace-expansion: 1.1.21
 
   minimatch@9.0.7:
     dependencies:

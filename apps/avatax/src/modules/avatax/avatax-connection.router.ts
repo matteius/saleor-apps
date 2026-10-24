@@ -35,7 +35,12 @@ const deleteInputSchema = z.object({
 
 const patchInputSchema = z.object({
   id: z.string(),
-  value: avataxConfigSchema.deepPartial(),
+  value: avataxConfigSchema
+    .extend({
+      address: avataxConfigSchema.shape.address.partial(),
+      credentials: avataxConfigSchema.shape.credentials.partial(),
+    })
+    .partial(),
 });
 
 const postInputSchema = z.object({

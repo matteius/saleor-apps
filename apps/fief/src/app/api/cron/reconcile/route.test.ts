@@ -17,10 +17,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { runForInstallMock, runForConnectionMock, ReconciliationRunnerMock } = vi.hoisted(() => {
   const runForInstall = vi.fn();
   const runForConnection = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({
-    runForInstall,
-    runForConnection,
-  }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return {
+      runForInstall,
+      runForConnection,
+    };
+  });
 
   return {
     runForInstallMock: runForInstall,
@@ -95,10 +97,12 @@ beforeEach(() => {
   runForInstallMock.mockReset();
   runForConnectionMock.mockReset();
   ReconciliationRunnerMock.mockReset();
-  ReconciliationRunnerMock.mockImplementation(() => ({
-    runForInstall: runForInstallMock,
-    runForConnection: runForConnectionMock,
-  }));
+  ReconciliationRunnerMock.mockImplementation(function () {
+    return {
+      runForInstall: runForInstallMock,
+      runForConnection: runForConnectionMock,
+    };
+  });
   aplGetAllMock.mockReset();
 });
 

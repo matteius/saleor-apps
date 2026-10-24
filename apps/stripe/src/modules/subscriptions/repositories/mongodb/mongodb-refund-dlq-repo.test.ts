@@ -53,7 +53,9 @@ const mongoClientInstance = {
 };
 
 vi.mock("mongodb", () => ({
-  MongoClient: vi.fn(() => mongoClientInstance),
+  MongoClient: vi.fn(function () {
+    return mongoClientInstance;
+  }),
 }));
 
 vi.stubEnv("MONGODB_URL", "mongodb://localhost:27017/test");
@@ -98,7 +100,9 @@ describe("MongodbRefundDlqRepo", () => {
     mongoClientInstance.connect.mockImplementation(async () => undefined);
     mongoClientInstance.db.mockImplementation(() => db);
     mongoClientInstance.close.mockImplementation(async () => undefined);
-    MongoClientMock.mockImplementation(() => mongoClientInstance);
+    MongoClientMock.mockImplementation(function () {
+      return mongoClientInstance;
+    });
     repo = new MongodbRefundDlqRepo();
   });
 

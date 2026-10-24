@@ -17,9 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { receiveMock, FiefReceiverMock } = vi.hoisted(() => {
   const receive = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({
-    receive,
-  }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return {
+      receive,
+    };
+  });
 
   return { receiveMock: receive, FiefReceiverMock: ctor };
 });
@@ -69,7 +71,9 @@ describe("Fief webhook route — T22", () => {
      * constructor mock here so each test still gets a `FiefReceiver`
      * instance with `receive` wired to our `receiveMock`.
      */
-    FiefReceiverMock.mockImplementation(() => ({ receive: receiveMock }));
+    FiefReceiverMock.mockImplementation(function () {
+      return { receive: receiveMock };
+    });
   });
 
   afterEach(() => {

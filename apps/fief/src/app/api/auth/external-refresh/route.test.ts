@@ -45,14 +45,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { refreshTokenMock, FiefOidcClientMock } = vi.hoisted(() => {
   const refreshToken = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({ refreshToken }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return { refreshToken };
+  });
 
   return { refreshTokenMock: refreshToken, FiefOidcClientMock: ctor };
 });
 
 const { resolveMock, ChannelResolverMock, createCacheMock } = vi.hoisted(() => {
   const resolve = vi.fn();
-  const ctor = vi.fn().mockImplementation(() => ({ resolve }));
+  const ctor = vi.fn().mockImplementation(function () {
+    return { resolve };
+  });
   const createCache = vi.fn().mockReturnValue({ get: vi.fn(), set: vi.fn() });
 
   return { resolveMock: resolve, ChannelResolverMock: ctor, createCacheMock: createCache };
@@ -346,8 +350,12 @@ describe("external-refresh route — T20", () => {
     getByFiefUserMock.mockReset();
     aplGetMock.mockReset();
 
-    FiefOidcClientMock.mockImplementation(() => ({ refreshToken: refreshTokenMock }));
-    ChannelResolverMock.mockImplementation(() => ({ resolve: resolveMock }));
+    FiefOidcClientMock.mockImplementation(function () {
+      return { refreshToken: refreshTokenMock };
+    });
+    ChannelResolverMock.mockImplementation(function () {
+      return { resolve: resolveMock };
+    });
     createCacheMock.mockReturnValue({ get: vi.fn(), set: vi.fn() });
     providerConnectionRepoFactoryMock.mockImplementation(() => ({
       getDecryptedSecrets: getDecryptedSecretsMock,

@@ -1,3 +1,4 @@
+import type { editor, Position } from "monaco-editor";
 import type { Monaco } from "@monaco-editor/react";
 
 /**
@@ -151,7 +152,7 @@ export function registerMjmlCompletionProviders(
   disposables.push(
     monaco.languages.registerCompletionItemProvider("xml", {
       triggerCharacters: ["{", "."],
-      provideCompletionItems(model, position) {
+      provideCompletionItems(model: editor.ITextModel, position: Position) {
         const textUntilPosition = model.getValueInRange({
           startLineNumber: position.lineNumber,
           startColumn: 1,
@@ -220,7 +221,7 @@ export function registerMjmlCompletionProviders(
   disposables.push(
     monaco.languages.registerCompletionItemProvider("xml", {
       triggerCharacters: ["<"],
-      provideCompletionItems(model, position) {
+      provideCompletionItems(model: editor.ITextModel, position: Position) {
         const textUntilPosition = model.getValueInRange({
           startLineNumber: position.lineNumber,
           startColumn: 1,

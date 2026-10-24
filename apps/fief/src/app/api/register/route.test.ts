@@ -46,9 +46,11 @@ vi.mock("@/modules/webhook-management", async () => {
 
   return {
     ...actual,
-    RunWebhookMigrationsUseCase: vi.fn().mockImplementation(() => ({
-      execute: runWebhookMigrationsExecute,
-    })),
+    RunWebhookMigrationsUseCase: vi.fn().mockImplementation(function () {
+      return {
+        execute: runWebhookMigrationsExecute,
+      };
+    }),
   };
 });
 

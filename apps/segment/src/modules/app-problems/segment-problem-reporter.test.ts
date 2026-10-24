@@ -29,13 +29,12 @@ describe("SegmentProblemReporter", () => {
     vi.clearAllMocks();
     mockReportProblem.mockReset();
     mockClearProblems.mockReset();
-    vi.mocked(AppProblemsReporter).mockImplementation(
-      () =>
-        ({
-          reportProblem: mockReportProblem,
-          clearProblems: mockClearProblems,
-        }) as unknown as AppProblemsReporter,
-    );
+    vi.mocked(AppProblemsReporter).mockImplementation(function () {
+      return {
+        reportProblem: mockReportProblem,
+        clearProblems: mockClearProblems,
+      } as unknown as AppProblemsReporter;
+    });
   });
 
   describe("reportConfigMissing", () => {

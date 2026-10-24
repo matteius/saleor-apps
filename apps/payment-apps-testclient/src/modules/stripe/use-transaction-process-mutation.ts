@@ -65,7 +65,7 @@ const createTransactionProcessMutationFn = async (args: {
 
   if (!parsedSaleorDataResult.success) {
     throw new ProcessTransactionError("Failed to parse Saleor data from processSession mutation.", {
-      errors: parsedSaleorDataResult.error.errors,
+      errors: parsedSaleorDataResult.error.issues,
     });
   }
 

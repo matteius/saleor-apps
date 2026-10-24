@@ -9,7 +9,7 @@ function getBaseUrl() {
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }
 
-export const createHttpBatchLink = (appBridgeInstance?: AppBridge) => {
+export const createHttpBatchLink = (appBridgeInstance?: Pick<AppBridge, "getState">) => {
   return httpBatchLink({
     url: `${getBaseUrl()}/api/trpc`,
     headers() {

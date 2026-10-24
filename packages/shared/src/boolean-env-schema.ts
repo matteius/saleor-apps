@@ -10,7 +10,7 @@ const booleanEnvSchema = z
   .refine((s) => s === "true" || s === "false")
   .transform((s) => s === "true");
 
-const defaultTrue = booleanEnvSchema.default("true");
-const defaultFalse = booleanEnvSchema.default("false");
+const defaultTrue = booleanEnvSchema.prefault("true");
+const defaultFalse = booleanEnvSchema.prefault("false");
 
 export const booleanEnv = { defaultTrue, defaultFalse, noDefault: booleanEnvSchema };

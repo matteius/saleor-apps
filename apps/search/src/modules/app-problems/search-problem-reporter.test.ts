@@ -37,13 +37,12 @@ describe("SearchProblemReporter", () => {
     mockClearProblems.mockReset();
     mockMutation.mockReset();
     mockMutation.mockReturnValue({ toPromise: () => Promise.resolve({ data: {} }) });
-    vi.mocked(AppProblemsReporter).mockImplementation(
-      () =>
-        ({
-          reportProblem: mockReportProblem,
-          clearProblems: mockClearProblems,
-        }) as unknown as AppProblemsReporter,
-    );
+    vi.mocked(AppProblemsReporter).mockImplementation(function () {
+      return {
+        reportProblem: mockReportProblem,
+        clearProblems: mockClearProblems,
+      } as unknown as AppProblemsReporter;
+    });
   });
 
   describe("reportAuthErrorAndDeactivate", () => {

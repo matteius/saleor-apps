@@ -15,7 +15,7 @@ export function setBackendErrors<T extends FieldValues = FieldValues>({
   notifyError,
 }: SetBackendErrorsProps<T>) {
   let isFieldErrorSet = false;
-  const fieldErrors = error.data?.zodError?.fieldErrors || {};
+  const fieldErrors: Record<string, string[] | undefined> = error.data?.zodError?.fieldErrors || {};
 
   for (const fieldName in fieldErrors) {
     for (const message of fieldErrors[fieldName] || []) {

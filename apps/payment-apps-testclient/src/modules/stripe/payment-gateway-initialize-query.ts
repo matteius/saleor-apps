@@ -94,7 +94,7 @@ export const createPaymentGatewayInitializeQuery = (args: {
     throw new InitializePaymentGatewayError(
       "Failed to parse initializePaymentGateway mutation response",
       {
-        errors: parsedSaleorDataResult.error.errors,
+        errors: parsedSaleorDataResult.error.issues,
       },
     );
   },

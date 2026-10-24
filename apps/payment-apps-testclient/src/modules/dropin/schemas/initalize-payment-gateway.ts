@@ -10,7 +10,7 @@ export const GiftCardBalanceResponseSchema = z
     }),
   })
   .optional();
-export const OrderCreateResponseSchema = z.any({}).optional();
+export const OrderCreateResponseSchema = z.any().optional();
 export const OrderCancelResponseSchema = z
   .object({
     resultCode: z.string(),

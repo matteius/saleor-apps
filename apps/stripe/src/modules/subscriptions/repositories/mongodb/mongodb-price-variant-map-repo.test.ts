@@ -41,7 +41,9 @@ const { collectionMock, dbMock, clientMock } = vi.hoisted(() => {
 });
 
 vi.mock("mongodb", () => ({
-  MongoClient: vi.fn(() => clientMock),
+  MongoClient: vi.fn(function () {
+    return clientMock;
+  }),
 }));
 
 vi.mock("@/lib/env", () => ({
@@ -94,7 +96,9 @@ describe("MongodbPriceVariantMapRepo", () => {
      * chained client/db/collection mocks here so each test starts from a
      * clean known state regardless of run order.
      */
-    vi.mocked(MongoClient).mockImplementation((() => clientMock) as never);
+    vi.mocked(MongoClient).mockImplementation(function () {
+      return clientMock;
+    } as never);
 
     collectionMock.createIndex.mockResolvedValue("idx_1");
     collectionMock.replaceOne.mockResolvedValue({ acknowledged: true, upsertedCount: 1 });
