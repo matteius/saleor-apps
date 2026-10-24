@@ -10,8 +10,8 @@ import { Layout } from "@saleor/apps-ui";
 import { Box, Text } from "@saleor/macaw-ui";
 import { type NextPage } from "next";
 
-import { ConfigPageShell } from "@/modules/ui/stripe-configs/config-page-shell";
 import { PriceVariantMappingsSection } from "@/modules/ui/price-variant-mappings/price-variant-mappings-section";
+import { ConfigPageShell } from "@/modules/ui/stripe-configs/config-page-shell";
 import { useHasAppAccess } from "@/modules/ui/use-has-app-access";
 
 const SubscriptionsConfigPage: NextPage = () => {
