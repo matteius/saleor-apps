@@ -6,9 +6,7 @@
  */
 
 export type TransactionProcessSession =
-  | TransactionSessionSuccess
-  | TransactionSessionFailure
-  | TransactionSessionActionRequired;
+  TransactionSessionSuccess | TransactionSessionFailure | TransactionSessionActionRequired;
 /**
  * PSP reference received from payment provider.
  */

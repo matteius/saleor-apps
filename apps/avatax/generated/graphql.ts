@@ -2300,7 +2300,10 @@ export const UntypedTaxBaseFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedTaxDiscountFragmentDoc}
+${UntypedAddressFragmentDoc}
+${UntypedTaxBaseLineFragmentDoc}
+${UntypedUserFragmentDoc}`;
 export const UntypedCalculateTaxesEventFragmentDoc = gql`
     fragment CalculateTaxesEvent on Event {
   __typename
@@ -2317,7 +2320,8 @@ export const UntypedCalculateTaxesEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedWebhookMetadataFragmentDoc}
+${UntypedTaxBaseFragmentDoc}`;
 export const UntypedMetadataItemFragmentDoc = gql`
     fragment MetadataItem on MetadataItem {
   key
@@ -2355,7 +2359,7 @@ export const UntypedTaxConfigurationPerCountryFragmentDoc = gql`
   displayGrossPrices
   __typename
 }
-    `;
+    ${UntypedCountryWithCodeFragmentDoc}`;
 export const UntypedTaxConfigurationFragmentDoc = gql`
     fragment TaxConfiguration on TaxConfiguration {
   id
@@ -2372,7 +2376,8 @@ export const UntypedTaxConfigurationFragmentDoc = gql`
   }
   __typename
 }
-    `;
+    ${UntypedChannelFragmentDoc}
+${UntypedTaxConfigurationPerCountryFragmentDoc}`;
 export const UntypedOrderCancelledSubscriptionFragmentDoc = gql`
     fragment OrderCancelledSubscription on Order {
   id
@@ -2399,7 +2404,8 @@ export const UntypedOrderCancelledEventSubscriptionFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedWebhookMetadataFragmentDoc}
+${UntypedOrderCancelledSubscriptionFragmentDoc}`;
 export const UntypedOrderLineFragmentDoc = gql`
     fragment OrderLine on OrderLine {
   productSku
@@ -2476,7 +2482,9 @@ export const UntypedOrderConfirmedSubscriptionFragmentDoc = gql`
   avataxTaxCalculationDate: metafield(key: "avataxTaxCalculationDate")
   avataxDocumentCode: metafield(key: "avataxDocumentCode")
 }
-    `;
+    ${UntypedUserFragmentDoc}
+${UntypedAddressFragmentDoc}
+${UntypedOrderLineFragmentDoc}`;
 export const UntypedOrderConfirmedEventSubscriptionFragmentDoc = gql`
     fragment OrderConfirmedEventSubscription on Event {
   __typename
@@ -2493,7 +2501,8 @@ export const UntypedOrderConfirmedEventSubscriptionFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedWebhookMetadataFragmentDoc}
+${UntypedOrderConfirmedSubscriptionFragmentDoc}`;
 export const UntypedDeleteAppMetadataDocument = gql`
     mutation DeleteAppMetadata($id: ID!, $keys: [String!]!) {
   deletePrivateMetadata(id: $id, keys: $keys) {
@@ -2667,44 +2676,28 @@ export const UntypedTaxConfigurationsListDocument = gql`
     __typename
   }
 }
-    ${UntypedTaxConfigurationFragmentDoc}
-${UntypedChannelFragmentDoc}
-${UntypedTaxConfigurationPerCountryFragmentDoc}
-${UntypedCountryWithCodeFragmentDoc}`;
+    ${UntypedTaxConfigurationFragmentDoc}`;
 export const UntypedCalculateTaxesDocument = gql`
     subscription CalculateTaxes {
   event {
     ...CalculateTaxesEvent
   }
 }
-    ${UntypedCalculateTaxesEventFragmentDoc}
-${UntypedWebhookMetadataFragmentDoc}
-${UntypedTaxBaseFragmentDoc}
-${UntypedTaxDiscountFragmentDoc}
-${UntypedAddressFragmentDoc}
-${UntypedTaxBaseLineFragmentDoc}
-${UntypedUserFragmentDoc}`;
+    ${UntypedCalculateTaxesEventFragmentDoc}`;
 export const UntypedOrderCancelledSubscriptionDocument = gql`
     subscription OrderCancelledSubscription {
   event {
     ...OrderCancelledEventSubscription
   }
 }
-    ${UntypedOrderCancelledEventSubscriptionFragmentDoc}
-${UntypedWebhookMetadataFragmentDoc}
-${UntypedOrderCancelledSubscriptionFragmentDoc}`;
+    ${UntypedOrderCancelledEventSubscriptionFragmentDoc}`;
 export const UntypedOrderConfirmedSubscriptionDocument = gql`
     subscription OrderConfirmedSubscription {
   event {
     ...OrderConfirmedEventSubscription
   }
 }
-    ${UntypedOrderConfirmedEventSubscriptionFragmentDoc}
-${UntypedWebhookMetadataFragmentDoc}
-${UntypedOrderConfirmedSubscriptionFragmentDoc}
-${UntypedUserFragmentDoc}
-${UntypedAddressFragmentDoc}
-${UntypedOrderLineFragmentDoc}`;
+    ${UntypedOrderConfirmedEventSubscriptionFragmentDoc}`;
 export const WebhookMetadataFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookMetadata"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Event"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"issuedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}}]}}]} as unknown as DocumentNode<WebhookMetadataFragment, unknown>;
 export const TaxDiscountFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"TaxDiscount"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"TaxableObjectDiscount"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}}]} as unknown as DocumentNode<TaxDiscountFragment, unknown>;
 export const AddressFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Address"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Address"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"streetAddress1"}},{"kind":"Field","name":{"kind":"Name","value":"streetAddress2"}},{"kind":"Field","name":{"kind":"Name","value":"city"}},{"kind":"Field","name":{"kind":"Name","value":"countryArea"}},{"kind":"Field","name":{"kind":"Name","value":"postalCode"}},{"kind":"Field","name":{"kind":"Name","value":"country"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode<AddressFragment, unknown>;

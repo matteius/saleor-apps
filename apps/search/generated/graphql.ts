@@ -1292,7 +1292,7 @@ export const UntypedCategoryDataFragmentDoc = gql`
     ...MetadataItem
   }
 }
-    `;
+    ${UntypedMetadataItemFragmentDoc}`;
 export const UntypedOwnWebhookFragmentDoc = gql`
     fragment OwnWebhook on Webhook {
   id
@@ -1355,7 +1355,8 @@ export const UntypedPageDataFragmentDoc = gql`
     ...ProductAttributesData
   }
 }
-    `;
+    ${UntypedMetadataItemFragmentDoc}
+${UntypedProductAttributesDataFragmentDoc}`;
 export const UntypedProductDataFragmentDoc = gql`
     fragment ProductData on Product {
   variants {
@@ -1457,7 +1458,8 @@ export const UntypedProductDataFragmentDoc = gql`
     ...MetadataItem
   }
 }
-    `;
+    ${UntypedProductAttributesDataFragmentDoc}
+${UntypedMetadataItemFragmentDoc}`;
 export const UntypedProductVariantDataFragmentDoc = gql`
     fragment ProductVariantData on ProductVariant {
   metadata {
@@ -1513,12 +1515,14 @@ export const UntypedProductVariantDataFragmentDoc = gql`
     ...ProductData
   }
 }
-    `;
+    ${UntypedMetadataItemFragmentDoc}
+${UntypedProductAttributesDataFragmentDoc}
+${UntypedProductDataFragmentDoc}`;
 export const UntypedProductVariantWebhookPayloadFragmentDoc = gql`
     fragment ProductVariantWebhookPayload on ProductVariant {
   ...ProductVariantData
 }
-    `;
+    ${UntypedProductVariantDataFragmentDoc}`;
 export const UntypedProductWebhookPayloadFragmentDoc = gql`
     fragment ProductWebhookPayload on Product {
   id
@@ -1526,7 +1530,7 @@ export const UntypedProductWebhookPayloadFragmentDoc = gql`
     ...ProductVariantData
   }
 }
-    `;
+    ${UntypedProductVariantDataFragmentDoc}`;
 export const UntypedAppDeactivateDocument = gql`
     mutation AppDeactivate($id: ID!) {
   appDeactivate(id: $id) {
@@ -1614,8 +1618,7 @@ export const UntypedCategoriesDataForImportDocument = gql`
     }
   }
 }
-    ${UntypedCategoryDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}`;
+    ${UntypedCategoryDataFragmentDoc}`;
 export const UntypedChannelsDocument = gql`
     query Channels {
   channels {
@@ -1678,9 +1681,7 @@ export const UntypedPagesDataForImportDocument = gql`
     }
   }
 }
-    ${UntypedPageDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}`;
+    ${UntypedPageDataFragmentDoc}`;
 export const UntypedProductsDataForImportDocument = gql`
     query ProductsDataForImport($first: Int, $channel: String, $after: String) {
   products(first: $first, channel: $channel, after: $after) {
@@ -1695,11 +1696,7 @@ export const UntypedProductsDataForImportDocument = gql`
     }
   }
 }
-    ${UntypedProductWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductWebhookPayloadFragmentDoc}`;
 export const UntypedVariantsAvailabilityDocument = gql`
     query VariantsAvailability($ids: [ID!], $channel: String!, $first: Int!) {
   productVariants(ids: $ids, channel: $channel, first: $first) {
@@ -1730,8 +1727,7 @@ export const UntypedCategoryCreatedDocument = gql`
     }
   }
 }
-    ${UntypedCategoryDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}`;
+    ${UntypedCategoryDataFragmentDoc}`;
 export const UntypedCategoryDeletedDocument = gql`
     subscription CategoryDeleted {
   event {
@@ -1750,8 +1746,7 @@ export const UntypedCategoryDeletedDocument = gql`
     }
   }
 }
-    ${UntypedCategoryDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}`;
+    ${UntypedCategoryDataFragmentDoc}`;
 export const UntypedCategoryUpdatedDocument = gql`
     subscription CategoryUpdated {
   event {
@@ -1770,8 +1765,7 @@ export const UntypedCategoryUpdatedDocument = gql`
     }
   }
 }
-    ${UntypedCategoryDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}`;
+    ${UntypedCategoryDataFragmentDoc}`;
 export const UntypedPageCreatedDocument = gql`
     subscription PageCreated {
   event {
@@ -1790,9 +1784,7 @@ export const UntypedPageCreatedDocument = gql`
     }
   }
 }
-    ${UntypedPageDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}`;
+    ${UntypedPageDataFragmentDoc}`;
 export const UntypedPageDeletedDocument = gql`
     subscription PageDeleted {
   event {
@@ -1811,9 +1803,7 @@ export const UntypedPageDeletedDocument = gql`
     }
   }
 }
-    ${UntypedPageDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}`;
+    ${UntypedPageDataFragmentDoc}`;
 export const UntypedPageUpdatedDocument = gql`
     subscription PageUpdated {
   event {
@@ -1832,9 +1822,7 @@ export const UntypedPageUpdatedDocument = gql`
     }
   }
 }
-    ${UntypedPageDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}`;
+    ${UntypedPageDataFragmentDoc}`;
 export const UntypedProductCreatedDocument = gql`
     subscription ProductCreated {
   event {
@@ -1853,11 +1841,7 @@ export const UntypedProductCreatedDocument = gql`
     }
   }
 }
-    ${UntypedProductWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductWebhookPayloadFragmentDoc}`;
 export const UntypedProductDeletedDocument = gql`
     subscription ProductDeleted {
   event {
@@ -1901,11 +1885,7 @@ export const UntypedProductUpdatedDocument = gql`
     }
   }
 }
-    ${UntypedProductWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantBackInStockDocument = gql`
     subscription ProductVariantBackInStock {
   event {
@@ -1924,11 +1904,7 @@ export const UntypedProductVariantBackInStockDocument = gql`
     }
   }
 }
-    ${UntypedProductVariantWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductVariantWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantCreatedDocument = gql`
     subscription ProductVariantCreated {
   event {
@@ -1947,11 +1923,7 @@ export const UntypedProductVariantCreatedDocument = gql`
     }
   }
 }
-    ${UntypedProductVariantWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductVariantWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantDeletedDocument = gql`
     subscription ProductVariantDeleted {
   event {
@@ -1991,11 +1963,7 @@ export const UntypedProductVariantOutOfStockDocument = gql`
     }
   }
 }
-    ${UntypedProductVariantWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductVariantWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantUpdatedDocument = gql`
     subscription ProductVariantUpdated {
   event {
@@ -2014,11 +1982,7 @@ export const UntypedProductVariantUpdatedDocument = gql`
     }
   }
 }
-    ${UntypedProductVariantWebhookPayloadFragmentDoc}
-${UntypedProductVariantDataFragmentDoc}
-${UntypedMetadataItemFragmentDoc}
-${UntypedProductAttributesDataFragmentDoc}
-${UntypedProductDataFragmentDoc}`;
+    ${UntypedProductVariantWebhookPayloadFragmentDoc}`;
 export const MetadataItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MetadataItem"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MetadataItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]} as unknown as DocumentNode<MetadataItemFragment, unknown>;
 export const CategoryDataFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"CategoryData"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Category"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"level"}},{"kind":"Field","name":{"kind":"Name","value":"ancestors"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"metadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MetadataItem"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MetadataItem"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MetadataItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]} as unknown as DocumentNode<CategoryDataFragment, unknown>;
 export const OwnWebhookFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"OwnWebhook"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"targetUrl"}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"eventDeliveries"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"attempts"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"responseStatusCode"}}]}}]}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode<OwnWebhookFragment, unknown>;

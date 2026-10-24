@@ -36050,7 +36050,8 @@ export const UntypedPaymentGatewayInitializeSessionEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}`;
 export const UntypedSyncWebhookTransactionFragmentDoc = gql`
     fragment SyncWebhookTransaction on TransactionItem {
   id
@@ -36081,7 +36082,10 @@ export const UntypedTransactionCancelRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}
+${UntypedSyncWebhookTransactionFragmentDoc}
+${UntypedMoneyFragmentDoc}`;
 export const UntypedTransactionChargeRequestedEventFragmentDoc = gql`
     fragment TransactionChargeRequestedEvent on TransactionChargeRequested {
   ...BasicWebhookMetadata
@@ -36100,7 +36104,10 @@ export const UntypedTransactionChargeRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}
+${UntypedSyncWebhookTransactionFragmentDoc}
+${UntypedMoneyFragmentDoc}`;
 export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
     fragment TransactionInitializeSessionEvent on TransactionInitializeSession {
   ...BasicWebhookMetadata
@@ -36125,7 +36132,9 @@ export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
     ...SyncWebhookTransaction
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}
+${UntypedSyncWebhookTransactionFragmentDoc}`;
 export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     fragment TransactionProcessSessionEvent on TransactionProcessSession {
   ...BasicWebhookMetadata
@@ -36144,7 +36153,9 @@ export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     ...SyncWebhookTransaction
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}
+${UntypedSyncWebhookTransactionFragmentDoc}`;
 export const UntypedTransactionRefundRequestedEventFragmentDoc = gql`
     fragment TransactionRefundRequestedEvent on TransactionRefundRequested {
   ...BasicWebhookMetadata
@@ -36163,7 +36174,10 @@ export const UntypedTransactionRefundRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedBasicWebhookMetadataFragmentDoc}
+${UntypedPaymentGatewayRecipientFragmentDoc}
+${UntypedSyncWebhookTransactionFragmentDoc}
+${UntypedMoneyFragmentDoc}`;
 export const UntypedTransactionFragmentDoc = gql`
     fragment Transaction on TransactionItem {
   id
@@ -36209,7 +36223,7 @@ export const UntypedTransactionFragmentDoc = gql`
     id
   }
 }
-    `;
+    ${UntypedMoneyFragmentDoc}`;
 export const UntypedCompleteCheckoutDocument = gql`
     mutation CompleteCheckout($id: ID!) {
   checkoutComplete(id: $id) {
@@ -36468,8 +36482,7 @@ export const UntypedTransactionDetailsViaIdDocument = gql`
     ...Transaction
   }
 }
-    ${UntypedTransactionFragmentDoc}
-${UntypedMoneyFragmentDoc}`;
+    ${UntypedTransactionFragmentDoc}`;
 
 export function useTransactionDetailsViaIdQuery(options: Omit<Urql.UseQueryArgs<TransactionDetailsViaIdQueryVariables>, 'query'>) {
   return Urql.useQuery<TransactionDetailsViaIdQuery, TransactionDetailsViaIdQueryVariables>({ query: UntypedTransactionDetailsViaIdDocument, ...options });
@@ -36488,8 +36501,7 @@ export const UntypedTransactionDetailsViaPspDocument = gql`
     }
   }
 }
-    ${UntypedTransactionFragmentDoc}
-${UntypedMoneyFragmentDoc}`;
+    ${UntypedTransactionFragmentDoc}`;
 
 export function useTransactionDetailsViaPspQuery(options: Omit<Urql.UseQueryArgs<TransactionDetailsViaPspQueryVariables>, 'query'>) {
   return Urql.useQuery<TransactionDetailsViaPspQuery, TransactionDetailsViaPspQueryVariables>({ query: UntypedTransactionDetailsViaPspDocument, ...options });
@@ -36500,9 +36512,7 @@ export const UntypedPaymentGatewayInitializeSessionDocument = gql`
     ...PaymentGatewayInitializeSessionEvent
   }
 }
-    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}`;
+    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}`;
 
 export function usePaymentGatewayInitializeSessionSubscription<TData = PaymentGatewayInitializeSessionSubscription>(options?: Omit<Urql.UseSubscriptionArgs<PaymentGatewayInitializeSessionSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<PaymentGatewayInitializeSessionSubscription, TData>) {
   return Urql.useSubscription<PaymentGatewayInitializeSessionSubscription, TData, PaymentGatewayInitializeSessionSubscriptionVariables>({ query: UntypedPaymentGatewayInitializeSessionDocument, ...options }, handler);
@@ -36513,11 +36523,7 @@ export const UntypedTransactionCancelRequestedDocument = gql`
     ...TransactionCancelRequestedEvent
   }
 }
-    ${UntypedTransactionCancelRequestedEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}
-${UntypedSyncWebhookTransactionFragmentDoc}
-${UntypedMoneyFragmentDoc}`;
+    ${UntypedTransactionCancelRequestedEventFragmentDoc}`;
 
 export function useTransactionCancelRequestedSubscription<TData = TransactionCancelRequestedSubscription>(options?: Omit<Urql.UseSubscriptionArgs<TransactionCancelRequestedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TransactionCancelRequestedSubscription, TData>) {
   return Urql.useSubscription<TransactionCancelRequestedSubscription, TData, TransactionCancelRequestedSubscriptionVariables>({ query: UntypedTransactionCancelRequestedDocument, ...options }, handler);
@@ -36528,11 +36534,7 @@ export const UntypedTransactionChargeRequestedDocument = gql`
     ...TransactionChargeRequestedEvent
   }
 }
-    ${UntypedTransactionChargeRequestedEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}
-${UntypedSyncWebhookTransactionFragmentDoc}
-${UntypedMoneyFragmentDoc}`;
+    ${UntypedTransactionChargeRequestedEventFragmentDoc}`;
 
 export function useTransactionChargeRequestedSubscription<TData = TransactionChargeRequestedSubscription>(options?: Omit<Urql.UseSubscriptionArgs<TransactionChargeRequestedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TransactionChargeRequestedSubscription, TData>) {
   return Urql.useSubscription<TransactionChargeRequestedSubscription, TData, TransactionChargeRequestedSubscriptionVariables>({ query: UntypedTransactionChargeRequestedDocument, ...options }, handler);
@@ -36543,10 +36545,7 @@ export const UntypedTransactionInitializeSessionDocument = gql`
     ...TransactionInitializeSessionEvent
   }
 }
-    ${UntypedTransactionInitializeSessionEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}
-${UntypedSyncWebhookTransactionFragmentDoc}`;
+    ${UntypedTransactionInitializeSessionEventFragmentDoc}`;
 
 export function useTransactionInitializeSessionSubscription<TData = TransactionInitializeSessionSubscription>(options?: Omit<Urql.UseSubscriptionArgs<TransactionInitializeSessionSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TransactionInitializeSessionSubscription, TData>) {
   return Urql.useSubscription<TransactionInitializeSessionSubscription, TData, TransactionInitializeSessionSubscriptionVariables>({ query: UntypedTransactionInitializeSessionDocument, ...options }, handler);
@@ -36557,10 +36556,7 @@ export const UntypedTransactionProcessSessionDocument = gql`
     ...TransactionProcessSessionEvent
   }
 }
-    ${UntypedTransactionProcessSessionEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}
-${UntypedSyncWebhookTransactionFragmentDoc}`;
+    ${UntypedTransactionProcessSessionEventFragmentDoc}`;
 
 export function useTransactionProcessSessionSubscription<TData = TransactionProcessSessionSubscription>(options?: Omit<Urql.UseSubscriptionArgs<TransactionProcessSessionSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TransactionProcessSessionSubscription, TData>) {
   return Urql.useSubscription<TransactionProcessSessionSubscription, TData, TransactionProcessSessionSubscriptionVariables>({ query: UntypedTransactionProcessSessionDocument, ...options }, handler);
@@ -36571,11 +36567,7 @@ export const UntypedTransactionRefundRequestedDocument = gql`
     ...TransactionRefundRequestedEvent
   }
 }
-    ${UntypedTransactionRefundRequestedEventFragmentDoc}
-${UntypedBasicWebhookMetadataFragmentDoc}
-${UntypedPaymentGatewayRecipientFragmentDoc}
-${UntypedSyncWebhookTransactionFragmentDoc}
-${UntypedMoneyFragmentDoc}`;
+    ${UntypedTransactionRefundRequestedEventFragmentDoc}`;
 
 export function useTransactionRefundRequestedSubscription<TData = TransactionRefundRequestedSubscription>(options?: Omit<Urql.UseSubscriptionArgs<TransactionRefundRequestedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TransactionRefundRequestedSubscription, TData>) {
   return Urql.useSubscription<TransactionRefundRequestedSubscription, TData, TransactionRefundRequestedSubscriptionVariables>({ query: UntypedTransactionRefundRequestedDocument, ...options }, handler);

@@ -200,7 +200,7 @@ export const UntypedProductUpdatedWebhookPayloadFragmentDoc = gql`
     ...WebhookProduct
   }
 }
-    `;
+    ${UntypedWebhookProductFragmentDoc}`;
 export const UntypedWebhookProductVariantFragmentDoc = gql`
     fragment WebhookProductVariant on ProductVariant {
   id
@@ -230,7 +230,7 @@ export const UntypedProductVariantCreatedWebhookPayloadFragmentDoc = gql`
     ...WebhookProductVariant
   }
 }
-    `;
+    ${UntypedWebhookProductVariantFragmentDoc}`;
 export const UntypedProductVariantDeletedWebhookPayloadFragmentDoc = gql`
     fragment ProductVariantDeletedWebhookPayload on ProductVariantDeleted {
   version
@@ -238,7 +238,7 @@ export const UntypedProductVariantDeletedWebhookPayloadFragmentDoc = gql`
     ...WebhookProductVariant
   }
 }
-    `;
+    ${UntypedWebhookProductVariantFragmentDoc}`;
 export const UntypedProductVariantUpdatedWebhookPayloadFragmentDoc = gql`
     fragment ProductVariantUpdatedWebhookPayload on ProductVariantUpdated {
   version
@@ -246,7 +246,7 @@ export const UntypedProductVariantUpdatedWebhookPayloadFragmentDoc = gql`
     ...WebhookProductVariant
   }
 }
-    `;
+    ${UntypedWebhookProductVariantFragmentDoc}`;
 export const UntypedUpdateAppMetadataDocument = gql`
     mutation UpdateAppMetadata($id: ID!, $input: [MetadataInput!]!) {
   updatePrivateMetadata(id: $id, input: $input) {
@@ -289,32 +289,28 @@ export const UntypedProductUpdatedDocument = gql`
     ...ProductUpdatedWebhookPayload
   }
 }
-    ${UntypedProductUpdatedWebhookPayloadFragmentDoc}
-${UntypedWebhookProductFragmentDoc}`;
+    ${UntypedProductUpdatedWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantCreatedDocument = gql`
     subscription ProductVariantCreated {
   event {
     ...ProductVariantCreatedWebhookPayload
   }
 }
-    ${UntypedProductVariantCreatedWebhookPayloadFragmentDoc}
-${UntypedWebhookProductVariantFragmentDoc}`;
+    ${UntypedProductVariantCreatedWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantDeletedDocument = gql`
     subscription ProductVariantDeleted {
   event {
     ...ProductVariantDeletedWebhookPayload
   }
 }
-    ${UntypedProductVariantDeletedWebhookPayloadFragmentDoc}
-${UntypedWebhookProductVariantFragmentDoc}`;
+    ${UntypedProductVariantDeletedWebhookPayloadFragmentDoc}`;
 export const UntypedProductVariantUpdatedDocument = gql`
     subscription ProductVariantUpdated {
   event {
     ...ProductVariantUpdatedWebhookPayload
   }
 }
-    ${UntypedProductVariantUpdatedWebhookPayloadFragmentDoc}
-${UntypedWebhookProductVariantFragmentDoc}`;
+    ${UntypedProductVariantUpdatedWebhookPayloadFragmentDoc}`;
 export const BulkImportProductFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BulkImportProduct"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Product"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"variants"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"sku"}},{"kind":"Field","name":{"kind":"Name","value":"channelListings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}},{"kind":"Field","name":{"kind":"Name","value":"price"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}}]}}]}}]}}]} as unknown as DocumentNode<BulkImportProductFragment, unknown>;
 export const WebhookProductFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookProduct"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Product"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"channelListings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"variants"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"channelListings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}},{"kind":"Field","name":{"kind":"Name","value":"price"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}}]}}]}}]}}]} as unknown as DocumentNode<WebhookProductFragment, unknown>;
 export const ProductUpdatedWebhookPayloadFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ProductUpdatedWebhookPayload"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ProductUpdated"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"product"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"WebhookProduct"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookProduct"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Product"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"channelListings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"variants"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"channelListings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}},{"kind":"Field","name":{"kind":"Name","value":"price"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}}]}}]}}]}}]} as unknown as DocumentNode<ProductUpdatedWebhookPayloadFragment, unknown>;

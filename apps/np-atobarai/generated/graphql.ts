@@ -34688,7 +34688,8 @@ export const UntypedFulfillmentTrackingNumberUpdatedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedChannelFragmentDoc}`;
 export const UntypedAddressFragmentDoc = gql`
     fragment Address on Address {
   firstName
@@ -34795,7 +34796,8 @@ export const UntypedSourceObjectFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedChannelFragmentDoc}
+${UntypedAddressFragmentDoc}`;
 export const UntypedPaymentGatewayInitializeSessionEventFragmentDoc = gql`
     fragment PaymentGatewayInitializeSessionEvent on PaymentGatewayInitializeSession {
   ...EventMetadata
@@ -34803,7 +34805,8 @@ export const UntypedPaymentGatewayInitializeSessionEventFragmentDoc = gql`
     ...SourceObject
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
     fragment TransactionInitializeSessionEvent on TransactionInitializeSession {
   ...EventMetadata
@@ -34818,7 +34821,8 @@ export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
     ...SourceObject
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     fragment TransactionProcessSessionEvent on TransactionProcessSession {
   ...EventMetadata
@@ -34834,7 +34838,8 @@ export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     ...SourceObject
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedOrderGrantedRefundFragmentDoc = gql`
     fragment OrderGrantedRefund on OrderGrantedRefund {
   shippingCostsIncluded
@@ -34870,7 +34875,9 @@ export const UntypedTransactionRefundRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedOrderGrantedRefundFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedOrderNoteAddDocument = gql`
     mutation OrderNoteAdd($order: ID!, $input: OrderNoteInput!) {
   orderNoteAdd(order: $order, input: $input) {
@@ -34898,54 +34905,35 @@ export const UntypedFulfillmentTrackingNumberUpdatedDocument = gql`
     ...FulfillmentTrackingNumberUpdatedEvent
   }
 }
-    ${UntypedFulfillmentTrackingNumberUpdatedEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedFulfillmentTrackingNumberUpdatedEventFragmentDoc}`;
 export const UntypedPaymentGatewayInitializeSessionDocument = gql`
     subscription PaymentGatewayInitializeSession {
   event {
     ...PaymentGatewayInitializeSessionEvent
   }
 }
-    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}
-${UntypedAddressFragmentDoc}`;
+    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}`;
 export const UntypedTransactionInitializeSessionDocument = gql`
     subscription TransactionInitializeSession {
   event {
     ...TransactionInitializeSessionEvent
   }
 }
-    ${UntypedTransactionInitializeSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}
-${UntypedAddressFragmentDoc}`;
+    ${UntypedTransactionInitializeSessionEventFragmentDoc}`;
 export const UntypedTransactionProcessSessionDocument = gql`
     subscription TransactionProcessSession {
   event {
     ...TransactionProcessSessionEvent
   }
 }
-    ${UntypedTransactionProcessSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}
-${UntypedAddressFragmentDoc}`;
+    ${UntypedTransactionProcessSessionEventFragmentDoc}`;
 export const UntypedTransactionRefundRequestedDocument = gql`
     subscription TransactionRefundRequested {
   event {
     ...TransactionRefundRequestedEvent
   }
 }
-    ${UntypedTransactionRefundRequestedEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedOrderGrantedRefundFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}
-${UntypedAddressFragmentDoc}`;
+    ${UntypedTransactionRefundRequestedEventFragmentDoc}`;
 export const EventMetadataFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"EventMetadata"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Event"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"issuedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipient"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<EventMetadataFragment, unknown>;
 export const ChannelFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Channel"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Channel"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"currencyCode"}}]}}]} as unknown as DocumentNode<ChannelFragment, unknown>;
 export const FulfillmentTrackingNumberUpdatedEventFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"FulfillmentTrackingNumberUpdatedEvent"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"FulfillmentTrackingNumberUpdated"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"EventMetadata"}},{"kind":"Field","name":{"kind":"Name","value":"fulfillment"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"trackingNumber"}},{"kind":"Field","alias":{"kind":"Name","value":"atobaraiPDCompanyCode"},"name":{"kind":"Name","value":"privateMetafield"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"key"},"value":{"kind":"StringValue","value":"np-atobarai.pd-company-code","block":false}}]}]}},{"kind":"Field","name":{"kind":"Name","value":"order"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"channel"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"Channel"}}]}},{"kind":"Field","name":{"kind":"Name","value":"transactions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pspReference"}},{"kind":"Field","name":{"kind":"Name","value":"events"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"InlineFragment","typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"App"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"__typename"}},{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"InlineFragment","typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"__typename"}}]}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"EventMetadata"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Event"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"issuedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipient"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Channel"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Channel"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"currencyCode"}}]}}]} as unknown as DocumentNode<FulfillmentTrackingNumberUpdatedEventFragment, unknown>;

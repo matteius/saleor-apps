@@ -2953,7 +2953,7 @@ export const UntypedInvoiceSentWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderCancelledWebhookPayloadFragmentDoc = gql`
     fragment OrderCancelledWebhookPayload on OrderCancelled {
   version
@@ -2961,7 +2961,7 @@ export const UntypedOrderCancelledWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderConfirmedWebhookPayloadFragmentDoc = gql`
     fragment OrderConfirmedWebhookPayload on OrderConfirmed {
   version
@@ -2969,7 +2969,7 @@ export const UntypedOrderConfirmedWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderCreatedWebhookPayloadFragmentDoc = gql`
     fragment OrderCreatedWebhookPayload on OrderCreated {
   version
@@ -2977,7 +2977,7 @@ export const UntypedOrderCreatedWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderFulfilledWebhookPayloadFragmentDoc = gql`
     fragment OrderFulfilledWebhookPayload on OrderFulfilled {
   version
@@ -2985,7 +2985,7 @@ export const UntypedOrderFulfilledWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderFullyPaidWebhookPayloadFragmentDoc = gql`
     fragment OrderFullyPaidWebhookPayload on OrderFullyPaid {
   version
@@ -2993,7 +2993,7 @@ export const UntypedOrderFullyPaidWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedOrderRefundedWebhookPayloadFragmentDoc = gql`
     fragment OrderRefundedWebhookPayload on OrderRefunded {
   version
@@ -3001,7 +3001,7 @@ export const UntypedOrderRefundedWebhookPayloadFragmentDoc = gql`
     ...OrderDetails
   }
 }
-    `;
+    ${UntypedOrderDetailsFragmentDoc}`;
 export const UntypedShopDetailsDocument = gql`
     query ShopDetails {
   shop {
@@ -3081,56 +3081,49 @@ export const UntypedInvoiceSentDocument = gql`
     ...InvoiceSentWebhookPayload
   }
 }
-    ${UntypedInvoiceSentWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedInvoiceSentWebhookPayloadFragmentDoc}`;
 export const UntypedOrderCancelledDocument = gql`
     subscription OrderCancelled {
   event {
     ...OrderCancelledWebhookPayload
   }
 }
-    ${UntypedOrderCancelledWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderCancelledWebhookPayloadFragmentDoc}`;
 export const UntypedOrderConfirmedDocument = gql`
     subscription OrderConfirmed {
   event {
     ...OrderConfirmedWebhookPayload
   }
 }
-    ${UntypedOrderConfirmedWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderConfirmedWebhookPayloadFragmentDoc}`;
 export const UntypedOrderCreatedDocument = gql`
     subscription OrderCreated {
   event {
     ...OrderCreatedWebhookPayload
   }
 }
-    ${UntypedOrderCreatedWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderCreatedWebhookPayloadFragmentDoc}`;
 export const UntypedOrderFulfilledDocument = gql`
     subscription OrderFulfilled {
   event {
     ...OrderFulfilledWebhookPayload
   }
 }
-    ${UntypedOrderFulfilledWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderFulfilledWebhookPayloadFragmentDoc}`;
 export const UntypedOrderFullyPaidDocument = gql`
     subscription OrderFullyPaid {
   event {
     ...OrderFullyPaidWebhookPayload
   }
 }
-    ${UntypedOrderFullyPaidWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderFullyPaidWebhookPayloadFragmentDoc}`;
 export const UntypedOrderRefundedDocument = gql`
     subscription OrderRefunded {
   event {
     ...OrderRefundedWebhookPayload
   }
 }
-    ${UntypedOrderRefundedWebhookPayloadFragmentDoc}
-${UntypedOrderDetailsFragmentDoc}`;
+    ${UntypedOrderRefundedWebhookPayloadFragmentDoc}`;
 export const ChannelFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Channel"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Channel"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]} as unknown as DocumentNode<ChannelFragment, unknown>;
 export const WebhookDetailsFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookDetails"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}}]}}]} as unknown as DocumentNode<WebhookDetailsFragment, unknown>;
 export const GiftCardSentWebhookPayloadFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"GiftCardSentWebhookPayload"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"GiftCardSent"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"giftCard"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"displayCode"}},{"kind":"Field","name":{"kind":"Name","value":"last4CodeChars"}},{"kind":"Field","name":{"kind":"Name","value":"created"}},{"kind":"Field","name":{"kind":"Name","value":"usedByEmail"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}},{"kind":"Field","name":{"kind":"Name","value":"privateMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}},{"kind":"Field","name":{"kind":"Name","value":"initialBalance"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"currentBalance"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"expiryDate"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedOn"}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"sentToEmail"}},{"kind":"Field","name":{"kind":"Name","value":"channel"}}]}}]} as unknown as DocumentNode<GiftCardSentWebhookPayloadFragment, unknown>;

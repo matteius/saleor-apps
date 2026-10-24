@@ -3180,7 +3180,7 @@ export const UntypedSourceObjectFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedChannelFragmentDoc}`;
 export const UntypedPaymentGatewayInitializeSessionEventFragmentDoc = gql`
     fragment PaymentGatewayInitializeSessionEvent on PaymentGatewayInitializeSession {
   ...EventMetadata
@@ -3188,7 +3188,8 @@ export const UntypedPaymentGatewayInitializeSessionEventFragmentDoc = gql`
     ...SourceObject
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedTransactionCancelationRequestedEventFragmentDoc = gql`
     fragment TransactionCancelationRequestedEvent on TransactionCancelationRequested {
   ...EventMetadata
@@ -3210,7 +3211,8 @@ export const UntypedTransactionCancelationRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedChannelFragmentDoc}`;
 export const UntypedTransactionChargeRequestedEventFragmentDoc = gql`
     fragment TransactionChargeRequestedEvent on TransactionChargeRequested {
   ...EventMetadata
@@ -3237,7 +3239,8 @@ export const UntypedTransactionChargeRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedChannelFragmentDoc}`;
 export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
     fragment TransactionInitializeSessionEvent on TransactionInitializeSession {
   ...EventMetadata
@@ -3255,7 +3258,8 @@ export const UntypedTransactionInitializeSessionEventFragmentDoc = gql`
   }
   idempotencyKey
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     fragment TransactionProcessSessionEvent on TransactionProcessSession {
   ...EventMetadata
@@ -3270,7 +3274,8 @@ export const UntypedTransactionProcessSessionEventFragmentDoc = gql`
     ...SourceObject
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedSourceObjectFragmentDoc}`;
 export const UntypedTransactionRefundRequestedEventFragmentDoc = gql`
     fragment TransactionRefundRequestedEvent on TransactionRefundRequested {
   ...EventMetadata
@@ -3298,7 +3303,8 @@ export const UntypedTransactionRefundRequestedEventFragmentDoc = gql`
     }
   }
 }
-    `;
+    ${UntypedEventMetadataFragmentDoc}
+${UntypedChannelFragmentDoc}`;
 export const UntypedSubscriptionCustomerCreateDocument = gql`
     mutation SubscriptionCustomerCreate($input: UserCreateInput!) {
   customerCreate(input: $input) {
@@ -3442,57 +3448,42 @@ export const UntypedPaymentGatewayInitializeSessionDocument = gql`
     ...PaymentGatewayInitializeSessionEvent
   }
 }
-    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedPaymentGatewayInitializeSessionEventFragmentDoc}`;
 export const UntypedTransactionCancelationRequestedDocument = gql`
     subscription TransactionCancelationRequested {
   event {
     ...TransactionCancelationRequestedEvent
   }
 }
-    ${UntypedTransactionCancelationRequestedEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedTransactionCancelationRequestedEventFragmentDoc}`;
 export const UntypedTransactionChargeRequestedDocument = gql`
     subscription TransactionChargeRequested {
   event {
     ...TransactionChargeRequestedEvent
   }
 }
-    ${UntypedTransactionChargeRequestedEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedTransactionChargeRequestedEventFragmentDoc}`;
 export const UntypedTransactionInitializeSessionDocument = gql`
     subscription TransactionInitializeSession {
   event {
     ...TransactionInitializeSessionEvent
   }
 }
-    ${UntypedTransactionInitializeSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedTransactionInitializeSessionEventFragmentDoc}`;
 export const UntypedTransactionProcessSessionDocument = gql`
     subscription TransactionProcessSession {
   event {
     ...TransactionProcessSessionEvent
   }
 }
-    ${UntypedTransactionProcessSessionEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedSourceObjectFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedTransactionProcessSessionEventFragmentDoc}`;
 export const UntypedTransactionRefundRequestedDocument = gql`
     subscription TransactionRefundRequested {
   event {
     ...TransactionRefundRequestedEvent
   }
 }
-    ${UntypedTransactionRefundRequestedEventFragmentDoc}
-${UntypedEventMetadataFragmentDoc}
-${UntypedChannelFragmentDoc}`;
+    ${UntypedTransactionRefundRequestedEventFragmentDoc}`;
 export const ConfigChannelFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ConfigChannel"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Channel"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"currencyCode"}}]}}]} as unknown as DocumentNode<ConfigChannelFragment, unknown>;
 export const EventMetadataFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"EventMetadata"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Event"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"recipient"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<EventMetadataFragment, unknown>;
 export const ChannelFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Channel"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Channel"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]} as unknown as DocumentNode<ChannelFragment, unknown>;

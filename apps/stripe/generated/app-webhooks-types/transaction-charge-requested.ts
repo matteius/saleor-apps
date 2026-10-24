@@ -6,9 +6,7 @@
  */
 
 export type TransactionChargeRequested =
-  | TransactionChargeRequestedSyncSuccess
-  | TransactionChargeRequestedSyncFailure
-  | TransactionChargeRequestedAsync;
+  TransactionChargeRequestedSyncSuccess | TransactionChargeRequestedSyncFailure | TransactionChargeRequestedAsync;
 /**
  * PSP reference received from payment provider.
  */

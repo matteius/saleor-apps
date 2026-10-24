@@ -1806,7 +1806,8 @@ export const UntypedCustomerCreatedWebhookPayloadFragmentDoc = gql`
     languageCode
   }
 }
-    `;
+    ${UntypedAddressFragmentFragmentDoc}
+${UntypedMetadataFragmentFragmentDoc}`;
 export const UntypedMoneyFragmentFragmentDoc = gql`
     fragment MoneyFragment on Money {
   amount
@@ -1823,7 +1824,7 @@ export const UntypedTaxedMoneyFragmentFragmentDoc = gql`
     ...MoneyFragment
   }
 }
-    `;
+    ${UntypedMoneyFragmentFragmentDoc}`;
 export const UntypedPaymentFragmentFragmentDoc = gql`
     fragment PaymentFragment on Payment {
   __typename
@@ -1844,7 +1845,7 @@ export const UntypedPaymentFragmentFragmentDoc = gql`
   }
   paymentMethodType
 }
-    `;
+    ${UntypedMoneyFragmentFragmentDoc}`;
 export const UntypedOrderFragmentFragmentDoc = gql`
     fragment OrderFragment on Order {
   __typename
@@ -1935,7 +1936,10 @@ export const UntypedOrderFragmentFragmentDoc = gql`
     unit
   }
 }
-    `;
+    ${UntypedAddressFragmentFragmentDoc}
+${UntypedTaxedMoneyFragmentFragmentDoc}
+${UntypedPaymentFragmentFragmentDoc}
+${UntypedMetadataFragmentFragmentDoc}`;
 export const UntypedFulfillmentCreatedWebhookPayloadFragmentDoc = gql`
     fragment FulfillmentCreatedWebhookPayload on FulfillmentCreated {
   version
@@ -1972,7 +1976,9 @@ export const UntypedFulfillmentCreatedWebhookPayloadFragmentDoc = gql`
     ...OrderFragment
   }
 }
-    `;
+    ${UntypedAddressFragmentFragmentDoc}
+${UntypedTaxedMoneyFragmentFragmentDoc}
+${UntypedOrderFragmentFragmentDoc}`;
 export const UntypedOrderCreatedWebhookPayloadFragmentDoc = gql`
     fragment OrderCreatedWebhookPayload on OrderCreated {
   version
@@ -1980,7 +1986,7 @@ export const UntypedOrderCreatedWebhookPayloadFragmentDoc = gql`
     ...OrderFragment
   }
 }
-    `;
+    ${UntypedOrderFragmentFragmentDoc}`;
 export const UntypedOrderFullyPaidWebhookPayloadFragmentDoc = gql`
     fragment OrderFullyPaidWebhookPayload on OrderFullyPaid {
   version
@@ -1988,7 +1994,7 @@ export const UntypedOrderFullyPaidWebhookPayloadFragmentDoc = gql`
     ...OrderFragment
   }
 }
-    `;
+    ${UntypedOrderFragmentFragmentDoc}`;
 export const UntypedDeleteAppMetadataDocument = gql`
     mutation DeleteAppMetadata($id: ID!, $keys: [String!]!) {
   deletePrivateMetadata(id: $id, keys: $keys) {
@@ -2030,48 +2036,28 @@ export const UntypedCustomerCreatedDocument = gql`
     ...CustomerCreatedWebhookPayload
   }
 }
-    ${UntypedCustomerCreatedWebhookPayloadFragmentDoc}
-${UntypedAddressFragmentFragmentDoc}
-${UntypedMetadataFragmentFragmentDoc}`;
+    ${UntypedCustomerCreatedWebhookPayloadFragmentDoc}`;
 export const UntypedFulfillmentCreatedDocument = gql`
     subscription FulfillmentCreated {
   event {
     ...FulfillmentCreatedWebhookPayload
   }
 }
-    ${UntypedFulfillmentCreatedWebhookPayloadFragmentDoc}
-${UntypedAddressFragmentFragmentDoc}
-${UntypedTaxedMoneyFragmentFragmentDoc}
-${UntypedMoneyFragmentFragmentDoc}
-${UntypedOrderFragmentFragmentDoc}
-${UntypedPaymentFragmentFragmentDoc}
-${UntypedMetadataFragmentFragmentDoc}`;
+    ${UntypedFulfillmentCreatedWebhookPayloadFragmentDoc}`;
 export const UntypedOrderCreatedDocument = gql`
     subscription OrderCreated {
   event {
     ...OrderCreatedWebhookPayload
   }
 }
-    ${UntypedOrderCreatedWebhookPayloadFragmentDoc}
-${UntypedOrderFragmentFragmentDoc}
-${UntypedAddressFragmentFragmentDoc}
-${UntypedTaxedMoneyFragmentFragmentDoc}
-${UntypedMoneyFragmentFragmentDoc}
-${UntypedPaymentFragmentFragmentDoc}
-${UntypedMetadataFragmentFragmentDoc}`;
+    ${UntypedOrderCreatedWebhookPayloadFragmentDoc}`;
 export const UntypedOrderFullyPaidDocument = gql`
     subscription OrderFullyPaid {
   event {
     ...OrderFullyPaidWebhookPayload
   }
 }
-    ${UntypedOrderFullyPaidWebhookPayloadFragmentDoc}
-${UntypedOrderFragmentFragmentDoc}
-${UntypedAddressFragmentFragmentDoc}
-${UntypedTaxedMoneyFragmentFragmentDoc}
-${UntypedMoneyFragmentFragmentDoc}
-${UntypedPaymentFragmentFragmentDoc}
-${UntypedMetadataFragmentFragmentDoc}`;
+    ${UntypedOrderFullyPaidWebhookPayloadFragmentDoc}`;
 export const AddressFragmentFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AddressFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Address"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"__typename"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"companyName"}},{"kind":"Field","name":{"kind":"Name","value":"streetAddress1"}},{"kind":"Field","name":{"kind":"Name","value":"streetAddress2"}},{"kind":"Field","name":{"kind":"Name","value":"city"}},{"kind":"Field","name":{"kind":"Name","value":"cityArea"}},{"kind":"Field","name":{"kind":"Name","value":"postalCode"}},{"kind":"Field","name":{"kind":"Name","value":"country"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"code"}}]}},{"kind":"Field","name":{"kind":"Name","value":"countryArea"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}}]}}]} as unknown as DocumentNode<AddressFragmentFragment, unknown>;
 export const MetadataFragmentFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MetadataFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MetadataItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]} as unknown as DocumentNode<MetadataFragmentFragment, unknown>;
 export const CustomerCreatedWebhookPayloadFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"CustomerCreatedWebhookPayload"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"CustomerCreated"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"__typename"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"defaultShippingAddress"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"AddressFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultBillingAddress"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"AddressFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"addresses"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"AddressFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"privateMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MetadataFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"metadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MetadataFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"dateJoined"}},{"kind":"Field","name":{"kind":"Name","value":"languageCode"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AddressFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Address"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"__typename"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"companyName"}},{"kind":"Field","name":{"kind":"Name","value":"streetAddress1"}},{"kind":"Field","name":{"kind":"Name","value":"streetAddress2"}},{"kind":"Field","name":{"kind":"Name","value":"city"}},{"kind":"Field","name":{"kind":"Name","value":"cityArea"}},{"kind":"Field","name":{"kind":"Name","value":"postalCode"}},{"kind":"Field","name":{"kind":"Name","value":"country"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"code"}}]}},{"kind":"Field","name":{"kind":"Name","value":"countryArea"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MetadataFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MetadataItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]} as unknown as DocumentNode<CustomerCreatedWebhookPayloadFragment, unknown>;

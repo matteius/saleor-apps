@@ -6,9 +6,7 @@
  */
 
 export type TransactionRefundRequested =
-  | TransactionRefundRequestedSyncSuccess
-  | TransactionRefundRequestedSyncFailure
-  | TransactionRefundRequestedAsync;
+  TransactionRefundRequestedSyncSuccess | TransactionRefundRequestedSyncFailure | TransactionRefundRequestedAsync;
 /**
  * PSP reference received from payment provider.
  */

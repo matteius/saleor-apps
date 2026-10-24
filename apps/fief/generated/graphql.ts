@@ -2599,7 +2599,7 @@ export const UntypedFiefCustomerCreatedEventFragmentDoc = gql`
     ...SaleorCustomerEventUser
   }
 }
-    `;
+    ${UntypedSaleorCustomerEventUserFragmentDoc}`;
 export const UntypedFiefCustomerDeletedEventFragmentDoc = gql`
     fragment FiefCustomerDeletedEvent on CustomerDeleted {
   version
@@ -2607,7 +2607,7 @@ export const UntypedFiefCustomerDeletedEventFragmentDoc = gql`
     ...SaleorCustomerEventUser
   }
 }
-    `;
+    ${UntypedSaleorCustomerEventUserFragmentDoc}`;
 export const UntypedFiefCustomerMetadataUpdatedEventFragmentDoc = gql`
     fragment FiefCustomerMetadataUpdatedEvent on CustomerMetadataUpdated {
   version
@@ -2615,7 +2615,7 @@ export const UntypedFiefCustomerMetadataUpdatedEventFragmentDoc = gql`
     ...SaleorCustomerEventUser
   }
 }
-    `;
+    ${UntypedSaleorCustomerEventUserFragmentDoc}`;
 export const UntypedFiefCustomerUpdatedEventFragmentDoc = gql`
     fragment FiefCustomerUpdatedEvent on CustomerUpdated {
   version
@@ -2623,7 +2623,7 @@ export const UntypedFiefCustomerUpdatedEventFragmentDoc = gql`
     ...SaleorCustomerEventUser
   }
 }
-    `;
+    ${UntypedSaleorCustomerEventUserFragmentDoc}`;
 export const UntypedFiefCustomerBulkUpdateDocument = gql`
     mutation FiefCustomerBulkUpdate($customers: [CustomerBulkUpdateInput!]!, $errorPolicy: ErrorPolicyEnum) {
   customerBulkUpdate(customers: $customers, errorPolicy: $errorPolicy) {
@@ -2734,32 +2734,28 @@ export const UntypedFiefCustomerCreatedDocument = gql`
     ...FiefCustomerCreatedEvent
   }
 }
-    ${UntypedFiefCustomerCreatedEventFragmentDoc}
-${UntypedSaleorCustomerEventUserFragmentDoc}`;
+    ${UntypedFiefCustomerCreatedEventFragmentDoc}`;
 export const UntypedFiefCustomerDeletedDocument = gql`
     subscription FiefCustomerDeleted {
   event {
     ...FiefCustomerDeletedEvent
   }
 }
-    ${UntypedFiefCustomerDeletedEventFragmentDoc}
-${UntypedSaleorCustomerEventUserFragmentDoc}`;
+    ${UntypedFiefCustomerDeletedEventFragmentDoc}`;
 export const UntypedFiefCustomerMetadataUpdatedDocument = gql`
     subscription FiefCustomerMetadataUpdated {
   event {
     ...FiefCustomerMetadataUpdatedEvent
   }
 }
-    ${UntypedFiefCustomerMetadataUpdatedEventFragmentDoc}
-${UntypedSaleorCustomerEventUserFragmentDoc}`;
+    ${UntypedFiefCustomerMetadataUpdatedEventFragmentDoc}`;
 export const UntypedFiefCustomerUpdatedDocument = gql`
     subscription FiefCustomerUpdated {
   event {
     ...FiefCustomerUpdatedEvent
   }
 }
-    ${UntypedFiefCustomerUpdatedEventFragmentDoc}
-${UntypedSaleorCustomerEventUserFragmentDoc}`;
+    ${UntypedFiefCustomerUpdatedEventFragmentDoc}`;
 export const AccountErrorFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AccountError"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"AccountError"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"field"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]} as unknown as DocumentNode<AccountErrorFragment, unknown>;
 export const CustomerBulkUpdateErrorFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"CustomerBulkUpdateError"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"CustomerBulkUpdateError"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"path"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]} as unknown as DocumentNode<CustomerBulkUpdateErrorFragment, unknown>;
 export const FiefCustomerFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"FiefCustomer"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}},{"kind":"Field","name":{"kind":"Name","value":"privateMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"key"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]}}]} as unknown as DocumentNode<FiefCustomerFragment, unknown>;
