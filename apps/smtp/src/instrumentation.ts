@@ -2,6 +2,18 @@
 import type { Instrumentation } from "next";
 
 export const register = async () => {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    /*
+     * The local hosting guard must use the app's native metadata decryptor.
+     * Import its entry point so standalone tracing includes it and its dependencies.
+     */
+    const { decrypt } = await import("@saleor/app-sdk/settings-manager");
+
+    if (typeof decrypt !== "function") {
+      throw new Error("SMTP metadata decryptor is unavailable");
+    }
+  }
+
   if (process.env.NEXT_RUNTIME === "nodejs" && process.env.OTEL_ENABLED === "true") {
     await import("./instrumentations/otel-node");
   }
