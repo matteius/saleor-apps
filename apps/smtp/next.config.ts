@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   },
   bundlePagesRouterDependencies: true,
   serverExternalPackages: [
+    // The local hosting guard uses the same SDK decryptor as the app.
+    // Keep its native entry point in the standalone dependency trace.
+    "@saleor/app-sdk",
     /*
      * Share one @opentelemetry/api instance between instrumentation and routes. With a bundled
      * copy, tracers created at module load (e.g. app-sdk DynamoAPL) stay no-op when a route

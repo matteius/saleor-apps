@@ -72,5 +72,8 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/static ./apps/${APP_NAME}/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/public ./apps/${APP_NAME}/public
+RUN if [ "$APP_NAME" = "smtp" ]; then \
+      node -e "const r=require('module').createRequire('/app/apps/smtp/package.json'); if(typeof r('@saleor/app-sdk/settings-manager').decrypt!=='function') process.exit(1); r('mongodb');"; \
+    fi
 USER nextjs
 CMD ["sh", "-c", "exec node /app/apps/${SALEOR_APP_DIRECTORY}/server.js"]
