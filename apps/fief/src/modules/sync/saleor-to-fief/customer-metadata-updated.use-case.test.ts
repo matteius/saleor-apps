@@ -55,8 +55,8 @@ vi.mock("@/lib/env", () => ({
 }));
 
 const SALEOR_API_URL = createSaleorApiUrl("https://shop.example.com/graphql/")._unsafeUnwrap();
-const CONNECTION_ID = createConnectionId("11111111-1111-1111-1111-111111111111");
-const PROVIDER_CONNECTION_ID = createProviderConnectionId("11111111-1111-1111-1111-111111111111");
+const CONNECTION_ID = createConnectionId("11111111-1111-4111-8111-111111111111");
+const PROVIDER_CONNECTION_ID = createProviderConnectionId("11111111-1111-4111-8111-111111111111");
 
 const FIEF_TENANT_ID = "22222222-2222-4222-8222-222222222222";
 const FIEF_CLIENT_ID = "33333333-3333-4333-8333-333333333333";

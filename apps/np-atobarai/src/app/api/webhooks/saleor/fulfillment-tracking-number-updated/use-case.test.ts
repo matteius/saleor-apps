@@ -789,7 +789,7 @@ describe("FulfillmentTrackingNumberUpdatedUseCase", () => {
     expect(result._unsafeUnwrap().error).toBeInstanceOf(InvalidEventValidationError);
     // @ts-expect-error - we expect Failure response
     expect(result._unsafeUnwrap().error.message).toContain(
-      "Invalid shipping company code: Validation error: Invalid enum value. Expected '50000' | '59010' | '59020' | '59030' | '59040' | '59041' | '59042' | '59043' | '59050' | '59060' | '59080' | '59090' | '59110' | '59140' | '59150' | '59100' | '59160' | '55555', received 'INVALID_CODE'",
+      'Invalid shipping company code: Validation error: Invalid option: expected one of "50000"|"59010"|"59020"|"59030"|"59040"|"59041"|"59042"|"59043"|"59050"|"59060"|"59080"|"59090"|"59110"|"59140"|"59150"|"59100"|"59160"|"55555"',
     );
     expect(result._unsafeUnwrap().statusCode).toBe(200);
     expect(await result._unsafeUnwrap().getResponse().json()).toMatchInlineSnapshot(`

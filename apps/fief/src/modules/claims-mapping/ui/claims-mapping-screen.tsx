@@ -1,4 +1,3 @@
-import { Trash2 as TrashBinIcon } from "lucide-react";
 /**
  * T36 - `<ClaimsMappingScreen />`.
  *
@@ -23,6 +22,7 @@ import { Trash2 as TrashBinIcon } from "lucide-react";
  */
 import { useDashboardNotification } from "@saleor/apps-shared/use-dashboard-notification";
 import { Box, Button, Skeleton, Text } from "@saleor/macaw-ui";
+import { Trash2 as TrashBinIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { trpcClient } from "@/modules/trpc/trpc-client";

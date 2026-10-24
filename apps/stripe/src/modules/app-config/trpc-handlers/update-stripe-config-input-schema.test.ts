@@ -66,15 +66,14 @@ describe("updateStripeConfigInputSchema", () => {
     ).toThrowErrorMatchingInlineSnapshot(`
       [ZodError: [
         {
+          "origin": "string",
           "code": "too_small",
           "minimum": 1,
-          "type": "string",
           "inclusive": true,
-          "exact": false,
-          "message": "String must contain at least 1 character(s)",
           "path": [
             "name"
-          ]
+          ],
+          "message": "Too small: expected string to have >=1 characters"
         }
       ]]
     `);
@@ -92,8 +91,8 @@ describe("updateStripeConfigInputSchema", () => {
       [ZodError: [
         {
           "code": "custom",
-          "message": "Both Publishable and Restricted Keys must be live or test",
-          "path": []
+          "path": [],
+          "message": "Both Publishable and Restricted Keys must be live or test"
         }
       ]]
     `);

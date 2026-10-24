@@ -26,17 +26,18 @@ describe("createAtobaraiMoney", () => {
       `
       [AtobaraiMoneyValidationError: [
         {
-          "received": "",
-          "code": "invalid_literal",
-          "expected": "JPY",
+          "code": "invalid_value",
+          "values": [
+            "JPY"
+          ],
           "path": [
             "currency"
           ],
-          "message": "Invalid literal value, expected \\"JPY\\""
+          "message": "Invalid input: expected \\"JPY\\""
         }
       ]
-      ZodValidationError: Validation error: Invalid literal value, expected "JPY" at "currency"
-      Invalid money data: Validation error: Invalid literal value, expected "JPY" at "currency"]
+      ZodValidationError: Validation error: Invalid input: expected "JPY" at "currency"
+      Invalid money data: Validation error: Invalid input: expected "JPY" at "currency"]
     `,
     );
   });
@@ -51,17 +52,18 @@ describe("createAtobaraiMoney", () => {
       `
       [AtobaraiMoneyValidationError: [
         {
-          "received": "USD",
-          "code": "invalid_literal",
-          "expected": "JPY",
+          "code": "invalid_value",
+          "values": [
+            "JPY"
+          ],
           "path": [
             "currency"
           ],
-          "message": "Invalid literal value, expected \\"JPY\\""
+          "message": "Invalid input: expected \\"JPY\\""
         }
       ]
-      ZodValidationError: Validation error: Invalid literal value, expected "JPY" at "currency"
-      Invalid money data: Validation error: Invalid literal value, expected "JPY" at "currency"]
+      ZodValidationError: Validation error: Invalid input: expected "JPY" at "currency"
+      Invalid money data: Validation error: Invalid input: expected "JPY" at "currency"]
     `,
     );
   });

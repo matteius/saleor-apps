@@ -15,7 +15,11 @@ import { err, ok } from "neverthrow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
-import { __testing, executeRetryCron } from "@/modules/subscriptions/cron/retry-failed-mints";
+import {
+  __testing,
+  executeRetryCron,
+  type RetryCronDeps,
+} from "@/modules/subscriptions/cron/retry-failed-mints";
 import {
   type FailedMintDlqRepo,
   type FailedMintRecord,
@@ -117,7 +121,7 @@ interface DepsHarness {
   owlbooksWebhookNotifier: { notify: ReturnType<typeof vi.fn> };
   mintFn: ReturnType<typeof vi.fn<typeof mintOrderFromInvoice>>;
   graphqlClient: { mutation: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn> };
-  graphqlClientFactory: ReturnType<typeof vi.fn>;
+  graphqlClientFactory: ReturnType<typeof vi.fn<RetryCronDeps["graphqlClientFactory"]>>;
   captureException: ReturnType<typeof vi.fn>;
   now: number;
 }

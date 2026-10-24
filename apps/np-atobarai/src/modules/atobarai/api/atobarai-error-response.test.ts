@@ -63,17 +63,16 @@ describe("createAtobaraiRegisterTransactionErrorResponse", () => {
       `
       [AtobaraiErrorResponseValidationError: [
         {
-          "code": "invalid_type",
           "expected": "array",
-          "received": "undefined",
+          "code": "invalid_type",
           "path": [
             "errors"
           ],
-          "message": "Required"
+          "message": "Invalid input: expected array, received undefined"
         }
       ]
-      ZodValidationError: Validation error: Required at "errors"
-      Invalid Atobarai error response format: Validation error: Required at "errors"]
+      ZodValidationError: Validation error: Invalid input: expected array, received undefined at "errors"
+      Invalid Atobarai error response format: Validation error: Invalid input: expected array, received undefined at "errors"]
     `,
     );
   });

@@ -1,4 +1,3 @@
-import { Trash2 as TrashBinIcon } from "lucide-react";
 /**
  * T35 — `<ConnectionListScreen />`.
  *
@@ -22,6 +21,7 @@ import { Trash2 as TrashBinIcon } from "lucide-react";
  */
 import { useDashboardNotification } from "@saleor/apps-shared/use-dashboard-notification";
 import { Box, Button, Chip, Modal, Skeleton, Text } from "@saleor/macaw-ui";
+import { Trash2 as TrashBinIcon } from "lucide-react";
 import { useState } from "react";
 
 import { trpcClient } from "@/modules/trpc/trpc-client";

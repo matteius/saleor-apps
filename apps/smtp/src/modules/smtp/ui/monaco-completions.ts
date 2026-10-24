@@ -1,5 +1,5 @@
-import type { editor, Position } from "monaco-editor";
 import type { Monaco } from "@monaco-editor/react";
+import type { editor, Position } from "monaco-editor";
 
 /**
  * Recursively extract dot-notation paths from a JSON object.

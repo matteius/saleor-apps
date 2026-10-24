@@ -87,14 +87,16 @@ describe("createAtobaraiChangeTransactionPayload", () => {
     ).toThrowErrorMatchingInlineSnapshot(`
       [AtobaraiChangeTransactionPayloadValidationError: [
         {
-          "validation": "regex",
-          "code": "invalid_string",
-          "message": "Date must be in YYYY-MM-DD format",
+          "origin": "string",
+          "code": "invalid_format",
+          "format": "regex",
+          "pattern": "/^\\\\d{4}-\\\\d{2}-\\\\d{2}$/",
           "path": [
             "transactions",
             0,
             "shop_order_date"
-          ]
+          ],
+          "message": "Date must be in YYYY-MM-DD format"
         }
       ]
       ZodValidationError: Validation error: Date must be in YYYY-MM-DD format at "transactions[0].shop_order_date"
@@ -117,21 +119,20 @@ describe("createAtobaraiChangeTransactionPayload", () => {
     ).toThrowErrorMatchingInlineSnapshot(`
       [AtobaraiChangeTransactionPayloadValidationError: [
         {
+          "origin": "string",
           "code": "too_big",
           "maximum": 40,
-          "type": "string",
           "inclusive": true,
-          "exact": false,
-          "message": "String must contain at most 40 character(s)",
           "path": [
             "transactions",
             0,
             "shop_transaction_id"
-          ]
+          ],
+          "message": "Too big: expected string to have <=40 characters"
         }
       ]
-      ZodValidationError: Validation error: String must contain at most 40 character(s) at "transactions[0].shop_transaction_id"
-      Invalid change transaction payload: Validation error: String must contain at most 40 character(s) at "transactions[0].shop_transaction_id"]
+      ZodValidationError: Validation error: Too big: expected string to have <=40 characters at "transactions[0].shop_transaction_id"
+      Invalid change transaction payload: Validation error: Too big: expected string to have <=40 characters at "transactions[0].shop_transaction_id"]
     `);
   });
 

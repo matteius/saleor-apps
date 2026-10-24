@@ -39,21 +39,20 @@ describe("createAtobaraiFulfillmentReportPayload", () => {
     ).toThrowErrorMatchingInlineSnapshot(`
       [AtobaraiFulfillmentReportPayloadValidationError: [
         {
+          "origin": "string",
           "code": "too_big",
           "maximum": 20,
-          "type": "string",
           "inclusive": true,
-          "exact": false,
-          "message": "String must contain at most 20 character(s)",
           "path": [
             "transactions",
             0,
             "slip_no"
-          ]
+          ],
+          "message": "Too big: expected string to have <=20 characters"
         }
       ]
-      ZodValidationError: Validation error: String must contain at most 20 character(s) at "transactions[0].slip_no"
-      Invalid fulfillment report payload: Validation error: String must contain at most 20 character(s) at "transactions[0].slip_no"]
+      ZodValidationError: Validation error: Too big: expected string to have <=20 characters at "transactions[0].slip_no"
+      Invalid fulfillment report payload: Validation error: Too big: expected string to have <=20 characters at "transactions[0].slip_no"]
     `);
   });
 
@@ -67,21 +66,20 @@ describe("createAtobaraiFulfillmentReportPayload", () => {
     ).toThrowErrorMatchingInlineSnapshot(`
       [AtobaraiFulfillmentReportPayloadValidationError: [
         {
+          "origin": "string",
           "code": "too_small",
           "minimum": 1,
-          "type": "string",
           "inclusive": true,
-          "exact": false,
-          "message": "String must contain at least 1 character(s)",
           "path": [
             "transactions",
             0,
             "slip_no"
-          ]
+          ],
+          "message": "Too small: expected string to have >=1 characters"
         }
       ]
-      ZodValidationError: Validation error: String must contain at least 1 character(s) at "transactions[0].slip_no"
-      Invalid fulfillment report payload: Validation error: String must contain at least 1 character(s) at "transactions[0].slip_no"]
+      ZodValidationError: Validation error: Too small: expected string to have >=1 characters at "transactions[0].slip_no"
+      Invalid fulfillment report payload: Validation error: Too small: expected string to have >=1 characters at "transactions[0].slip_no"]
     `);
   });
 

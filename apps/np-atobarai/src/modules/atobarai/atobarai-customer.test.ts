@@ -155,16 +155,18 @@ describe("createAtobaraiCustomer", () => {
       `
       [AtobaraiCustomerMissingDataError: [
         {
-          "validation": "email",
-          "code": "invalid_string",
-          "message": "Invalid email",
+          "origin": "string",
+          "code": "invalid_format",
+          "format": "email",
+          "pattern": "/^(?:[A-Za-z0-9_'+\\\\-]+\\\\.)*[A-Za-z0-9_'+\\\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\\\-]*\\\\.)+[A-Za-z]{2,}$/",
           "path": [
             "email"
-          ]
+          ],
+          "message": "Invalid email address"
         }
       ]
-      ZodValidationError: Validation error: Invalid email at "email"
-      Invalid customer data: Validation error: Invalid email at "email"]
+      ZodValidationError: Validation error: Invalid email address at "email"
+      Invalid customer data: Validation error: Invalid email address at "email"]
     `,
     );
   });

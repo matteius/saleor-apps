@@ -668,7 +668,7 @@ const wireDeps = (h: TestHarness) => {
     identityMapRepo: h.identityMapRepo,
     saleorClient: h.saleorClient,
   });
-  fiefOidcClientCtorMock.mockImplementation((input: { baseUrl: string }) => {
+  fiefOidcClientCtorMock.mockImplementation(function (input: { baseUrl: string }) {
     lastFiefOidcClientCtorInput.value = input;
 
     return h.fiefOidcClient;

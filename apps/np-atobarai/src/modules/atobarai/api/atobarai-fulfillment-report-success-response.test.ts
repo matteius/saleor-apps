@@ -87,17 +87,16 @@ describe("createAtobaraiFulfillmentReportSuccessResponse", () => {
       `
       [AtobaraiFulfillmentReportSuccessResponseValidationError: [
         {
-          "code": "invalid_type",
           "expected": "array",
-          "received": "undefined",
+          "code": "invalid_type",
           "path": [
             "results"
           ],
-          "message": "Required"
+          "message": "Invalid input: expected array, received undefined"
         }
       ]
-      ZodValidationError: Validation error: Required at "results"
-      Invalid Atobarai fulfillment report success response format: Validation error: Required at "results"]
+      ZodValidationError: Validation error: Invalid input: expected array, received undefined at "results"
+      Invalid Atobarai fulfillment report success response format: Validation error: Invalid input: expected array, received undefined at "results"]
     `,
     );
   });
@@ -117,19 +116,18 @@ describe("createAtobaraiFulfillmentReportSuccessResponse", () => {
       `
       [AtobaraiFulfillmentReportSuccessResponseValidationError: [
         {
-          "code": "invalid_type",
           "expected": "string",
-          "received": "undefined",
+          "code": "invalid_type",
           "path": [
             "results",
             0,
             "np_transaction_id"
           ],
-          "message": "Required"
+          "message": "Invalid input: expected string, received undefined"
         }
       ]
-      ZodValidationError: Validation error: Required at "results[0].np_transaction_id"
-      Invalid Atobarai fulfillment report success response format: Validation error: Required at "results[0].np_transaction_id"]
+      ZodValidationError: Validation error: Invalid input: expected string, received undefined at "results[0].np_transaction_id"
+      Invalid Atobarai fulfillment report success response format: Validation error: Invalid input: expected string, received undefined at "results[0].np_transaction_id"]
     `,
     );
   });

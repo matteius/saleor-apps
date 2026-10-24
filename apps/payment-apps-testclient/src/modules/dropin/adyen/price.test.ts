@@ -30,13 +30,13 @@ describe("AdyenPrice", () => {
       .toThrowErrorMatchingInlineSnapshot(`
         [ArgsParseError: ZodError: [
           {
+            "expected": "int",
+            "format": "safeint",
             "code": "invalid_type",
-            "expected": "integer",
-            "received": "float",
-            "message": "Expected integer, received float",
             "path": [
               "integerAmount"
-            ]
+            ],
+            "message": "Invalid input: expected int, received number"
           }
         ]
         Invalid arguments]

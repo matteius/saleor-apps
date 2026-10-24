@@ -18,7 +18,7 @@ describe("zodReadableError", () => {
       const error = zodReadableError(result.error);
 
       expect(error.message).toMatchInlineSnapshot(
-        `"Validation error: String must contain at least 4 character(s) at "foo"; Number must be greater than 3 at "bar""`,
+        `"Validation error: Too small: expected string to have >=4 characters at "foo"; Too small: expected number to be >3 at "bar""`,
       );
     }
   });

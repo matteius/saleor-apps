@@ -277,9 +277,8 @@ describe("TransactionProcessSessionUseCase", () => {
     ).rejects.toThrowErrorMatchingInlineSnapshot(`
       [ZodError: [
         {
-          "received": "broken_status",
-          "code": "invalid_enum_value",
-          "options": [
+          "code": "invalid_value",
+          "values": [
             "requires_action",
             "requires_confirmation",
             "requires_payment_method",
@@ -289,7 +288,7 @@ describe("TransactionProcessSessionUseCase", () => {
             "succeeded"
           ],
           "path": [],
-          "message": "Invalid enum value. Expected 'requires_action' | 'requires_confirmation' | 'requires_payment_method' | 'canceled' | 'processing' | 'requires_capture' | 'succeeded', received 'broken_status'"
+          "message": "Invalid option: expected one of \\"requires_action\\"|\\"requires_confirmation\\"|\\"requires_payment_method\\"|\\"canceled\\"|\\"processing\\"|\\"requires_capture\\"|\\"succeeded\\""
         }
       ]]
     `);

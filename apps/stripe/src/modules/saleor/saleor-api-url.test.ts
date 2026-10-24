@@ -30,23 +30,23 @@ describe("SaleorApiUrl", () => {
       expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
         [SaleorApiUrlValidationError: ZodError: [
           {
-            "validation": "url",
-            "code": "invalid_string",
-            "message": "Invalid url",
-            "path": []
+            "code": "invalid_format",
+            "format": "url",
+            "path": [],
+            "message": "Invalid URL"
           },
           {
-            "code": "invalid_string",
-            "validation": {
-              "endsWith": "/graphql/"
-            },
-            "message": "Invalid input: must end with \\"/graphql/\\"",
-            "path": []
+            "origin": "string",
+            "code": "invalid_format",
+            "format": "ends_with",
+            "suffix": "/graphql/",
+            "path": [],
+            "message": "Invalid string: must end with \\"/graphql/\\""
           },
           {
             "code": "custom",
-            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\"",
-            "path": []
+            "path": [],
+            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\""
           }
         ]]
       `);
@@ -61,8 +61,8 @@ describe("SaleorApiUrl", () => {
         [SaleorApiUrlValidationError: ZodError: [
           {
             "code": "custom",
-            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\"",
-            "path": []
+            "path": [],
+            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\""
           }
         ]]
       `);
@@ -76,12 +76,12 @@ describe("SaleorApiUrl", () => {
       expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
         [SaleorApiUrlValidationError: ZodError: [
           {
-            "code": "invalid_string",
-            "validation": {
-              "endsWith": "/graphql/"
-            },
-            "message": "Invalid input: must end with \\"/graphql/\\"",
-            "path": []
+            "origin": "string",
+            "code": "invalid_format",
+            "format": "ends_with",
+            "suffix": "/graphql/",
+            "path": [],
+            "message": "Invalid string: must end with \\"/graphql/\\""
           }
         ]]
       `);
@@ -95,15 +95,15 @@ describe("SaleorApiUrl", () => {
       expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
         [SaleorApiUrlValidationError: ZodError: [
           {
-            "validation": "url",
-            "code": "invalid_string",
-            "message": "Invalid url",
-            "path": []
+            "code": "invalid_format",
+            "format": "url",
+            "path": [],
+            "message": "Invalid URL"
           },
           {
             "code": "custom",
-            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\"",
-            "path": []
+            "path": [],
+            "message": "Invalid input: must start with \\"http://\\" or \\"https://\\""
           }
         ]]
       `);

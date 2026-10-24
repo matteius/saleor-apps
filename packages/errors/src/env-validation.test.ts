@@ -47,7 +47,7 @@ describe("formatEnvValidationError", () => {
 
     expect(consoleErrorSpy).toHaveBeenNthCalledWith(
       1,
-      'Validation error: Expected number, received nan at "PORT"; Required at "SECRET_KEY"; Required at "APL"',
+      'Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid input: expected string, received undefined at "SECRET_KEY"; Invalid option: expected one of "file"|"dynamodb" at "APL"',
     );
   });
 
@@ -60,7 +60,7 @@ describe("formatEnvValidationError", () => {
 
     expect(consoleErrorSpy).toHaveBeenNthCalledWith(
       1,
-      `Validation error: Expected number, received nan at "PORT"; Invalid enum value. Expected 'file' | 'dynamodb', received 'wrong' at "APL"`,
+      `Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid option: expected one of "file"|"dynamodb" at "APL"`,
     );
   });
 
@@ -82,11 +82,11 @@ describe("formatEnvValidationError", () => {
 
     try {
       expect(() => formatEnvValidationError(getError({}))).toThrowError(
-        'Validation error: Expected number, received nan at "PORT"; Required at "SECRET_KEY"; Required at "APL"',
+        'Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid input: expected string, received undefined at "SECRET_KEY"; Invalid option: expected one of "file"|"dynamodb" at "APL"',
       );
       expect(consoleErrorSpy).toHaveBeenNthCalledWith(
         1,
-        'Validation error: Expected number, received nan at "PORT"; Required at "SECRET_KEY"; Required at "APL"',
+        'Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid input: expected string, received undefined at "SECRET_KEY"; Invalid option: expected one of "file"|"dynamodb" at "APL"',
       );
     } finally {
       Object.defineProperty(process, "exit", { value: originalExit, configurable: true });
@@ -101,11 +101,11 @@ describe("formatEnvValidationError", () => {
 
     try {
       expect(() => formatEnvValidationError(getError({}))).toThrowError(
-        'Validation error: Expected number, received nan at "PORT"; Required at "SECRET_KEY"; Required at "APL"',
+        'Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid input: expected string, received undefined at "SECRET_KEY"; Invalid option: expected one of "file"|"dynamodb" at "APL"',
       );
       expect(consoleErrorSpy).toHaveBeenNthCalledWith(
         1,
-        'Validation error: Expected number, received nan at "PORT"; Required at "SECRET_KEY"; Required at "APL"',
+        'Validation error: Invalid input: expected number, received NaN at "PORT"; Invalid input: expected string, received undefined at "SECRET_KEY"; Invalid option: expected one of "file"|"dynamodb" at "APL"',
       );
     } finally {
       vi.unstubAllGlobals();

@@ -51,7 +51,9 @@ describe("Manifest handler", async () => {
          {
            "label": "Subscription mappings",
            "mount": "NAVIGATION_CATALOG",
-           "permissions": ["HANDLE_PAYMENTS"],
+           "permissions": [
+             "HANDLE_PAYMENTS",
+           ],
            "target": "APP_PAGE",
            "url": "/subscriptions",
          },

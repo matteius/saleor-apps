@@ -203,19 +203,18 @@ describe("createAtobaraiTransactionSuccessResponse", () => {
       `
       [AtobaraiTransactionSuccessResponseValidationError: [
         {
-          "code": "invalid_type",
           "expected": "string",
-          "received": "undefined",
+          "code": "invalid_type",
           "path": [
             "results",
             0,
             "np_transaction_id"
           ],
-          "message": "Required"
+          "message": "Invalid input: expected string, received undefined"
         }
       ]
-      ZodValidationError: Validation error: Required at "results[0].np_transaction_id"
-      Invalid Atobarai transaction success response format: Validation error: Required at "results[0].np_transaction_id"]
+      ZodValidationError: Validation error: Invalid input: expected string, received undefined at "results[0].np_transaction_id"
+      Invalid Atobarai transaction success response format: Validation error: Invalid input: expected string, received undefined at "results[0].np_transaction_id"]
     `,
     );
   });
