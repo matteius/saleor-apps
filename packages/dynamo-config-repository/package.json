@@ -28,7 +28,7 @@
     "eslint": "catalog:",
     "next": "catalog:",
     "typescript": "5.8.2",
-    "vite": "6.2.4",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

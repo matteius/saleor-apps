@@ -38,14 +38,16 @@ export const createOtelUrqlExchange = (args: { tracer: Tracer }) => {
 
       span.setAttribute(
         GraphQLAttributeNames.OPERATION_NAME,
-        `${(operation.query.definitions[0] as Definition).name.value ?? "unknown"}`,
+        "definitions" in operation.query
+          ? (operation.query.definitions[0] as Definition | undefined)?.name?.value ?? "unknown"
+          : "persisted",
       );
 
       span.setAttribute(GraphQLAttributeNames.OPERATION_TYPE, operation.kind);
 
       span.setAttribute(
         GraphQLAttributeNames.OPERATION_BODY,
-        operation.query.loc?.source.body ?? "unknown",
+        "loc" in operation.query ? operation.query.loc?.source.body ?? "unknown" : "persisted",
       );
 
       span.setAttribute(GraphQLAttributeNames.OPERATION_KEY, operation.key);

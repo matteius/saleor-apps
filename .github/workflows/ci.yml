@@ -47,7 +47,7 @@ jobs:
         run: pnpm lint
       - name: Check types
         if: always()
-        run: pnpm check-types
+        run: pnpm exec turbo run check-types --continue
       - name: Check package dependencies
         run: pnpm lint:packages
       - name: Check for changes in graphql files
