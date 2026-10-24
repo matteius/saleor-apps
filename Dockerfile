@@ -66,11 +66,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 ARG APP_NAME
-ENV APP_NAME=${APP_NAME}
+ENV SALEOR_APP_DIRECTORY=${APP_NAME}
 ENV PORT=3010
 ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/static ./apps/${APP_NAME}/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/public ./apps/${APP_NAME}/public
 USER nextjs
-CMD ["sh", "-c", "exec node apps/${APP_NAME}/server.js"]
+CMD ["sh", "-c", "exec node /app/apps/${SALEOR_APP_DIRECTORY}/server.js"]
