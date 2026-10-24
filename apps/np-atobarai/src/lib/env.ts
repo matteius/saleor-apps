@@ -1,12 +1,12 @@
 import { booleanEnv } from "@saleor/apps-shared/boolean-env";
+import { headerSecretEnv } from "@saleor/apps-shared/header-secret-env";
 import {
   newSecretKeyRuntimeEnv,
   newSecretKeyServerSchema,
 } from "@saleor/apps-shared/secret-key-resolution";
-import { BaseError } from "@saleor/errors";
+import { formatEnvValidationError } from "@saleor/errors";
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
-import { fromError } from "zod-validation-error";
 
 export const env = createEnv({
   client: {
@@ -19,7 +19,7 @@ export const env = createEnv({
     APP_IFRAME_BASE_URL: z.string().optional(),
     APP_LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
     MANIFEST_APP_ID: z.string().default("saleor.app.payment.np-atobarai"),
-    OTEL_ACCESS_TOKEN: z.string().optional(),
+    OTEL_ACCESS_TOKEN: headerSecretEnv.optional(),
     OTEL_ENABLED: booleanEnv.defaultFalse,
     OTEL_SERVICE_NAME: z.string().default("saleor-app-payment-np-atobarai"),
     PORT: z.coerce.number().default(3000),
@@ -71,13 +71,5 @@ export const env = createEnv({
     ...newSecretKeyRuntimeEnv,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
-  onValidationError(issues) {
-    const validationError = fromError(issues);
-
-    const EnvValidationError = BaseError.subclass("EnvValidationError");
-
-    throw new EnvValidationError(validationError.toString(), {
-      cause: issues,
-    });
-  },
+  onValidationError: formatEnvValidationError,
 });

@@ -1,5 +1,6 @@
 fragment TransactionChargeRequestedEvent on TransactionChargeRequested {
   ...EventMetadata
+  idempotencyKey
   action {
     amount
   }
@@ -14,6 +15,8 @@ fragment TransactionChargeRequestedEvent on TransactionChargeRequested {
     }
     order {
       id
+      number
+      checkoutId
       channel {
         ...Channel
       }

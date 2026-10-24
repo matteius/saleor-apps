@@ -1,8 +1,10 @@
 import { booleanEnv } from "@saleor/apps-shared/boolean-env";
+import { headerSecretEnv } from "@saleor/apps-shared/header-secret-env";
 import {
   newSecretKeyRuntimeEnv,
   newSecretKeyServerSchema,
 } from "@saleor/apps-shared/secret-key-resolution";
+import { formatEnvValidationError } from "@saleor/errors";
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
@@ -36,14 +38,12 @@ export const env = createEnv({
     OTEL_ENABLED: booleanEnv.defaultFalse,
     OTEL_SERVICE_NAME: z.string().optional(),
     PORT: z.coerce.number().default(3000),
-    REST_APL_ENDPOINT: z.string().optional(),
-    REST_APL_TOKEN: z.string().optional(),
     SECRET_KEY: z.string(),
     TEST_SALEOR_API_URL: z.string().optional(),
     VERCEL_URL: z.string().optional(),
     NEXT_RUNTIME: z.enum(["nodejs", "edge"]).optional(),
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
-    OTEL_ACCESS_TOKEN: z.string().optional(),
+    OTEL_ACCESS_TOKEN: headerSecretEnv.optional(),
     VERCEL_ENV: z.string().optional(),
     REPOSITORY_URL: z.string().optional(),
     OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(1),
@@ -94,8 +94,6 @@ export const env = createEnv({
     OTEL_ENABLED: process.env.OTEL_ENABLED,
     OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
     PORT: process.env.PORT,
-    REST_APL_ENDPOINT: process.env.REST_APL_ENDPOINT,
-    REST_APL_TOKEN: process.env.REST_APL_TOKEN,
     SECRET_KEY: process.env.SECRET_KEY,
     TEST_SALEOR_API_URL: process.env.TEST_SALEOR_API_URL,
     VERCEL_URL: process.env.VERCEL_URL,
@@ -112,4 +110,5 @@ export const env = createEnv({
     ...newSecretKeyRuntimeEnv,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
+  onValidationError: formatEnvValidationError,
 });

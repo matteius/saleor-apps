@@ -1,52 +1,77 @@
-import { Layout } from "@saleor/apps-ui";
-import { Box, Text } from "@saleor/macaw-ui";
+import { ParkedSetupChecklist } from "@saleor/apps-ui-next";
 import { type NextPage } from "next";
+import { useMemo } from "react";
 
-import { AppHeader } from "@/modules/ui/app-header";
-import { ChannelConfigMappingSection } from "@/modules/ui/channel-configs/channel-config-mapping-section";
-import { ChannelConfigSection } from "@/modules/ui/stripe-configs/channel-config-section";
+import { trpcClient } from "@/modules/trpc/trpc-client";
+import { MissingAppAccess } from "@/modules/ui/missing-app-access";
+import {
+  ChannelConfigSection,
+  ChannelConfigSectionSkeleton,
+} from "@/modules/ui/stripe-configs/channel-config-section";
+import { ConfigPageShell } from "@/modules/ui/stripe-configs/config-page-shell";
+import { StripeSetupCard } from "@/modules/ui/stripe-setup/stripe-setup-card";
+import {
+  buildStripeSetupTasks,
+  summarizeStripeSetupTasks,
+} from "@/modules/ui/stripe-setup/stripe-setup-summary";
+import { useStripeSetupCardDismiss } from "@/modules/ui/stripe-setup/use-stripe-setup-card-dismiss";
 import { useHasAppAccess } from "@/modules/ui/use-has-app-access";
 
 const ConfigPage: NextPage = () => {
-  const { haveAccessToApp } = useHasAppAccess();
+  const { haveAccessToApp, isReady } = useHasAppAccess();
+  const { dismissed, dismiss, restore } = useStripeSetupCardDismiss();
+  const configsQuery = trpcClient.appConfig.getStripeConfigsList.useQuery();
+  const mappingQuery = trpcClient.appConfig.channelsConfigsMapping.useQuery();
 
-  if (!haveAccessToApp) {
-    return <Text>You do not have permission to access this page.</Text>;
+  const parkedSummary = useMemo(() => {
+    if (!configsQuery.data || !mappingQuery.data) {
+      return null;
+    }
+
+    return summarizeStripeSetupTasks(
+      buildStripeSetupTasks({
+        configs: configsQuery.data,
+        mapping: mappingQuery.data,
+      }),
+    );
+  }, [configsQuery.data, mappingQuery.data]);
+
+  if (!isReady) {
+    return (
+      <ConfigPageShell>
+        <ChannelConfigSectionSkeleton />
+      </ConfigPageShell>
+    );
   }
 
+  if (!haveAccessToApp) {
+    return <MissingAppAccess />;
+  }
+
+  const dataReady = configsQuery.data !== undefined && mappingQuery.data !== undefined;
+  const showSetup = !dismissed && dataReady;
+  const showParked = dismissed && dataReady && parkedSummary !== null;
+
   return (
-    <Box>
-      <AppHeader />
-      <Layout.AppSection
-        marginBottom={14}
-        heading="Stripe configurations"
-        sideContent={
-          <Box display="flex" flexDirection="column" gap={4}>
-            <Text>
-              App allows to create and use multiple Stripe configurations e.g one for test mode and
-              the other for live mode.
-            </Text>
-            <Text>
-              You can set up multiple Stripe configurations and assign them to each channel
-              individually.
-            </Text>
-          </Box>
-        }
-      >
-        <ChannelConfigSection />
-      </Layout.AppSection>
-      <Layout.AppSection
-        heading="Channels configurations"
-        sideContent={
-          <Box display="flex" flexDirection="column" gap={4}>
-            <Text>Assign created Stripe configurations to Saleor channel.</Text>
-            <Text>You can configure multiple channels to use the same Stripe configuration.</Text>
-          </Box>
-        }
-      >
-        <ChannelConfigMappingSection />
-      </Layout.AppSection>
-    </Box>
+    <ConfigPageShell>
+      {showSetup ? (
+        <StripeSetupCard
+          configs={configsQuery.data}
+          mapping={mappingQuery.data}
+          onDismiss={dismiss}
+        />
+      ) : null}
+      {showParked && parkedSummary ? (
+        <ParkedSetupChecklist
+          title="Finish Stripe setup"
+          progress={parkedSummary.progress}
+          nextUp={parkedSummary.nextUp}
+          onReveal={restore}
+          data-test-id="stripe-parked-setup-checklist"
+        />
+      ) : null}
+      <ChannelConfigSection />
+    </ConfigPageShell>
   );
 };
 

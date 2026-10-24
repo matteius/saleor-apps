@@ -37,7 +37,6 @@ import {
 import { StripePaymentIntentHandler } from "./stripe-object-handlers/stripe-payment-intent-handler";
 import { StripeRefundHandler } from "./stripe-object-handlers/stripe-refund-handler";
 import {
-  ObjectCreatedOutsideOfSaleorResponse,
   type PossibleStripeWebhookErrorResponses,
   type PossibleStripeWebhookSuccessResponses,
   StripeWebhookAppIsNotConfiguredResponse,
@@ -57,6 +56,13 @@ type SaleorTransactionEventReporterFactory = (authData: AuthData) => ITransactio
 type ProblemReporterFactory = (authData: AuthData) => StripeProblemReporter;
 
 const ObjectMetadataMissingError = BaseError.subclass("ObjectMetadataMissingError");
+const ObjectMetadataMismatchError = BaseError.subclass("ObjectMetadataMismatchError");
+
+/**
+ * Missing saleor_app_id is allowed for objects created before it was introduced.
+ */
+const isFromDifferentInstallation = (meta: AllowedStripeObjectMetadata, appId: string) =>
+  Boolean(meta.saleor_app_id) && meta.saleor_app_id !== appId;
 
 /**
  * T18 — minimal contract for the subscription dispatcher consumed by
@@ -268,23 +274,18 @@ export class StripeWebhookUseCase {
             new ObjectMetadataMissingError(
               "Missing metadata on object, it was not created by Saleor",
               {
-                props: {
-                  meta,
-                },
+                props: { meta },
               },
             ),
           );
         }
 
-        if (meta.saleor_app_id && meta.saleor_app_id !== appId) {
+        if (isFromDifferentInstallation(meta, appId)) {
           return err(
-            new ObjectMetadataMissingError(
+            new ObjectMetadataMismatchError(
               "PaymentIntent belongs to a different Saleor installation",
               {
-                props: {
-                  meta,
-                  expectedAppId: appId,
-                },
+                props: { meta, expectedAppId: appId },
               },
             ),
           );
@@ -321,13 +322,10 @@ export class StripeWebhookUseCase {
           return this.dispatchToSubscriptionUseCase({ event, ctx: subscriptionCtx });
         }
 
-        if (meta.saleor_app_id && meta.saleor_app_id !== appId) {
+        if (isFromDifferentInstallation(meta, appId)) {
           return err(
-            new ObjectMetadataMissingError("Refund belongs to a different Saleor installation", {
-              props: {
-                meta,
-                expectedAppId: appId,
-              },
+            new ObjectMetadataMismatchError("Refund belongs to a different Saleor installation", {
+              props: { meta, expectedAppId: appId },
             }),
           );
         }
@@ -400,7 +398,7 @@ export class StripeWebhookUseCase {
    * At this point we detect an old webhook because it has different appId in URL (from previous installation).
    * Now we can use that to fetch old config from DB and remove the webhook.
    */
-  private async processLegacyWebhook(webhookParams: WebhookParams) {
+  private async processLegacyWebhook(webhookParams: WebhookParams, authData: AuthData) {
     const legacyConfig = await this.appConfigRepo.getStripeConfig({
       configId: webhookParams.configurationId,
       // Use app ID from webhook, not AuthData, so we have it frozen in time
@@ -426,7 +424,15 @@ export class StripeWebhookUseCase {
     }
 
     if (!legacyConfig.value) {
-      this.logger.error("Legacy config is empty, this requires manual cleanup");
+      /*
+       * Not an app error - old config is already gone, so we can't remove the orphaned webhook.
+       * Surfaced to the user via AppProblems so they delete it in Stripe Dashboard.
+       */
+      this.logger.warn("Legacy config is empty, this requires manual cleanup");
+
+      const problemReporter = this.problemReporterFactory(authData);
+
+      after(() => problemReporter.reportLegacyWebhookOrphaned(webhookParams.configurationId));
 
       return err(new BaseError("Legacy config is empty"));
     }
@@ -478,7 +484,7 @@ export class StripeWebhookUseCase {
         "Received webhook with different appId than expected. There may be old webhook from uninstalled app. Will try to remove it now.",
       );
 
-      const processingResult = await this.processLegacyWebhook(webhookParams);
+      const processingResult = await this.processLegacyWebhook(webhookParams, authData);
 
       if (processingResult.isErr()) {
         this.logger.warn("Received legacy webhook but failed to handle removing it", {
@@ -513,7 +519,11 @@ export class StripeWebhookUseCase {
     }
 
     if (!config.value) {
-      this.logger.error("Config for given webhook is missing");
+      /*
+       * Not an app error - Stripe may keep sending events for a deleted config (orphaned webhook).
+       * Surfaced to the user via AppProblems below instead of alerting us.
+       */
+      this.logger.warn("Config for given webhook is missing");
 
       after(() => problemReporter.reportConfigMissing(webhookParams.configurationId));
 
@@ -576,7 +586,25 @@ export class StripeWebhookUseCase {
        * This is technically not an error, so we catch it here without the error log.
        */
       if (processingResult.error instanceof ObjectMetadataMissingError) {
-        return err(new ObjectCreatedOutsideOfSaleorResponse());
+        this.logger.info("Ignoring event for object created outside of Saleor");
+
+        return ok(new StripeWebhookSuccessResponse());
+      }
+
+      // E.g. other Saleor environment connected to the same Stripe account in the same mode
+      if (processingResult.error instanceof ObjectMetadataMismatchError) {
+        this.logger.info("Ignoring event for object created by a different Saleor installation");
+
+        const configName = config.value.name;
+
+        after(() =>
+          problemReporter.reportObjectFromDifferentInstallation(
+            webhookParams.configurationId,
+            configName,
+          ),
+        );
+
+        return ok(new StripeWebhookSuccessResponse());
       }
 
       this.logger.error("Failed to process event", {

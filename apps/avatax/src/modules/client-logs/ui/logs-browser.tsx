@@ -1,14 +1,5 @@
-import {
-  Box,
-  Button,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Input,
-  RangeInput,
-  Skeleton,
-  Switch,
-  Text,
-} from "@saleor/macaw-ui";
+import { Box, Button, Input, RangeInput, Skeleton, Switch, Text } from "@saleor/macaw-ui";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { type ClientLogValue } from "@/modules/client-logs/client-log";
@@ -95,13 +86,13 @@ const LogsPagiation = ({
         <Button
           onClick={onBackwardButtonClick}
           disabled={isBackwardButtonDisabled}
-          icon={<ChevronLeftIcon />}
+          icon={<ChevronLeft size={16} />}
           variant="secondary"
         />
         <Button
           onClick={onForwardButtonClick}
           disabled={isForwardButtonDisabled}
-          icon={<ChevronRightIcon />}
+          icon={<ChevronRight size={16} />}
           variant="secondary"
         />
       </Box>
@@ -129,11 +120,16 @@ const LogsByDate = () => {
     };
   });
 
-  const { data, error, isLoading } = trpcClient.clientLogs.getByDate.useQuery({
-    startDate: formatDateForQuery(rangeDates.start),
-    endDate: formatDateForQuery(rangeDates.end),
-    lastEvaluatedKey: currentEvaluatedKey,
-  });
+  const isRangeValid = rangeDates.start <= rangeDates.end;
+
+  const { data, error, isLoading } = trpcClient.clientLogs.getByDate.useQuery(
+    {
+      startDate: formatDateForQuery(rangeDates.start),
+      endDate: formatDateForQuery(rangeDates.end),
+      lastEvaluatedKey: currentEvaluatedKey,
+    },
+    { enabled: isRangeValid },
+  );
 
   const isEmpty = !isLoading && data?.clientLogs && data.clientLogs.length === 0;
   const isLoaded = !isLoading && data?.clientLogs && data.clientLogs.length > 0;
@@ -168,6 +164,9 @@ const LogsByDate = () => {
           <Text marginX={2}>To</Text>
         </RangeInput>
       </Box>
+      {!isRangeValid && (
+        <Text color="critical1">&quot;From&quot; date must be before &quot;To&quot; date</Text>
+      )}
       {error && <Text color="critical1">{error.message}</Text>}
       {isEmpty && <Text>No logs are available for specified date range</Text>}
       {isLoaded && <LogsList logs={logs} />}

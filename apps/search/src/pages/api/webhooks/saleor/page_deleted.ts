@@ -8,7 +8,9 @@ import { loggerContext } from "../../../../lib/logger-context";
 import { type PageDeleted } from "../../../../lib/webhook-event-types";
 import { createSearchProblemReporter } from "../../../../modules/app-problems";
 import { webhookPageDeleted } from "../../../../webhooks/definitions/page-deleted";
+import { handleAlgoliaWebhookError } from "../../../../webhooks/handle-algolia-webhook-error";
 import { handleInvalidAppIdError } from "../../../../webhooks/handle-invalid-app-id-error";
+import { handleWebhookContextError } from "../../../../webhooks/handle-webhook-context-error";
 import { createWebhookContext } from "../../../../webhooks/webhook-context";
 
 export const config = {
@@ -20,6 +22,8 @@ export const config = {
 const logger = createLogger("webhookPageDeletedHandler");
 
 export const handler: NextJsWebhookHandler<PageDeleted> = async (req, res, context) => {
+  loggerContext.setSaleorVersion(context.schemaVersion);
+
   const { event, authData } = context;
 
   logger.info(`New event received: ${event} (${context.payload?.__typename})`, {
@@ -81,16 +85,20 @@ export const handler: NextJsWebhookHandler<PageDeleted> = async (req, res, conte
         return;
       }
 
-      logger.error("Failed to execute page_deleted webhook (algoliaClient.deletePage)", {
+      return handleAlgoliaWebhookError({
         error: e,
+        logger,
+        message: "Failed to execute page_deleted webhook (algoliaClient.deletePage)",
+        res,
       });
-
-      return res.status(500).send("Operation failed due to error");
     }
   } catch (e) {
-    logger.error("Failed to execute page_deleted webhook (createWebhookContext)", { error: e });
-
-    return res.status(400).send((e as Error).message);
+    return handleWebhookContextError({
+      error: e,
+      logger,
+      message: "Failed to execute page_deleted webhook (createWebhookContext)",
+      res,
+    });
   }
 };
 

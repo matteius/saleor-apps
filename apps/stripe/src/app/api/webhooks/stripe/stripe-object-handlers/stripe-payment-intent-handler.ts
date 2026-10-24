@@ -1,10 +1,9 @@
-import { type SaleorSchemaVersion } from "@saleor/app-sdk/types";
-import { SaleorVersionCompatibilityValidator } from "@saleor/apps-shared/saleor-version-compatibility-validator";
 import { err, ok, type Result } from "neverthrow";
 import type Stripe from "stripe";
 
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
+import { loggerContext } from "@/lib/logger-context";
 import { resolveSaleorMoneyFromStripePaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-stripe-payment-intent";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
@@ -46,13 +45,6 @@ type PossibleErrors =
       | typeof StripePaymentIntentHandler.MalformedEventError
     >
   | TransactionRecorderError;
-
-/*
- * Minimum Saleor version required for payment method details support.
- * Saleor 3.22 introduced the `paymentMethodDetails` field in the Transaction API.
- * See: https://github.com/saleor/saleor/releases/tag/3.22.0
- */
-const PAYMENT_METHOD_DETAILS_MIN_VERSION = "3.22";
 
 export class StripePaymentIntentHandler {
   static NotSupportedEventError = BaseError.subclass("NotSupportedEventError", {
@@ -124,15 +116,9 @@ export class StripePaymentIntentHandler {
       return err(recordedTransactionResult.error);
     }
 
+    loggerContext.setSaleorVersion(recordedTransactionResult.value.saleorSchemaVersion);
+
     return ok(recordedTransactionResult.value);
-  }
-
-  private checkIfSaleorSupportsPaymentMethodDetails(
-    saleorSchemaVersion: SaleorSchemaVersion,
-  ): boolean {
-    const validator = new SaleorVersionCompatibilityValidator(PAYMENT_METHOD_DETAILS_MIN_VERSION);
-
-    return validator.isSaleorCompatible(saleorSchemaVersion);
   }
 
   private async getPaymentMethodDetails(
@@ -202,8 +188,7 @@ export class StripePaymentIntentHandler {
       return err(recordedTransactionResult.error);
     }
 
-    const { resolvedTransactionFlow, saleorTransactionId, saleorSchemaVersion } =
-      recordedTransactionResult.value;
+    const { resolvedTransactionFlow, saleorTransactionId } = recordedTransactionResult.value;
 
     const paramsResult = this.prepareTransactionEventReportParams(event);
 
@@ -215,9 +200,10 @@ export class StripePaymentIntentHandler {
 
     const externalUrl = generatePaymentIntentStripeDashboardUrl(stripePaymentIntentId, stripeEnv);
 
-    const paymentMethodDetails = this.checkIfSaleorSupportsPaymentMethodDetails(saleorSchemaVersion)
-      ? await this.getPaymentMethodDetails(stripePaymentIntentsApi, stripePaymentIntentId)
-      : null;
+    const paymentMethodDetails = await this.getPaymentMethodDetails(
+      stripePaymentIntentsApi,
+      stripePaymentIntentId,
+    );
 
     switch (event.type) {
       case "payment_intent.succeeded":

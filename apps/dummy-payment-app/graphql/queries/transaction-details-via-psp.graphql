@@ -1,0 +1,13 @@
+query TransactionDetailsViaPsp($pspReference: String!) {
+  orders(first: 1, search: $pspReference) {
+    edges {
+      node {
+        id
+        number
+        transactions {
+          ...Transaction
+        }
+      }
+    }
+  }
+}

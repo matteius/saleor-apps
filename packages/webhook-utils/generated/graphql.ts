@@ -1,5 +1,4 @@
 import gql from 'graphql-tag';
-import * as Urql from 'urql';
 import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
 type JSONValue = string | number | boolean | null | { [key: string]: JSONValue } | JSONValue[];
 export type Maybe<T> = T | null;
@@ -94,10 +93,22 @@ export type WebhookCreateInput = {
    * @deprecated Use `asyncEvents` or `syncEvents` instead.
    */
   readonly events?: InputMaybe<ReadonlyArray<WebhookEventTypeEnum>>;
+  /**
+   * The unique identifier of the webhook, set by the app. Unique per app. Maximum length is 256 characters.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly identifier?: InputMaybe<Scalars['String']['input']>;
   /** Determine if webhook will be set active or not. */
   readonly isActive?: InputMaybe<Scalars['Boolean']['input']>;
   /** The name of the webhook. */
   readonly name?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Determines when the subscription payload is built for asynchronous events that defer payload generation. Defaults to `DEFERRED`. Ignored for webhooks without a subscription query, for synchronous events and for events that do not defer their payload.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly payloadGeneration?: InputMaybe<WebhookPayloadGenerationEnum>;
   /** Subscription query used to define a webhook payload. */
   readonly query?: InputMaybe<Scalars['String']['input']>;
   /**
@@ -217,6 +228,24 @@ export type WebhookEventTypeAsyncEnum =
   | 'CUSTOMER_DELETED'
   /** A customer account metadata is updated. */
   | 'CUSTOMER_METADATA_UPDATED'
+  /**
+   * A new customer type is created.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_CREATED'
+  /**
+   * A customer type is deleted.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_DELETED'
+  /**
+   * A customer type is updated.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_UPDATED'
   /** A customer account is updated. */
   | 'CUSTOMER_UPDATED'
   /** A draft order is created. */
@@ -544,6 +573,24 @@ export type WebhookEventTypeEnum =
   | 'CUSTOMER_DELETED'
   /** A customer account metadata is updated. */
   | 'CUSTOMER_METADATA_UPDATED'
+  /**
+   * A new customer type is created.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_CREATED'
+  /**
+   * A customer type is deleted.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_DELETED'
+  /**
+   * A customer type is updated.
+   *
+   * Added in Saleor 3.23.
+   */
+  | 'CUSTOMER_TYPE_UPDATED'
   /** A customer account is updated. */
   | 'CUSTOMER_UPDATED'
   /** A draft order is created. */
@@ -850,6 +897,19 @@ export type WebhookEventTypeSyncEnum =
   /** Event called when refund has been requested for transaction. */
   | 'TRANSACTION_REFUND_REQUESTED';
 
+/**
+ * Determines when the subscription payload of an asynchronous webhook is built for events that defer payload generation.
+ *
+ * `DEFERRED`: the payload is built in a background task and reflects the object's state at the time the task runs.
+ *
+ * `IMMEDIATE`: the payload is built by whatever triggered the event, a request or a background task, and reflects the object's state at that moment, at the cost of slowing that request or task.
+ *
+ * Added in Saleor 3.23.
+ */
+export type WebhookPayloadGenerationEnum =
+  | 'DEFERRED'
+  | 'IMMEDIATE';
+
 export type WebhookUpdateInput = {
   /** ID of the app to which webhook belongs. */
   readonly app?: InputMaybe<Scalars['ID']['input']>;
@@ -862,10 +922,22 @@ export type WebhookUpdateInput = {
    * @deprecated Use `asyncEvents` or `syncEvents` instead.
    */
   readonly events?: InputMaybe<ReadonlyArray<WebhookEventTypeEnum>>;
+  /**
+   * The unique identifier of the webhook, set by the app. Unique per app. Maximum length is 256 characters. Pass a blank value to clear it.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly identifier?: InputMaybe<Scalars['String']['input']>;
   /** Determine if webhook will be set active or not. */
   readonly isActive?: InputMaybe<Scalars['Boolean']['input']>;
   /** The new name of the webhook. */
   readonly name?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Determines when the subscription payload is built for asynchronous events that defer payload generation. Omit to keep the current value, `null` resets it to `DEFERRED`. Ignored for webhooks without a subscription query, for synchronous events and for events that do not defer their payload. A change applies to events triggered after the update. Deliveries already created finish the way they started, so around a change a newer delivery can be sent before an older one.
+   *
+   * Added in Saleor 3.23.
+   */
+  readonly payloadGeneration?: InputMaybe<WebhookPayloadGenerationEnum>;
   /** Subscription query used to define a webhook payload. */
   readonly query?: InputMaybe<Scalars['String']['input']>;
   /**
@@ -913,6 +985,11 @@ export type GetSaleorInstanceDataQueryVariables = Exact<{ [key: string]: never; 
 
 export type GetSaleorInstanceDataQuery = { readonly shop: { readonly version: string } };
 
+export type AppDeletedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AppDeletedSubscription = { readonly event?: { readonly app?: { readonly id: string } | null } | {} | null };
+
 export const UntypedWebhookDetailsFragmentFragmentDoc = gql`
     fragment WebhookDetailsFragment on Webhook {
   id
@@ -944,10 +1021,6 @@ export const UntypedCreateAppWebhookDocument = gql`
   }
 }
     ${UntypedWebhookDetailsFragmentFragmentDoc}`;
-
-export function useCreateAppWebhookMutation() {
-  return Urql.useMutation<CreateAppWebhookMutation, CreateAppWebhookMutationVariables>(UntypedCreateAppWebhookDocument);
-};
 export const UntypedModifyAppWebhookDocument = gql`
     mutation ModifyAppWebhook($id: ID!, $input: WebhookUpdateInput!) {
   webhookUpdate(id: $id, input: $input) {
@@ -960,10 +1033,6 @@ export const UntypedModifyAppWebhookDocument = gql`
   }
 }
     ${UntypedWebhookDetailsFragmentFragmentDoc}`;
-
-export function useModifyAppWebhookMutation() {
-  return Urql.useMutation<ModifyAppWebhookMutation, ModifyAppWebhookMutationVariables>(UntypedModifyAppWebhookDocument);
-};
 export const UntypedRemoveAppWebhookDocument = gql`
     mutation RemoveAppWebhook($id: ID!) {
   webhookDelete(id: $id) {
@@ -977,10 +1046,6 @@ export const UntypedRemoveAppWebhookDocument = gql`
   }
 }
     `;
-
-export function useRemoveAppWebhookMutation() {
-  return Urql.useMutation<RemoveAppWebhookMutation, RemoveAppWebhookMutationVariables>(UntypedRemoveAppWebhookDocument);
-};
 export const UntypedGetAppDetailsAndWebhooksDataDocument = gql`
     query GetAppDetailsAndWebhooksData {
   app {
@@ -993,10 +1058,6 @@ export const UntypedGetAppDetailsAndWebhooksDataDocument = gql`
   }
 }
     ${UntypedWebhookDetailsFragmentFragmentDoc}`;
-
-export function useGetAppDetailsAndWebhooksDataQuery(options?: Omit<Urql.UseQueryArgs<GetAppDetailsAndWebhooksDataQueryVariables>, 'query'>) {
-  return Urql.useQuery<GetAppDetailsAndWebhooksDataQuery, GetAppDetailsAndWebhooksDataQueryVariables>({ query: UntypedGetAppDetailsAndWebhooksDataDocument, ...options });
-};
 export const UntypedGetSaleorInstanceDataDocument = gql`
     query GetSaleorInstanceData {
   shop {
@@ -1004,13 +1065,21 @@ export const UntypedGetSaleorInstanceDataDocument = gql`
   }
 }
     `;
-
-export function useGetSaleorInstanceDataQuery(options?: Omit<Urql.UseQueryArgs<GetSaleorInstanceDataQueryVariables>, 'query'>) {
-  return Urql.useQuery<GetSaleorInstanceDataQuery, GetSaleorInstanceDataQueryVariables>({ query: UntypedGetSaleorInstanceDataDocument, ...options });
-};
+export const UntypedAppDeletedDocument = gql`
+    subscription AppDeleted {
+  event {
+    ... on AppDeleted {
+      app {
+        id
+      }
+    }
+  }
+}
+    `;
 export const WebhookDetailsFragmentFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookDetailsFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"targetUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionQuery"}},{"kind":"Field","name":{"kind":"Name","value":"syncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}}]}}]} as unknown as DocumentNode<WebhookDetailsFragmentFragment, unknown>;
 export const CreateAppWebhookDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateAppWebhook"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"WebhookCreateInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"webhookCreate"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"webhook"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"WebhookDetailsFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"errors"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"field"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookDetailsFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"targetUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionQuery"}},{"kind":"Field","name":{"kind":"Name","value":"syncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}}]}}]} as unknown as DocumentNode<CreateAppWebhookMutation, CreateAppWebhookMutationVariables>;
 export const ModifyAppWebhookDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ModifyAppWebhook"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"WebhookUpdateInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"webhookUpdate"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"errors"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"message"}}]}},{"kind":"Field","name":{"kind":"Name","value":"webhook"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"WebhookDetailsFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookDetailsFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"targetUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionQuery"}},{"kind":"Field","name":{"kind":"Name","value":"syncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}}]}}]} as unknown as DocumentNode<ModifyAppWebhookMutation, ModifyAppWebhookMutationVariables>;
 export const RemoveAppWebhookDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"RemoveAppWebhook"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"webhookDelete"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"webhook"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"errors"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"field"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]}}]} as unknown as DocumentNode<RemoveAppWebhookMutation, RemoveAppWebhookMutationVariables>;
 export const GetAppDetailsAndWebhooksDataDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAppDetailsAndWebhooksData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"app"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"appUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"webhooks"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"WebhookDetailsFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"WebhookDetailsFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Webhook"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"targetUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionQuery"}},{"kind":"Field","name":{"kind":"Name","value":"syncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}},{"kind":"Field","name":{"kind":"Name","value":"asyncEvents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}}]}}]}}]} as unknown as DocumentNode<GetAppDetailsAndWebhooksDataQuery, GetAppDetailsAndWebhooksDataQueryVariables>;
 export const GetSaleorInstanceDataDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetSaleorInstanceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shop"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"version"}}]}}]}}]} as unknown as DocumentNode<GetSaleorInstanceDataQuery, GetSaleorInstanceDataQueryVariables>;
+export const AppDeletedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"AppDeleted"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"event"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"InlineFragment","typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"AppDeleted"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"app"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}}]}}]} as unknown as DocumentNode<AppDeletedSubscription, AppDeletedSubscriptionVariables>;

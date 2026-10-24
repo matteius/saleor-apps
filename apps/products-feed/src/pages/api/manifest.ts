@@ -6,8 +6,10 @@ import { withSpanAttributes } from "@saleor/apps-otel/src/with-span-attributes";
 import { env } from "@/env";
 
 import packageJson from "../../../package.json";
+import { appDeletedWebhook } from "../../app/api/webhooks/app-deleted/webhook-definition";
 import { createLogger } from "../../logger";
 import { loggerContext } from "../../logger-context";
+import { DEPRECATION_REASON } from "../../modules/deprecation/deprecation-reason";
 
 export default wrapWithLoggerContext(
   withSpanAttributes(
@@ -21,7 +23,8 @@ export default wrapWithLoggerContext(
         logger.info("Generating manifest");
 
         const manifest: AppManifest = {
-          about: "Generate feeds consumed by Merchant Platforms",
+          about:
+            "[Deprecated] Replaced by the Google Merchant Center app, installable from Extensions \u2192 Explore. Still functional, but no longer developed.",
           appUrl: iframeBaseUrl,
           author: "Saleor Commerce",
           brand: {
@@ -29,17 +32,22 @@ export default wrapWithLoggerContext(
               default: `${apiBaseURL}/logo.png`,
             },
           },
+          /*
+           * Saleor below 3.23 ignores this field; the daily cron picks such an installation up
+           * once its core is upgraded.
+           */
+          deprecationReason: DEPRECATION_REASON,
           dataPrivacyUrl: "https://saleor.io/legal/privacy/",
           extensions: [],
           homepageUrl: "https://github.com/saleor/apps",
           id: "saleor.app.product-feed",
-          name: "Product Feed",
+          name: "Product Feed (deprecated)",
           permissions: ["MANAGE_PRODUCTS"],
           supportUrl: "https://github.com/saleor/apps/discussions",
           tokenTargetUrl: `${apiBaseURL}/api/register`,
           version: packageJson.version,
-          requiredSaleorVersion: ">=3.21 <4",
-          webhooks: [],
+          requiredSaleorVersion: ">=3.22 <3.24",
+          webhooks: [appDeletedWebhook.getWebhookManifest(apiBaseURL)],
         };
 
         return manifest;

@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
-    workspace: [
+    projects: [
       {
         extends: true,
         test: {

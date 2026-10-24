@@ -89,7 +89,7 @@ const validateClientToken = middleware(async ({ ctx, next, meta }) => {
       ],
     });
   } catch (e) {
-    logger.error("JWT verification failed, throwing", { error: e });
+    logger.warn("JWT verification failed, throwing", { error: e });
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "JWT verification failed.",
@@ -112,20 +112,7 @@ const validateClientToken = middleware(async ({ ctx, next, meta }) => {
  * TODO Rethink middleware composition to enable safe server-side router calls
  */
 
-const logErrors = middleware(async ({ next }) => {
-  const logger = createLogger("trpcServer");
-
-  const result = await next();
-
-  if (!result.ok) {
-    logger.error(`[TRPC Error] ${result.error.message}`, { error: result.error });
-  }
-
-  return result;
-});
-
 export const protectedClientProcedure = procedure
-  .use(logErrors)
   .use(attachAppToken)
   .use(validateClientToken)
   .use(async ({ ctx, next }) => {

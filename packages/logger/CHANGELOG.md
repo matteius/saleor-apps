@@ -1,5 +1,30 @@
 # @saleor/apps-logger
 
+## 1.6.8
+
+### Patch Changes
+
+- ab5a656: Fixed log message being replaced by log attributes. Before: an attribute named `message` replaced the log message in production logs (and in the extra data sent to Sentry). Now: the log message is always kept.
+
+## 1.6.7
+
+### Patch Changes
+
+- 4c5c512: Fixed the Sentry log transport. Before, every log call attached one more transport, so each log added a growing number of duplicated (and stale) breadcrumbs, and all breadcrumbs were sent with the "debug" level. Error logs were never reported to Sentry as events. Now each log adds exactly one breadcrumb with the correct level, and `error`/`fatal` logs are sent to Sentry as events: as an exception when the log attributes contain an `Error`, otherwise as a message.
+
+## 1.6.6
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+
+## 1.6.5
+
+### Patch Changes
+
+- 53fa836: Errors passed to the logger are now written to the logs with their name, message and stack. Before, a log like `logger.warn("Failed", { error })` produced `"error":{}` in Vercel runtime logs, which made failures impossible to diagnose. Now the same log contains the actual error details.
+
 ## 1.6.4
 
 ### Patch Changes

@@ -1,5 +1,166 @@
 # saleor-app-cms
 
+## 2.18.10
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+
+## 2.18.9
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 2.18.8
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+  - @saleor/apps-shared@1.17.3
+  - @saleor/webhook-utils@0.3.4
+
+## 2.18.7
+
+### Patch Changes
+
+- 3a4b70a: Fixed logging in the `APP_DELETED` webhook. Before, every uninstall logged "You cant use LoggerContext outside of the wrapped scope" warnings, and its log lines had no request path or Saleor API URL context. Now the handler runs inside the logger context, so the warnings are gone and the logs carry the same context as other webhooks.
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+- 0e0d0f4: When Saleor rejects the app's token while the app reads its configuration (for example after the environment was restored or the app was reinstalled), the app now logs a warning instead of an error. App behavior doesn't change: as before, the app treats it as missing configuration.
+
+## 2.18.6
+
+### Patch Changes
+
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+
+## 2.18.5
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+
+## 2.18.4
+
+### Patch Changes
+
+- 635e29e: Upgraded Sentry SDK to v10. Previously, Sentry context (breadcrumbs, tags, user) could leak between concurrent requests handled by the same server instance. Now each request gets its own isolated Sentry scope, so error reports only contain data from the request that failed.
+
+  Sentry no longer wraps API route handlers. Previously, this wrapper stopped OpenTelemetry from recording spans created inside handlers. Now those spans appear in traces again. Errors from API routes are still reported to Sentry.
+
+- abdba39: Fixed OpenTelemetry spans that could go missing when a route was loaded before instrumentation was registered. Previously, tracers created at module load (e.g. DynamoDB APL) could stay silent; now they share the same OpenTelemetry instance as instrumentation and always record spans. This also prepares the apps for the Next.js 16 upgrade, where this load order happens on Vercel.
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+  - @saleor/apps-shared@1.17.2
+  - @saleor/webhook-utils@0.3.3
+
+## 2.18.3
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+
+## 2.18.2
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+
+## 2.18.1
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+  - @saleor/apps-shared@1.16.2
+  - @saleor/webhook-utils@0.3.2
+
+## 2.18.0
+
+### Minor Changes
+
+- b7efe3b: Dropped support for Saleor 3.21. Before, these apps could be installed on Saleor 3.21 and newer. Now, the minimum supported version is 3.22 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.21 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+  - @saleor/apps-shared@1.16.1
+  - @saleor/webhook-utils@0.3.1
+
+## 2.17.3
+
+### Patch Changes
+
+- 238a85b: Fixed error reporting when a CMS provider fails with a non-standard error. Previously such failures were logged as `Error: [object Object]`, hiding the actual reason (for example an expired Strapi token) and causing them to be reported as generic sync failures. Now the original error payload is preserved, so the message is visible and authentication problems are correctly reported as auth errors.
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+
+## 2.17.2
+
+### Patch Changes
+
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+  - @saleor/apps-shared@1.15.0
+  - @saleor/apps-ui@1.4.0
+
+## 2.17.1
+
+### Patch Changes
+
+- 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
+
+## 2.17.0
+
+### Minor Changes
+
+- f7f0e74: Minimum Saleor version required is now 3.21 (Saleor 3.20 is EOL)
+
+## 2.16.0
+
+### Minor Changes
+
+- 164454d: Implemented APP_DELETED handler. On Saleor 3.23+ app will react to its own removal and prune APL data
+
+### Patch Changes
+
+- c8a4efe: When environment variables fail validation at startup, the app now prints a readable error message and the offending fields, then exits with code 1 — instead of dumping a long stack trace. Before: a wall of webpack stack frames around `Invalid environment variables`. After: e.g. `Validation error: Required at "SECRET_KEY"` followed by a JSON list of the failing fields.
+- Updated dependencies [6683590]
+  - @saleor/webhook-utils@0.3.0
+
+## 2.15.8
+
+### Patch Changes
+
+- 3691d44: Upgraded Axios to v1.15.2 to fix CVE-2026-40175 and more
+- 9044c32: Upgraded protobufjs to v7.5.8 to fix the following CVEs: CVE-2026-41242,
+  CVE-2026-44290, CVE-2026-44291, CVE-2026-44292, CVE-2026-44293,
+  CVE-2026-44294, CVE-2026-44295, CVE-2026-45740.
+
+  This is only relevant for you if you use & enabled OpenTelemetry.
+
+## 2.15.7
+
+### Patch Changes
+
+- 2865a4f: Upgraded next.js to v15.5.18, more info: https://vercel.com/changelog/next-js-may-2026-security-release
+
+## 2.15.6
+
+### Patch Changes
+
+- 4af78c1: Failed JWT verification in tRPC procedures no longer reports to Sentry as an error. Before, an expired or invalid token raised a 500 (or 403) and produced an error in monitoring even though it was a normal client-side auth failure. Now it logs a warning and returns 401, so dashboards stay clean and the client can react to the auth state correctly.
+
 ## 2.15.5
 
 ### Patch Changes

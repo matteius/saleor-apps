@@ -15,7 +15,10 @@ export const PROBLEM_KEYS = {
   permissionError: (configId: string) => `stripe-permission-error:${configId}`,
   webhookSecretMismatch: (configId: string) => `stripe-webhook-secret-mismatch:${configId}`,
   configMissing: (configId: string) => `stripe-config-missing:${configId}`,
+  legacyWebhookOrphaned: (configId: string) => `stripe-legacy-webhook-orphaned:${configId}`,
   invalidPaymentMethod: (channelSlug: string) => `stripe-invalid-payment-method:${channelSlug}`,
+  objectFromDifferentInstallation: (configId: string) =>
+    `stripe-object-from-different-installation:${configId}`,
 } as const;
 
 export class StripeProblemReporter {
@@ -33,7 +36,7 @@ export class StripeProblemReporter {
     });
 
     if (result.isErr()) {
-      logger.error("Failed to report auth failure problem", { error: result.error });
+      logger.warn("Failed to report auth failure problem", { error: result.error });
     }
   }
 
@@ -45,7 +48,7 @@ export class StripeProblemReporter {
     });
 
     if (result.isErr()) {
-      logger.error("Failed to report permission error problem", { error: result.error });
+      logger.warn("Failed to report permission error problem", { error: result.error });
     }
   }
 
@@ -57,7 +60,7 @@ export class StripeProblemReporter {
     });
 
     if (result.isErr()) {
-      logger.error("Failed to report webhook secret mismatch problem", { error: result.error });
+      logger.warn("Failed to report webhook secret mismatch problem", { error: result.error });
     }
   }
 
@@ -69,7 +72,19 @@ export class StripeProblemReporter {
     });
 
     if (result.isErr()) {
-      logger.error("Failed to report config missing problem", { error: result.error });
+      logger.warn("Failed to report config missing problem", { error: result.error });
+    }
+  }
+
+  async reportLegacyWebhookOrphaned(configId: string): Promise<void> {
+    const result = await this.reporter.reportProblem({
+      key: PROBLEM_KEYS.legacyWebhookOrphaned(configId),
+      aggregationPeriod: 24 * 60,
+      message: `Stripe is sending webhook events for configuration "${configId}" from a previous app installation. The app can't remove this webhook because the old configuration no longer exists. Please remove the orphaned webhook in your Stripe Dashboard.`,
+    });
+
+    if (result.isErr()) {
+      logger.warn("Failed to report legacy webhook orphaned problem", { error: result.error });
     }
   }
 
@@ -80,7 +95,20 @@ export class StripeProblemReporter {
     });
 
     if (result.isErr()) {
-      logger.error("Failed to report config missing problem", { error: result.error });
+      logger.warn("Failed to report invalid payment method problem", { error: result.error });
+    }
+  }
+
+  async reportObjectFromDifferentInstallation(configId: string, configName: string): Promise<void> {
+    const result = await this.reporter.reportProblem({
+      key: PROBLEM_KEYS.objectFromDifferentInstallation(configId),
+      message: `Stripe is sending webhook events for payments created by a different Saleor environment to configuration "${configName}". These events are ignored. This happens when multiple Saleor environments use the same Stripe account in the same mode (test or live). Use a separate Stripe account or sandbox for each environment.`,
+    });
+
+    if (result.isErr()) {
+      logger.warn("Failed to report object from different installation problem", {
+        error: result.error,
+      });
     }
   }
 
@@ -90,11 +118,12 @@ export class StripeProblemReporter {
       PROBLEM_KEYS.permissionError(configId),
       PROBLEM_KEYS.webhookSecretMismatch(configId),
       PROBLEM_KEYS.configMissing(configId),
+      PROBLEM_KEYS.objectFromDifferentInstallation(configId),
     ];
     const result = await this.reporter.clearProblems(keys);
 
     if (result.isErr()) {
-      logger.error("Failed to clear problems for config", { error: result.error, configId });
+      logger.warn("Failed to clear problems for config", { error: result.error, configId });
     }
   }
 

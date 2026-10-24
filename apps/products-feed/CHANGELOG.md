@@ -1,5 +1,205 @@
 # saleor-app-products-feed
 
+## 3.3.7
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+
+## 3.3.6
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 3.3.5
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+  - @saleor/app-deprecation@0.0.2
+  - @saleor/apps-shared@1.17.3
+  - @saleor/webhook-utils@0.3.4
+
+## 3.3.4
+
+### Patch Changes
+
+- 335cc0c: Upgraded Handlebar.js to 4.7.10 to fix CVE-2026-106444, CVE-2026-106446, and CVE-2026-106445
+- Updated dependencies [335cc0c]
+  - @saleor/handlebars@0.1.3
+
+## 3.3.3
+
+### Patch Changes
+
+- 3a4b70a: Fixed logging in the `APP_DELETED` webhook. Before, every uninstall logged "You cant use LoggerContext outside of the wrapped scope" warnings, and its log lines had no request path or Saleor API URL context. Now the handler runs inside the logger context, so the warnings are gone and the logs carry the same context as other webhooks.
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+
+## 3.3.2
+
+### Patch Changes
+
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+
+## 3.3.1
+
+### Patch Changes
+
+- f59c456: Fixed the daily deprecation job timing out before it reached every store. Before, it updated 5 stores at a time and a single slow store held up the whole group, so with ~2000 installations it hit the 5-minute limit and never finished. Now it handles 25 stores at a time by default (configurable with `DEPRECATION_CRON_PARALLEL_CALLS`), each store gets at most 3 seconds (configurable with `DEPRECATION_CRON_REQUEST_TIMEOUT_MS`), and a slow store no longer holds up the others.
+
+  Stores that no longer exist (deleted environment, or the app's access was revoked) are now counted as `gone` and logged as information instead of warnings, so they no longer appear as failures. The job also logs a summary when it finishes.
+
+- Updated dependencies [f59c456]
+  - @saleor/app-deprecation@0.0.1
+
+## 3.3.0
+
+### Minor Changes
+
+- 1f40ce7: This app is now deprecated. It has been replaced by the Google Merchant Center app, which generates feeds asynchronously and handles much larger catalogs.
+
+  Product Feed keeps working and its feeds keep generating, but it will not receive new features. The Dashboard now shows the deprecation next to the app, pointing to where the replacement can be installed. Configuration is not carried over: set the new app up alongside this one, then uninstall this one.
+
+  Deploying this version requires the `CRON_SECRET` environment variable. Without it, stores that installed the app earlier will not be told about the deprecation.
+
+## 3.2.6
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+
+## 3.2.5
+
+### Patch Changes
+
+- 635e29e: Upgraded Sentry SDK to v10. Previously, Sentry context (breadcrumbs, tags, user) could leak between concurrent requests handled by the same server instance. Now each request gets its own isolated Sentry scope, so error reports only contain data from the request that failed.
+
+  Sentry no longer wraps API route handlers. Previously, this wrapper stopped OpenTelemetry from recording spans created inside handlers. Now those spans appear in traces again. Errors from API routes are still reported to Sentry.
+
+- abdba39: Fixed OpenTelemetry spans that could go missing when a route was loaded before instrumentation was registered. Previously, tracers created at module load (e.g. DynamoDB APL) could stay silent; now they share the same OpenTelemetry instance as instrumentation and always record spans. This also prepares the apps for the Next.js 16 upgrade, where this load order happens on Vercel.
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+  - @saleor/apps-shared@1.17.2
+  - @saleor/webhook-utils@0.3.3
+
+## 3.2.4
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+
+## 3.2.3
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+
+## 3.2.2
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+  - @saleor/apps-shared@1.16.2
+  - @saleor/webhook-utils@0.3.2
+
+## 3.2.1
+
+### Patch Changes
+
+- 2dc5c6a: Now the Product Feed app declares compatibility with Saleor 3.22 and 3.23 only. Before, it advertised support for every 3.x version, so Saleor Dashboard offered it for installation on 3.24, where it is not supported.
+
+## 3.2.0
+
+### Minor Changes
+
+- b7efe3b: Dropped support for Saleor 3.21. Before, these apps could be installed on Saleor 3.21 and newer. Now, the minimum supported version is 3.22 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.21 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+  - @saleor/apps-shared@1.16.1
+  - @saleor/webhook-utils@0.3.1
+
+## 3.1.5
+
+### Patch Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+  - @saleor/apps-shared@1.15.0
+  - @saleor/apps-ui@1.4.0
+
+## 3.1.3
+
+### Patch Changes
+
+- 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
+
+## 3.1.2
+
+### Patch Changes
+
+- 0e46758: Added a "Use SKU as GTIN" toggle to the Google feed attribute mapping. When enabled, variants without a mapped GTIN attribute use their SKU as the GTIN, so you no longer need to duplicate SKUs into a custom attribute. Products that have a mapped GTIN attribute keep that value.
+
+## 3.1.1
+
+### Patch Changes
+
+- 6e70f4e: The Google Merchant Center feed now uses a product's SEO description for the `g:description` attribute when one is set. Before, the feed always used the regular product description; now it prefers the SEO description and only falls back to the regular description when the SEO description is empty. This lets merchants control the description sent to Google Merchant Center via the product's SEO settings.
+
+## 3.1.0
+
+### Minor Changes
+
+- 164454d: Implemented APP_DELETED handler. On Saleor 3.23+ app will react to its own removal and prune APL data
+
+### Patch Changes
+
+- c8a4efe: When environment variables fail validation at startup, the app now prints a readable error message and the offending fields, then exits with code 1 — instead of dumping a long stack trace. Before: a wall of webpack stack frames around `Invalid environment variables`. After: e.g. `Validation error: Required at "SECRET_KEY"` followed by a JSON list of the failing fields.
+- Updated dependencies [6683590]
+  - @saleor/webhook-utils@0.3.0
+
+## 3.0.8
+
+### Patch Changes
+
+- 9044c32: Upgraded protobufjs to v7.5.8 to fix the following CVEs: CVE-2026-41242,
+  CVE-2026-44290, CVE-2026-44291, CVE-2026-44292, CVE-2026-44293,
+  CVE-2026-44294, CVE-2026-44295, CVE-2026-45740.
+
+  This is only relevant for you if you use & enabled OpenTelemetry.
+
+## 3.0.7
+
+### Patch Changes
+
+- 2865a4f: Upgraded next.js to v15.5.18, more info: https://vercel.com/changelog/next-js-may-2026-security-release
+
+## 3.0.6
+
+### Patch Changes
+
+- 4af78c1: Failed JWT verification in tRPC procedures no longer reports to Sentry as an error. Before, an expired or invalid token raised a 500 (or 403) and produced an error in monitoring even though it was a normal client-side auth failure. Now it logs a warning and returns 401, so dashboards stay clean and the client can react to the auth state correctly.
+
 ## 3.0.5
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 import { SaleorVersionCompatibilityValidator } from "@saleor/apps-shared/saleor-version-compatibility-validator";
 
-export const featureFlags = ["giftCardSentEvent", "orderRefundedEvent"] as const;
+export const featureFlags = ["giftCardPaymentMethodDetails"] as const;
 
 export type FeatureFlag = (typeof featureFlags)[number];
 
@@ -16,7 +16,9 @@ interface GetFeatureFlagsArgs {
  */
 export const getFeatureFlags = ({ saleorVersion }: GetFeatureFlagsArgs): FeatureFlagsState => {
   return {
-    giftCardSentEvent: new SaleorVersionCompatibilityValidator(">=3.13").isValid(saleorVersion),
-    orderRefundedEvent: new SaleorVersionCompatibilityValidator(">=3.14").isValid(saleorVersion),
+    // GiftCardPaymentMethodDetails type was added to the schema in 3.23
+    giftCardPaymentMethodDetails: new SaleorVersionCompatibilityValidator(">=3.23").isValid(
+      saleorVersion,
+    ),
   };
 };

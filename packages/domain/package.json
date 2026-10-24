@@ -20,7 +20,7 @@
     "eslint": "catalog:"
   },
   "devDependencies": {
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",
     "@vitest/coverage-v8": "catalog:",

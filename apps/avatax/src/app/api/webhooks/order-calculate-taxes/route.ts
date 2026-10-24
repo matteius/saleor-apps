@@ -6,7 +6,6 @@ import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-att
 import { compose } from "@saleor/apps-shared/compose";
 import { captureException, setTag } from "@sentry/nextjs";
 import Decimal from "decimal.js-light";
-import { after } from "next/server";
 
 import { AppConfig } from "@/lib/app-config";
 import { AppConfigExtractor } from "@/lib/app-config-extractor";
@@ -14,6 +13,7 @@ import { AppConfigurationLogger } from "@/lib/app-configuration-logger";
 import { metadataCache, wrapWithMetadataCache } from "@/lib/app-metadata-cache";
 import { createInstrumentedGraphqlClient } from "@/lib/create-instrumented-graphql-client";
 import { SubscriptionPayloadErrorChecker } from "@/lib/error-utils";
+import { afterDetached } from "@/lib/otel/after-detached";
 import { appExternalTracer } from "@/lib/otel/tracing";
 import { withFlushOtelMetrics } from "@/lib/otel/with-flush-otel-metrics";
 import { createLogger } from "@/logger";
@@ -35,6 +35,7 @@ import { AvataxCalculateTaxesResponseTransformer } from "@/modules/avatax/calcul
 import { AvataxCalculateTaxesTaxCodeMatcher } from "@/modules/avatax/calculate-taxes/avatax-calculate-taxes-tax-code-matcher";
 import { AutomaticallyDistributedProductLinesDiscountsStrategy } from "@/modules/avatax/discounts";
 import { AvataxTaxCodeMatchesService } from "@/modules/avatax/tax-code/avatax-tax-code-matches.service";
+import { reportUnhandledCalculateTaxesError } from "@/modules/calculate-taxes/report-unhandled-calculate-taxes-error";
 import { CalculateTaxesLogRequest } from "@/modules/client-logs/calculate-taxes-log-request";
 import { LogWriterFactory } from "@/modules/client-logs/log-writer-factory";
 import {
@@ -245,7 +246,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
                 ? "Channel references a provider configuration that no longer exists"
                 : "Channel is not configured in the AvaTax app";
 
-            after(() => problemReporter.reportChannelConfigMissing(channelSlug, reason));
+            afterDetached(() => problemReporter.reportChannelConfigMissing(channelSlug, reason));
           }
 
           span.recordException(providerConfig.error);
@@ -286,7 +287,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
               calculatedTaxesResult.transaction.customerUsageType ??
               undefined;
 
-            after(() => {
+            afterDetached(() => {
               const isExemptionApplied = exemptAmountTotalDecimal.gt(0);
               const currentExemptionStatus =
                 payload.taxBase.sourceObject.avataxExemptionStatus ?? null;
@@ -337,7 +338,9 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
             const problemReporter = createAvataxProblemReporter(ctx.authData);
             const configRef = avataxConfigRef;
 
-            after(() => problemReporter.reportSuspiciousZeroTax(configRef.id, configRef.name));
+            afterDetached(() =>
+              problemReporter.reportSuspiciousZeroTax(configRef.id, configRef.name),
+            );
           }
         }
 
@@ -374,7 +377,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
           const problemReporter = createAvataxProblemReporter(ctx.authData);
           const configRef = avataxConfigRef;
 
-          after(() => problemReporter.reportApiProblem(error, configRef));
+          afterDetached(() => problemReporter.reportApiProblem(error, configRef));
         }
 
         if (error instanceof AvataxGetTaxWrongUserInputError) {
@@ -422,7 +425,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
             const problemReporter = createAvataxProblemReporter(ctx.authData);
             const configRef = avataxConfigRef;
 
-            after(() => problemReporter.reportApiProblem(error, configRef));
+            afterDetached(() => problemReporter.reportApiProblem(error, configRef));
           }
 
           span.setStatus({
@@ -453,9 +456,16 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
             { error },
           );
 
+          if (avataxConfigRef) {
+            const problemReporter = createAvataxProblemReporter(ctx.authData);
+            const configRef = avataxConfigRef;
+
+            afterDetached(() => problemReporter.reportInvalidAddress(configRef.id, configRef.name));
+          }
+
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: "Failed to calculate taxes: error from AvaTax API",
+            message: "Failed to calculate taxes: invalid address in app configuration",
           });
 
           return Response.json(
@@ -510,7 +520,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
             const problemReporter = createAvataxProblemReporter(ctx.authData);
             const configRef = avataxConfigRef;
 
-            after(() => problemReporter.reportApiProblem(error, configRef));
+            afterDetached(() => problemReporter.reportApiProblem(error, configRef));
           }
 
           logger.warn(
@@ -542,7 +552,7 @@ const handler = orderCalculateTaxesSyncWebhook.createHandler(async (_req, ctx) =
           return Response.json({ message: "AvaTax API request timed out" }, { status: 504 });
         }
 
-        captureException(error);
+        reportUnhandledCalculateTaxesError(error, "500");
 
         CalculateTaxesLogRequest.createErrorLog({
           sourceId: orderId,

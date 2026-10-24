@@ -13,7 +13,7 @@
     "lint:fix": "eslint --fix ."
   },
   "devDependencies": {
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/apps-shared": "workspace:*",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",

@@ -15,8 +15,10 @@ import {
 import {
   type IGetFallbackSmtpEnabled,
   type IGetSmtpConfiguration,
+  SmtpConfigurationService,
 } from "../../smtp/configuration/smtp-configuration.service";
 import { defaultMjmlSubjectTemplates, defaultMjmlTemplates } from "../../smtp/default-templates";
+import { enrichPayloadWithConfig } from "../../smtp/enrich-payload-with-config";
 import { type IEmailCompiler } from "../../smtp/services/email-compiler";
 import { type ISMTPEmailSender, type SendMailArgs } from "../../smtp/services/smtp-email-sender";
 import { type MessageEventTypes, messageEventTypes } from "../message-event-types";
@@ -25,11 +27,18 @@ export class SendEventMessagesUseCase {
   static BaseError = BaseError.subclass("SendEventMessagesUseCaseError");
 
   /**
-   * Errors thrown when something goes wrong and Saleor should retry
+   * Errors thrown when sending fails on the infrastructure side (e.g. SMTP server failure).
+   * Not retried by Saleor, because retrying could send duplicate emails.
    */
   static ServerError = BaseError.subclass("SendEventMessagesUseCaseServerError");
 
-  static FailedToFetchConfigurationError = this.ServerError.subclass(
+  /**
+   * Server errors that happen before any email was sent (e.g. Saleor API timeout),
+   * so Saleor can safely retry the webhook
+   */
+  static RetryableServerError = this.ServerError.subclass("RetryableServerError");
+
+  static FailedToFetchConfigurationError = this.RetryableServerError.subclass(
     "FailedToFetchConfigurationError",
   );
 
@@ -41,6 +50,11 @@ export class SendEventMessagesUseCase {
   static EmailCompilationError = this.ClientError.subclass("EmailCompilationError");
 
   static InvalidSenderConfigError = this.ClientError.subclass("InvalidSenderConfigError");
+
+  /**
+   * The installation is broken (app token no longer valid in Saleor). Retrying won't help.
+   */
+  static AppTokenRejectedError = this.ClientError.subclass("AppTokenRejectedError");
 
   /**
    * Errors that externally can be translated to no-op operations due to design of the app.
@@ -56,7 +70,7 @@ export class SendEventMessagesUseCase {
 
   static InvalidEmailAddressError = this.NoOpError.subclass("InvalidEmailAddressError");
 
-  static RedirectEmailFetchError = this.ServerError.subclass("RedirectEmailFetchError");
+  static RedirectEmailFetchError = this.RetryableServerError.subclass("RedirectEmailFetchError");
 
   private logger = createLogger("SendEventMessagesUseCase");
 
@@ -67,26 +81,6 @@ export class SendEventMessagesUseCase {
       emailSender: ISMTPEmailSender;
     },
   ) {}
-
-  /**
-   * Enriches the payload with branding info from the SMTP configuration.
-   * This allows templates to use {{branding.siteName}} and {{branding.logoUrl}}.
-   */
-  private enrichPayloadWithBranding(payload: unknown, config: SmtpConfiguration): unknown {
-    const hasBranding = config.brandingSiteName || config.brandingLogoUrl;
-
-    if (!hasBranding) {
-      return payload;
-    }
-
-    return {
-      ...(payload as object),
-      branding: {
-        siteName: config.brandingSiteName || null,
-        logoUrl: config.brandingLogoUrl || null,
-      },
-    };
-  }
 
   private processSingleConfiguration({
     config,
@@ -148,8 +142,8 @@ export class SendEventMessagesUseCase {
       );
     }
 
-    // Enrich payload with branding from config
-    const enrichedPayload = this.enrichPayloadWithBranding(payload, config);
+    // Enrich payload with branding and custom variables from config
+    const enrichedPayload = enrichPayloadWithConfig(payload, config);
 
     const preparedEmailResult = this.deps.emailCompiler.compile({
       event: event,
@@ -343,6 +337,7 @@ export class SendEventMessagesUseCase {
       smtpPassword: fallbackSmtpConfig.smtpPassword,
       encryption: fallbackSmtpConfig.encryption,
       channels: { channels: [], mode: "restrict", override: false },
+      customVariables: {},
       events: messageEventTypes.map((eventType) => ({
         active: true,
         eventType,
@@ -391,6 +386,21 @@ export class SendEventMessagesUseCase {
       active: true,
       availableInChannel: channelSlug,
     });
+
+    if (
+      availableSmtpConfigurations.isErr() &&
+      availableSmtpConfigurations.error instanceof SmtpConfigurationService.AppTokenRejectedError
+    ) {
+      return err([
+        new SendEventMessagesUseCase.AppTokenRejectedError("Saleor rejected the app token", {
+          cause: availableSmtpConfigurations.error,
+          props: {
+            channelSlug,
+            event,
+          },
+        }),
+      ]);
+    }
 
     if (availableSmtpConfigurations.isErr()) {
       this.logger.warn("Failed to fetch configuration");

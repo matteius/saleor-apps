@@ -11,7 +11,9 @@ import { loggerContext } from "../../../../lib/logger-context";
 import { type PageUpdated } from "../../../../lib/webhook-event-types";
 import { createSearchProblemReporter } from "../../../../modules/app-problems";
 import { webhookPageUpdated } from "../../../../webhooks/definitions/page-updated";
+import { handleAlgoliaWebhookError } from "../../../../webhooks/handle-algolia-webhook-error";
 import { handleInvalidAppIdError } from "../../../../webhooks/handle-invalid-app-id-error";
+import { handleWebhookContextError } from "../../../../webhooks/handle-webhook-context-error";
 import { createWebhookContext } from "../../../../webhooks/webhook-context";
 
 export const config = {
@@ -23,6 +25,8 @@ export const config = {
 const logger = createLogger("webhookPageUpdatedHandler");
 
 export const handler: NextJsWebhookHandler<PageUpdated> = async (req, res, context) => {
+  loggerContext.setSaleorVersion(context.schemaVersion);
+
   const { event, authData } = context;
 
   logger.info(`New event received: ${event} (${context.payload?.__typename})`, {
@@ -98,16 +102,20 @@ export const handler: NextJsWebhookHandler<PageUpdated> = async (req, res, conte
         return;
       }
 
-      logger.error("Failed to execute page_updated webhook (algoliaClient.updatePage)", {
+      return handleAlgoliaWebhookError({
         error: e,
+        logger,
+        message: "Failed to execute page_updated webhook (algoliaClient.updatePage)",
+        res,
       });
-
-      return res.status(500).send("Operation failed due to error");
     }
   } catch (e) {
-    logger.error("Failed to execute page_updated webhook (createWebhookContext)", { error: e });
-
-    return res.status(400).send((e as Error).message);
+    return handleWebhookContextError({
+      error: e,
+      logger,
+      message: "Failed to execute page_updated webhook (createWebhookContext)",
+      res,
+    });
   }
 };
 

@@ -1,5 +1,243 @@
 # saleor-app-payment-stripe
 
+## 2.12.0
+
+### Minor Changes
+
+- d87f0b4: You can now find Saleor orders and checkouts from the Stripe Dashboard. Payment intents and refunds now include `saleor_order_id`, `saleor_order_number` and `saleor_checkout_id` metadata when the app knows them. Payments started for an existing order also get the description "Saleor Order #<number>".
+
+  Before, payment intents only had the ID of the Saleor checkout or order they were started for. Payments created from a checkout get the order details when the payment is captured or refunded. Payments captured right away during checkout still don't have the order number, because the order doesn't exist yet when Stripe creates the payment. Order details are added after the app's webhooks are migrated, which happens on the app's deployment.
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+- 7e746f3: If the app can't report a problem to your Saleor Dashboard, it now logs a warning instead of an error. Before, this case was logged as an error even though payment processing was not affected. One example is when the Saleor environment that a Stripe webhook points to was deleted.
+
+## 2.11.5
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 2.11.4
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+  - @saleor/apps-shared@1.17.3
+  - @saleor/apps-trpc@4.0.5
+
+## 2.11.3
+
+### Patch Changes
+
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+- 8a86989: Fixed Stripe reporting failed webhook deliveries for events the app should ignore. Stripe sends events for every payment in the account to each webhook endpoint, so the app also receives events for payments it didn't create:
+
+  - payments created outside of Saleor, for example Payment Links or other integrations
+  - payments created by a different Saleor environment connected to the same Stripe account in the same mode
+
+  Before: the app answered these events with HTTP 400. Stripe kept retrying them for up to 3 days, sent "having trouble delivering webhooks" emails, and could eventually disable the endpoint.
+
+  After: the app acknowledges these events with HTTP 200 and ignores them. Payments created by the environment itself are processed as before.
+
+  When events come from a different Saleor environment, the app also shows an App Problem in the Dashboard for the affected configuration. It recommends using a separate Stripe account or sandbox for each environment. The problem is cleared when the configuration is updated or removed.
+
+## 2.11.2
+
+### Patch Changes
+
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+- c5db97f: You now see an App Problem when Stripe keeps sending webhook events from a previous installation of the app whose configuration no longer exists. This happens when the app is reinstalled while the old webhook endpoint is still active in Stripe. The app can't remove that webhook without the old configuration, so the problem asks you to delete it in your Stripe Dashboard. Repeated events are grouped into one problem per day. Before, this was only logged as an internal error.
+
+## 2.11.1
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+- d3e9a93: Fixed payment method details (e.g. card brand and last digits) missing on transactions for Saleor 3.23 and newer. Before, the Stripe webhook sent payment method details only on Saleor 3.22. If the Stripe webhook arrived before the shopper returned to the storefront, or Saleor completed the checkout itself, the transaction had no payment method. Now the details are always sent from the Stripe webhook.
+
+## 2.11.0
+
+### Minor Changes
+
+- 649ea54: Added support for Pay by Bank (`pay_by_bank`), MobilePay (`mobilepay`) and Revolut Pay (`revolut_pay`) payment methods. Previously, sending any of these as `paymentMethod` in `transactionInitializeSession` returned an `UnsupportedPaymentMethodError`. Now a PaymentIntent is created for them. MobilePay and Revolut Pay support both AUTHORIZATION and CHARGE flows. Pay by Bank is always charged immediately.
+
+## 2.10.1
+
+### Patch Changes
+
+- 635e29e: Upgraded Sentry SDK to v10. Previously, Sentry context (breadcrumbs, tags, user) could leak between concurrent requests handled by the same server instance. Now each request gets its own isolated Sentry scope, so error reports only contain data from the request that failed.
+
+  Sentry no longer wraps API route handlers. Previously, this wrapper stopped OpenTelemetry from recording spans created inside handlers. Now those spans appear in traces again. Errors from API routes are still reported to Sentry.
+
+- abdba39: Fixed OpenTelemetry spans that could go missing when a route was loaded before instrumentation was registered. Previously, tracers created at module load (e.g. DynamoDB APL) could stay silent; now they share the same OpenTelemetry instance as instrumentation and always record spans. This also prepares the apps for the Next.js 16 upgrade, where this load order happens on Vercel.
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+  - @saleor/apps-shared@1.17.2
+  - @saleor/apps-trpc@4.0.5
+
+## 2.10.0
+
+### Minor Changes
+
+- 57acbeb: Refunds, captures and cancellations are no longer performed twice when Saleor re-delivers the same request. Saleor retries a transaction action webhook up to five times when the app is slow or returns an error, and until now each retry reached Stripe as a brand new call - a retry that arrived after Stripe had already accepted a refund created a second, duplicate refund. The app now forwards the `idempotencyKey` that Saleor sends with the request, so Stripe returns the original refund instead of creating another one. Two separate refunds of the same amount are still processed independently, because Saleor assigns each requested action its own key.
+
+  Requires Saleor 3.23 or newer, which is where `idempotencyKey` was added to the transaction action webhook payloads.
+
+## 2.9.1
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+- Updated dependencies [c12c623]
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+  - @saleor/apps-ui-next@0.2.1
+  - @saleor/apps-trpc@4.0.5
+
+## 2.9.0
+
+### Minor Changes
+
+- b5f3231: Dropped support for Saleor 3.22. Before, the app could be installed on Saleor 3.22 and newer. Now the minimum supported version is 3.23 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.22 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+  - @saleor/apps-ui-next@0.2.0
+  - @saleor/apps-trpc@4.0.5
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+  - @saleor/apps-shared@1.16.2
+  - @saleor/apps-trpc@4.0.5
+
+## 2.8.0
+
+### Minor Changes
+
+- b7efe3b: Dropped support for Saleor 3.21. Before, these apps could be installed on Saleor 3.21 and newer. Now, the minimum supported version is 3.22 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.21 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+  - @saleor/apps-shared@1.16.1
+  - @saleor/apps-trpc@4.0.5
+
+## 2.7.2
+
+### Patch Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+  - @saleor/apps-trpc@4.0.5
+
+## 2.7.1
+
+### Patch Changes
+
+- b44a659: Opening the app from Saleor Dashboard no longer flashes unstyled bare "Loading..."
+- b44a659: Reloading a Stripe configuration page no longer briefly claims you lack permission. Before: the app
+  treated "Dashboard has not sent the user yet" the same as "user is missing a permission", so
+  reloading or deep-linking into a configuration page flashed "You do not have permission to access
+  this page" before the real page appeared. Now: the app waits until permissions are actually known
+  and shows a loading skeleton in the meantime, so the message only appears for users who really are
+  missing one.
+
+## 2.7.0
+
+### Minor Changes
+
+- d78dcb0: Rebuilt the configuration screens to match Saleor Dashboard settings pages. Before: a single
+  list of configurations with a separate channel-mapping section and no guidance. Now: each
+  configuration is a card that shows the channels using it, with a Sandbox/Live badge, a
+  connected-channel count, per-channel disconnect, and a fold at the bottom of the card listing
+  channels that are not assigned yet. Each card’s overflow menu has Edit and Delete, instead of a
+  standalone remove control. A "Finish Stripe setup" checklist walks through adding keys and
+  assigning channels, and stays reachable as a compact summary row after
+  being dismissed. Saving a new configuration now locks the form and save bar while it is in
+  flight, so a double click can no longer create a duplicate configuration. Key fields also name
+  the value they expect and the prefix it starts with, so pasting a secret key instead of a
+  restricted one is easier to catch before saving. After a key is pasted, a Sandbox or Live
+  pill appears in the form header so the environment is visible before save.
+- d78dcb0: Stripe configurations can now be edited. Before: a configuration was read-only once created, so
+  fixing a typo in its name or rotating leaked Stripe keys meant deleting it and creating a new one,
+  which also lost every channel assignment. Now: clicking a configuration name opens its own page
+  where the name and keys can be changed and the configuration can be deleted, while its channels
+  stay assigned. Pasting a new restricted key is optional — leaving the field empty keeps the saved
+  one. Switching a configuration to another Stripe account or between sandbox and live re-creates
+  its Stripe webhook automatically, and rotating keys clears any credential problems the app
+  reported for that configuration.
+- d78dcb0: Assigning one channel to a Stripe configuration is quicker, and taking a channel from another
+  configuration is now spelled out. Before: the only way to connect a channel was to open a
+  configuration card and pick channels from a multiselect, and a channel silently disappeared from
+  whichever configuration held it before. Now: every channel in the "channels not assigned" list has
+  its own "Assign to…" select that names each configuration together with its Sandbox or Live mode, so
+  a single channel can be connected in one click. When a card's multiselect pulls channels away from
+  other configurations, the card lists which channels move and where they come from before saving, and
+  a move that swaps sandbox keys for live ones (or the other way round) asks for confirmation first,
+  since it decides whether that channel takes real payments.
+
+### Patch Changes
+
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+  - @saleor/apps-ui-next@0.1.0
+  - @saleor/apps-shared@1.15.0
+  - @saleor/apps-ui@1.4.0
+  - @saleor/apps-trpc@4.0.5
+
+## 2.6.10
+
+### Patch Changes
+
+- 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
+- 0080cce: Stripe no longer raises an error alert when it receives webhook events for a configuration that no longer exists. This happens when a configuration is deleted but its webhook endpoint is still active in Stripe — something outside the app's control. The situation is now surfaced to you as an App Problem, prompting you to remove the orphaned webhook in your Stripe Dashboard.
+
+## 2.6.9
+
+### Patch Changes
+
+- c8a4efe: When environment variables fail validation at startup, the app now prints a readable error message and the offending fields, then exits with code 1 — instead of dumping a long stack trace. Before: a wall of webpack stack frames around `Invalid environment variables`. After: e.g. `Validation error: Required at "SECRET_KEY"` followed by a JSON list of the failing fields.
+
+## 2.6.8
+
+### Patch Changes
+
+- 9044c32: Upgraded protobufjs to v7.5.8 to fix the following CVEs: CVE-2026-41242,
+  CVE-2026-44290, CVE-2026-44291, CVE-2026-44292, CVE-2026-44293,
+  CVE-2026-44294, CVE-2026-44295, CVE-2026-45740.
+
+  This is only relevant for you if you use & enabled OpenTelemetry.
+
+## 2.6.7
+
+### Patch Changes
+
+- 2865a4f: Upgraded next.js to v15.5.18, more info: https://vercel.com/changelog/next-js-may-2026-security-release
+
+## 2.6.6
+
+### Patch Changes
+
+- 4af78c1: Failed JWT verification in tRPC procedures no longer reports to Sentry as an error. Before, an expired or invalid token raised a 500 (or 403) and produced an error in monitoring even though it was a normal client-side auth failure. Now it logs a warning and returns 401, so dashboards stay clean and the client can react to the auth state correctly.
+
 ## 2.6.5
 
 ### Patch Changes

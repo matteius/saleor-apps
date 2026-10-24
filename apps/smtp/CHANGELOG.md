@@ -1,5 +1,244 @@
 # saleor-app-smtp
 
+## 2.9.7
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+
+## 2.9.6
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 2.9.5
+
+### Patch Changes
+
+- 2c2a138: Webhooks for events without an email recipient (e.g. an order placed without a customer email) are now reported correctly.
+
+  Before: the app logged an error and reported it to Sentry, which made it look like the app was failing.
+
+  After: the app logs a warning, does not report to Sentry, and responds with `202 Accepted` to signal the event was received but there was no one to email.
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+  - @saleor/app-deprecation@0.0.2
+  - @saleor/apps-shared@1.17.3
+  - @saleor/webhook-utils@0.3.4
+
+## 2.9.4
+
+### Patch Changes
+
+- 335cc0c: Upgraded Handlebar.js to 4.7.10 to fix CVE-2026-106444, CVE-2026-106446, and CVE-2026-106445
+- Updated dependencies [335cc0c]
+  - @saleor/handlebars@0.1.3
+
+## 2.9.3
+
+### Patch Changes
+
+- 3a4b70a: Fixed logging in the `APP_DELETED` webhook. Before, every uninstall logged "You cant use LoggerContext outside of the wrapped scope" warnings, and its log lines had no request path or Saleor API URL context. Now the handler runs inside the logger context, so the warnings are gone and the logs carry the same context as other webhooks.
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+- 0e0d0f4: Fixed how the app handles events from a Saleor instance that no longer accepts the app's token, for example after the environment was restored or the app was reinstalled.
+
+  Before: the app read this as "no configuration", skipped the email and answered with 200, so the event looked handled. It also reported an error.
+
+  After: the app answers with 400 ("Saleor rejected the app token, reinstall the app"), so the failed delivery shows up in Saleor's webhook logs. It no longer reports an error, because the fix is to reinstall the app, not to change the app's code.
+
+## 2.9.2
+
+### Patch Changes
+
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+- 0572536: Fixed lost emails when the app couldn't reach Saleor. Before, if loading the app configuration or the fallback redirect email from Saleor failed (e.g. timed out), the webhook returned 400 and Saleor dropped the event, so the email was never sent. Now the app returns 503 and Saleor retries the webhook. SMTP send failures still return 400, so they aren't retried and no duplicate emails are sent.
+
+## 2.9.1
+
+### Patch Changes
+
+- f59c456: Fixed the daily deprecation job timing out before it reached every store. Before, it updated 5 stores at a time and a single slow store held up the whole group, so with ~2000 installations it hit the 5-minute limit and never finished. Now it handles 25 stores at a time by default (configurable with `DEPRECATION_CRON_PARALLEL_CALLS`), each store gets at most 3 seconds (configurable with `DEPRECATION_CRON_REQUEST_TIMEOUT_MS`), and a slow store no longer holds up the others.
+
+  Stores that no longer exist (deleted environment, or the app's access was revoked) are now counted as `gone` and logged as information instead of warnings, so they no longer appear as failures. The job also logs a summary when it finishes.
+
+- Updated dependencies [f59c456]
+  - @saleor/app-deprecation@0.0.1
+
+## 2.9.0
+
+### Minor Changes
+
+- 2fecd57: This app is now deprecated. It has been replaced by the Customer Emails app.
+
+  SMTP keeps working and keeps sending emails, but it will not receive new features. The Dashboard now shows the deprecation next to the app (Saleor 3.23+) and the app name gets a "(deprecated)" suffix. The replacement can be installed from Extensions → Explore. Email templates are not carried over: set the new app up alongside this one, then uninstall this one.
+
+  Deploying this version requires the `CRON_SECRET` environment variable. Without it, stores that installed the app earlier will not be told about the deprecation.
+
+## 2.8.5
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+
+## 2.8.4
+
+### Patch Changes
+
+- 635e29e: Upgraded Sentry SDK to v10. Previously, Sentry context (breadcrumbs, tags, user) could leak between concurrent requests handled by the same server instance. Now each request gets its own isolated Sentry scope, so error reports only contain data from the request that failed.
+
+  Sentry no longer wraps API route handlers. Previously, this wrapper stopped OpenTelemetry from recording spans created inside handlers. Now those spans appear in traces again. Errors from API routes are still reported to Sentry.
+
+- abdba39: Fixed OpenTelemetry spans that could go missing when a route was loaded before instrumentation was registered. Previously, tracers created at module load (e.g. DynamoDB APL) could stay silent; now they share the same OpenTelemetry instance as instrumentation and always record spans. This also prepares the apps for the Next.js 16 upgrade, where this load order happens on Vercel.
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+  - @saleor/apps-shared@1.17.2
+  - @saleor/webhook-utils@0.3.3
+
+## 2.8.3
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+
+## 2.8.2
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+  - @saleor/apps-shared@1.16.2
+  - @saleor/webhook-utils@0.3.2
+
+## 2.8.0
+
+### Minor Changes
+
+- b7efe3b: Dropped support for Saleor 3.21. Before, these apps could be installed on Saleor 3.21 and newer. Now, the minimum supported version is 3.22 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.21 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- 90797bb: Now the SMTP app declares compatibility with Saleor 3.22 and 3.23 only. Before, it advertised support for every 3.x version, so it could be installed on Saleor 3.24, where it is not supported. Installing on 3.24 or newer is now rejected with a clear version mismatch message. On Saleor 3.24 and newer, use the Customer Emails app instead.
+- 53fa836: Fixed webhooks not being registered on Saleor 3.22. Before, the app sent a subscription query containing `GiftCardPaymentMethodDetails` - a type that only exists in Saleor 3.23 - so Saleor rejected 7 of 9 webhooks during installation and the app silently sent no order or invoice emails. Now the app detects the Saleor version and registers a query that instance accepts, keeping gift card payment method details on 3.23 and dropping just that field on 3.22.
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+  - @saleor/apps-shared@1.16.1
+  - @saleor/webhook-utils@0.3.1
+
+## 2.7.3
+
+### Patch Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+  - @saleor/apps-shared@1.15.0
+  - @saleor/apps-ui@1.4.0
+
+## 2.7.1
+
+### Patch Changes
+
+- 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
+
+## 2.7.0
+
+### Minor Changes
+
+- 196cbf7: Added a "Custom variables" section to each SMTP configuration. You can now define your own global key-value pairs (e.g. `storefrontUrl`, `supportEmail`) instead of hard-coding them into templates, and reference them in any email template for that configuration as `{{customVariables.yourKey}}`.
+
+  Before: values like the storefront URL had to be pasted into every template by hand and updated in many places. After: define them once per configuration and use `{{customVariables.storefrontUrl}}` everywhere; the live template preview and editor autocomplete reflect your saved values (branding values now show in the preview too).
+
+## 2.6.0
+
+### Minor Changes
+
+- 518e484: The `ORDER_CREATED` email template payload now exposes the order's transactions, including payment method details (e.g. card brand and last digits, or gift card), charged amount and authorized amount. This lets you show which payment method(s) were used in your email templates, including split payments. The example templates were updated to demonstrate rendering this data.
+
+  Note: this requires Saleor 3.22 or newer (the minimum required version was bumped from 3.21), because transaction payment method details were added in Saleor 3.22.
+
+### Patch Changes
+
+- d72747d: Fixed SMTP order template saving so templates are validated with the matching event example payload instead of an empty payload. Templates that preview correctly for `ORDER_CREATED` can now be saved correctly.
+
+## 2.5.1
+
+### Patch Changes
+
+- a6c95f7: Fixed saving an email event configuration with an invalid template (e.g. a Handlebars helper called with the wrong argument type) returning a generic "Internal server error". These template problems are now reported as validation errors, so the UI shows the actual reason (for example "expected the first argument to be a number") instead of an unexpected server error. As a side effect, invalid-template attempts are no longer reported as application errors in monitoring.
+
+## 2.5.0
+
+### Minor Changes
+
+- f7f0e74: Minimum Saleor version required is now 3.21 (Saleor 3.20 is EOL)
+
+### Patch Changes
+
+- 686ff4d: Fixed the default "Gift card sent" email template so it shows the full redeemable gift card code instead of the masked display code. Before, the email rendered `giftCard.displayCode`, which only contains the last 4 characters of the code, so customers could not actually redeem the gift card. Now the template uses `giftCard.code` and shows the complete code.
+
+## 2.4.0
+
+### Minor Changes
+
+- 164454d: Implemented APP_DELETED handler. On Saleor 3.23+ app will react to its own removal and prune APL data
+
+### Patch Changes
+
+- c8a4efe: When environment variables fail validation at startup, the app now prints a readable error message and the offending fields, then exits with code 1 — instead of dumping a long stack trace. Before: a wall of webpack stack frames around `Invalid environment variables`. After: e.g. `Validation error: Required at "SECRET_KEY"` followed by a JSON list of the failing fields.
+- 8238117: Fixed the "Fallback behavior" section on the configuration page being stuck in a loading state for apps installed before the fallback setting was introduced. Previously, configurations saved without the fallback setting caused the section to show a skeleton loader forever. Now the section loads correctly, with the fallback disabled by default.
+- Updated dependencies [6683590]
+  - @saleor/webhook-utils@0.3.0
+
+## 2.3.6
+
+### Patch Changes
+
+- 9044c32: Upgraded protobufjs to v7.5.8 to fix the following CVEs: CVE-2026-41242,
+  CVE-2026-44290, CVE-2026-44291, CVE-2026-44292, CVE-2026-44293,
+  CVE-2026-44294, CVE-2026-44295, CVE-2026-45740.
+
+  This is only relevant for you if you use & enabled OpenTelemetry.
+
+## 2.3.5
+
+### Patch Changes
+
+- 5e9143c: You can now configure an email template for the "Customer account password setup" event. Previously, when you created a customer via the `customerCreate` mutation with a `redirectUrl`, Saleor emitted a notification but the SMTP app silently ignored it — no password-setup email was sent. The event is now wired through the existing NOTIFY pipeline alongside the existing password-reset event, with its own default template ("Set your password") and the `{{password_set_url}}` variable bound to Saleor's set-password URL.
+
+## 2.3.4
+
+### Patch Changes
+
+- 2865a4f: Upgraded next.js to v15.5.18, more info: https://vercel.com/changelog/next-js-may-2026-security-release
+
+## 2.3.3
+
+### Patch Changes
+
+- 4af78c1: Failed JWT verification in tRPC procedures no longer reports to Sentry as an error. Before, an expired or invalid token raised a 500 (or 403) and produced an error in monitoring even though it was a normal client-side auth failure. Now it logs a warning and returns 401, so dashboards stay clean and the client can react to the auth state correctly.
+
 ## 2.3.2
 
 ### Patch Changes

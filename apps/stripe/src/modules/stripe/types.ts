@@ -21,6 +21,7 @@ export interface IStripeRefundsApi {
   createRefund(args: {
     paymentIntentId: StripePaymentIntentId;
     stripeMoney: StripeMoney;
+    idempotencyKey: string | undefined;
     metadata?: AllowedStripeObjectMetadata;
   }): Promise<Result<Stripe.Refund, unknown>>;
 }
@@ -34,6 +35,9 @@ export type AllowedStripeObjectMetadata = {
   saleor_source_type?: "Checkout" | "Order";
   saleor_api_url?: string;
   saleor_app_id?: string;
+  saleor_order_id?: string;
+  saleor_order_number?: string;
+  saleor_checkout_id?: string;
 };
 
 export interface CreatePaymentIntentArgs {
@@ -45,6 +49,7 @@ export interface CreatePaymentIntentArgs {
     | "confirm"
     | "payment_method"
     | "return_url"
+    | "description"
   >;
   idempotencyKey: string;
   metadata?: AllowedStripeObjectMetadata;
@@ -59,9 +64,12 @@ export interface IStripePaymentIntentsApi {
   }): Promise<Result<Stripe.PaymentIntent, unknown>>;
   capturePaymentIntent(args: {
     id: StripePaymentIntentId;
+    idempotencyKey: string | undefined;
+    metadata?: AllowedStripeObjectMetadata;
   }): Promise<Result<Stripe.PaymentIntent, unknown>>;
   cancelPaymentIntent(args: {
     id: StripePaymentIntentId;
+    idempotencyKey: string | undefined;
   }): Promise<Result<Stripe.PaymentIntent, unknown>>;
 }
 

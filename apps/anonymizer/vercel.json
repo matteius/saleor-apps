@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "oss-sync-staging": false,
+      "public-mirror": false
+    }
+  }
+}

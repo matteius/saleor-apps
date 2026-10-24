@@ -14,6 +14,7 @@ import { orderRefundedWebhook } from "../../pages/api/webhooks/order-refunded";
 import { type MessageEventTypes } from "../event-handlers/message-event-types";
 import { type FeatureFlagService } from "../feature-flag-service/feature-flag-service";
 import { createAppWebhook, deleteAppWebhook, fetchAppWebhooks } from "./api-operations";
+import { removeUnsupportedInlineFragments } from "./remove-unsupported-inline-fragments";
 
 export const AppWebhooks = {
   giftCardSentWebhook,
@@ -35,6 +36,7 @@ export const eventToWebhookMapping: Record<MessageEventTypes, AppWebhook> = {
   ACCOUNT_CONFIRMATION: "notifyWebhook",
   ACCOUNT_DELETE: "notifyWebhook",
   ACCOUNT_PASSWORD_RESET: "notifyWebhook",
+  ACCOUNT_SET_CUSTOMER_PASSWORD: "notifyWebhook",
   GIFT_CARD_SENT: "giftCardSentWebhook",
   INVOICE_SENT: "invoiceSentWebhook",
   ORDER_CANCELLED: "orderCancelledWebhook",
@@ -92,11 +94,6 @@ export class WebhookManagementService {
   public async createWebhook({ webhook }: { webhook: AppWebhook }) {
     const flags = await this.featureFlagService.getFeatureFlags();
 
-    if (!flags.giftCardSentEvent && webhook === "giftCardSentWebhook") {
-      logger.error(`Attempt to activate Gift Card Sent webhook despite unsupported environment`);
-      throw new Error("Gift card event is not supported in this environment");
-    }
-
     const webhookManifest = AppWebhooks[webhook].getWebhookManifest(this.appBaseUrl);
 
     const asyncWebhooks = webhookManifest.asyncEvents;
@@ -106,6 +103,13 @@ export class WebhookManagementService {
       throw new Error("Only the webhooks with async events can be registered");
     }
 
+    // Override empty queries to handle NOTIFY webhook
+    let query = webhookManifest.query === "{}" ? undefined : webhookManifest.query;
+
+    if (query && !flags.giftCardPaymentMethodDetails) {
+      query = removeUnsupportedInlineFragments(query, ["GiftCardPaymentMethodDetails"]);
+    }
+
     await createAppWebhook({
       client: this.client,
       variables: {
@@ -113,8 +117,7 @@ export class WebhookManagementService {
         isActive: true,
         name: webhookManifest.name,
         targetUrl: webhookManifest.targetUrl,
-        // Override empty queries to handle NOTIFY webhook
-        query: webhookManifest.query === "{}" ? undefined : webhookManifest.query,
+        query,
       },
     });
   }

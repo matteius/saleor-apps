@@ -1,6 +1,6 @@
 {
   "name": "@saleor/dynamo-config-repository",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
@@ -19,7 +19,7 @@
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/lib-dynamodb": "catalog:",
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/apps-domain": "workspace:*",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",
@@ -29,7 +29,7 @@
     "next": "catalog:",
     "typescript": "5.8.2",
     "vite": "6.2.4",
-    "vitest": "3.1.1"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "dynamodb-toolbox": "catalog:"

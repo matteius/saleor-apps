@@ -1,9 +1,9 @@
 import { verifyJWT } from "@saleor/app-sdk/auth";
 import { type Permission } from "@saleor/app-sdk/types";
-import { createGraphQLClient } from "@saleor/apps-shared/create-graphql-client";
 import { setSentrySaleorUser } from "@saleor/sentry-utils";
 import { TRPCError } from "@trpc/server";
 
+import { createInstrumentedGraphqlClient } from "@/lib/create-instrumented-graphql-client";
 import { createLogger } from "@/logger";
 import { saleorApp } from "@/saleor-app";
 
@@ -88,9 +88,9 @@ const validateClientToken = middleware(async ({ ctx, next, meta }) => {
         ],
       });
     } catch (e) {
-      logger.error("JWT verification failed, throwing", { error: e });
+      logger.warn("JWT verification failed, throwing", { error: e });
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: "UNAUTHORIZED",
         message: "JWT verification failed",
       });
     }
@@ -116,7 +116,10 @@ export const protectedClientProcedure = procedure
   .use(attachAppToken)
   .use(validateClientToken)
   .use(async ({ ctx, next }) => {
-    const client = createGraphQLClient({ saleorApiUrl: ctx.saleorApiUrl, token: ctx.appToken });
+    const client = createInstrumentedGraphqlClient({
+      saleorApiUrl: ctx.saleorApiUrl,
+      token: ctx.appToken,
+    });
 
     return next({
       ctx: {

@@ -9,7 +9,7 @@ export default defineConfig({
     css: false,
     mockReset: true,
     restoreMocks: true,
-    workspace: [
+    projects: [
       {
         extends: true,
         test: {
@@ -50,9 +50,8 @@ export default defineConfig({
            * `poolOptions.forks.singleFork`.
            */
           pool: "forks",
-          poolOptions: {
-            forks: { singleFork: true },
-          },
+          fileParallelism: false,
+          maxWorkers: 1,
           testTimeout: 300_000,
           hookTimeout: 120_000,
         },
@@ -80,9 +79,8 @@ export default defineConfig({
            * spawns OOM-ing CI.
            */
           pool: "forks",
-          poolOptions: {
-            forks: { singleFork: true },
-          },
+          fileParallelism: false,
+          maxWorkers: 1,
           testTimeout: 120_000,
           hookTimeout: 120_000,
         },

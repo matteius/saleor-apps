@@ -1,0 +1,48 @@
+.root {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--mu-spacing-6);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .root {
+    /* Site Settings / Refunds: narrow rail + wide forms */
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr);
+    gap: var(--mu-spacing-8);
+  }
+}
+
+.aside {
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .aside {
+    position: sticky;
+    top: var(--mu-spacing-6);
+  }
+}
+
+/* Below the rail's breakpoint the rail sits above the forms and scrolls away with them, so a map
+   of what is further down would leave the viewport before it could be used. */
+.nav {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .nav {
+    display: block;
+  }
+}
+
+.description {
+  line-height: 1.5;
+  max-width: none;
+}
+
+.main {
+  min-width: 0;
+  width: 100%;
+}

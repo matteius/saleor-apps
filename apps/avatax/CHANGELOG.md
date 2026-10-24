@@ -1,5 +1,186 @@
 # saleor-app-avatax
 
+## 1.25.11
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+
+## 1.25.10
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 1.25.9
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+  - @saleor/apps-shared@1.17.3
+  - @saleor/webhook-utils@0.3.4
+
+## 1.25.8
+
+### Patch Changes
+
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+
+## 1.25.7
+
+### Patch Changes
+
+- 9e50c88: Fixed tracing of background work (client logs, problem reports, exemption status updates) that runs after a webhook or configuration response is sent. Before, these spans were cut short when the request finished and produced "You can only call end() on a span once" errors. Now they are recorded as separate traces with their real duration.
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+
+## 1.25.6
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+
+## 1.25.5
+
+### Patch Changes
+
+- 52c80bb: Fixed "You can only call end() on a span once" OpenTelemetry errors that were logged for every client log written to DynamoDB. Previously, the write ran in the background and could still be running when the request finished, which also meant Vercel could stop the function before the log was saved. Now the write runs after the response is sent, and the function stays alive until it finishes.
+
+## 1.25.4
+
+### Patch Changes
+
+- 635e29e: Upgraded Sentry SDK to v10. Previously, Sentry context (breadcrumbs, tags, user) could leak between concurrent requests handled by the same server instance. Now each request gets its own isolated Sentry scope, so error reports only contain data from the request that failed.
+
+  Sentry no longer wraps API route handlers. Previously, this wrapper stopped OpenTelemetry from recording spans created inside handlers. Now those spans appear in traces again. Errors from API routes are still reported to Sentry.
+
+- abdba39: Fixed OpenTelemetry spans that could go missing when a route was loaded before instrumentation was registered. Previously, tracers created at module load (e.g. DynamoDB APL) could stay silent; now they share the same OpenTelemetry instance as instrumentation and always record spans. This also prepares the apps for the Next.js 16 upgrade, where this load order happens on Vercel.
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+  - @saleor/apps-shared@1.17.2
+  - @saleor/webhook-utils@0.3.3
+
+## 1.25.3
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+
+## 1.25.2
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+
+## 1.25.1
+
+### Patch Changes
+
+- b139865: Fixed incomplete "ship from" addresses being reported as app failures. Before: when AvaTax rejected the configured address as incomplete, checkout tax calculation returned HTTP 500, so the problem looked like an app outage and the merchant got no hint about what was wrong. After: the app returns HTTP 400 and raises an app problem in the Dashboard naming the configuration and what the address is missing, so it can actually be fixed.
+- b139865: Tax calculation errors the app does not recognize are now reported as errors. Before: when AvaTax returned a failure the app had no mapping for, checkout answered with HTTP 500 but only wrote a warning log and no error report, so a brand new provider error could keep breaking checkouts unnoticed. After: those unmapped failures emit an error log and an error report, so they surface as soon as they start. Failures caused by configuration or by the checkout itself are unchanged - they keep returning 4xx/202 with a warning.
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+  - @saleor/apps-shared@1.16.2
+  - @saleor/webhook-utils@0.3.2
+
+## 1.25.0
+
+### Minor Changes
+
+- b7efe3b: Dropped support for Saleor 3.21. Before, these apps could be installed on Saleor 3.21 and newer. Now, the minimum supported version is 3.22 - installing on an older Saleor will be rejected by the Dashboard. Saleor 3.21 users should stay on the previous app release until they upgrade their Saleor instance.
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+  - @saleor/apps-shared@1.16.1
+  - @saleor/webhook-utils@0.3.1
+
+## 1.24.3
+
+### Patch Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+
+## 1.24.2
+
+### Patch Changes
+
+- a558369: Upgraded next.js to 15.5.24
+
+## 1.24.1
+
+### Patch Changes
+
+- Updated dependencies [d78dcb0]
+- Updated dependencies [d78dcb0]
+  - @saleor/apps-shared@1.15.0
+  - @saleor/apps-ui@1.4.0
+
+## 1.24.0
+
+### Minor Changes
+
+- b5f7b66: Added a "AvaTax tax code" widget to the product details page in the Dashboard. It shows the product's tax class and the AvaTax tax code it maps to, and warns when a product has no tax class or its tax class isn't mapped (so AvaTax's default code would be used). Requires Saleor 3.22+.
+
+  This adds the `MANAGE_PRODUCTS` permission to the app (needed to read a product's tax class), so the app will ask for approval of the new permission.
+
+### Patch Changes
+
+- 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
+
+## 1.23.0
+
+### Minor Changes
+
+- f7f0e74: Minimum Saleor version required is now 3.21 (Saleor 3.20 is EOL)
+
+## 1.22.12
+
+### Patch Changes
+
+- 92e2026: Fixed AvaTax `ORDER_CONFIRMED` webhook failing with a validation error when a channel has no tax calculation strategy configured. Previously the app only accepted `TAX_APP` or `FLAT_RATES` and rejected the payload (returning a 500) when `taxCalculationStrategy` was `null`. Now a `null` strategy is accepted and treated like `FLAT_RATES` — the order is skipped instead of erroring, since the app is not the configured tax calculator for that channel.
+
+## 1.22.11
+
+### Patch Changes
+
+- c8a4efe: When environment variables fail validation at startup, the app now prints a readable error message and the offending fields, then exits with code 1 — instead of dumping a long stack trace. Before: a wall of webpack stack frames around `Invalid environment variables`. After: e.g. `Validation error: Required at "SECRET_KEY"` followed by a JSON list of the failing fields.
+- Updated dependencies [6683590]
+  - @saleor/webhook-utils@0.3.0
+
+## 1.22.10
+
+### Patch Changes
+
+- 9044c32: Upgraded protobufjs to v7.5.8 to fix the following CVEs: CVE-2026-41242,
+  CVE-2026-44290, CVE-2026-44291, CVE-2026-44292, CVE-2026-44293,
+  CVE-2026-44294, CVE-2026-44295, CVE-2026-45740.
+
+  This is only relevant for you if you use & enabled OpenTelemetry.
+
+## 1.22.9
+
+### Patch Changes
+
+- 2865a4f: Upgraded next.js to v15.5.18, more info: https://vercel.com/changelog/next-js-may-2026-security-release
+
+## 1.22.8
+
+### Patch Changes
+
+- 9265c47: Fixed Client Logs date filter showing an opaque error when the "From" date was after the "To" date. Before, the request was sent and DynamoDB rejected it with a generic validation error. Now the form skips the request and shows a clear inline message, and the API rejects inverted ranges with a 400 response.
+- 4af78c1: Failed JWT verification in tRPC procedures no longer reports to Sentry as an error. Before, an expired or invalid token raised a 500 (or 403) and produced an error in monitoring even though it was a normal client-side auth failure. Now it logs a warning and returns 401, so dashboards stay clean and the client can react to the auth state correctly.
+
 ## 1.22.7
 
 ### Patch Changes

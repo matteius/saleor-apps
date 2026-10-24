@@ -1,5 +1,68 @@
 # @saleor/apps-shared
 
+## 1.17.3
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+
+## 1.17.2
+
+### Patch Changes
+
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+
+## 1.17.1
+
+### Patch Changes
+
+- c12c623: `useUnsavedChangesGuard` can ignore same-page query updates so a form can change `?scope=` without asking the merchant to discard edits.
+
+## 1.17.0
+
+### Minor Changes
+
+- 831f396: `useUnsavedChangesGuard` now also holds back reload shortcuts (⌘R / Ctrl+R / F5). Before, only Pages Router navigation was guarded, so reloading silently discarded a half-written form — and because the Dashboard iframe is sandboxed without `allow-modals`, the browser's own "leave site?" prompt never appeared to catch it. Treat it as best effort: the keys only arrive while the iframe has focus, so a form that must not lose work still needs to persist its draft.
+
+  Added `requestLeave(run)` for holding back a leave that is not a route change, such as switching language in local state.
+
+  Also exposed `@saleor/apps-shared/key-rotation/metadata-key-matcher`, which was already in the package but unreachable.
+
+## 1.16.2
+
+### Patch Changes
+
+- Updated dependencies [9c585ac]
+  - @saleor/apps-otel@2.4.2
+  - @saleor/apps-logger@1.6.6
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+
+## 1.16.0
+
+### Minor Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+
+## 1.15.0
+
+### Minor Changes
+
+- d78dcb0: Added `useUnsavedChangesGuard`: holds back in-app navigation while a form has unsaved changes so
+  the app can ask for confirmation. Apps could not rely on the browser for this — the Dashboard app
+  iframe is sandboxed without `allow-modals`, so `beforeunload` prompts and `window.confirm` never
+  appear — and users could silently lose edits by clicking a back link.
+
 ## 1.14.5
 
 ### Patch Changes

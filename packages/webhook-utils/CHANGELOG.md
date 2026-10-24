@@ -1,5 +1,38 @@
 # @saleor/webhook-utils
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [ab5a656]
+  - @saleor/apps-logger@1.6.8
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [4c5c512]
+  - @saleor/apps-logger@1.6.7
+
+## 0.3.2
+
+### Patch Changes
+
+- @saleor/apps-logger@1.6.6
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [53fa836]
+  - @saleor/apps-logger@1.6.5
+
+## 0.3.0
+
+### Minor Changes
+
+- 6683590: Added app-deleted-handler, shared webhook abstraction, that automatically runs apl.delete(). It additionally exposes hooks to run extra clean up, like DynamoDB pruning (this is per-app logic).
+
 ## 0.2.10
 
 ### Patch Changes

@@ -1,0 +1,90 @@
+# saleor-app-shipping-dummy
+
+## 1.1.12
+
+### Patch Changes
+
+- 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
+
+## 1.1.11
+
+### Patch Changes
+
+- 7783337: Upgraded next.js v16.4.1
+
+## 1.1.10
+
+### Patch Changes
+
+- @saleor/apps-shared@1.17.3
+
+## 1.1.9
+
+### Patch Changes
+
+- 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
+
+## 1.1.8
+
+### Patch Changes
+
+- a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
+
+## 1.1.7
+
+### Patch Changes
+
+- 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
+
+## 1.1.6
+
+### Patch Changes
+
+- @saleor/apps-shared@1.17.2
+
+## 1.1.5
+
+### Patch Changes
+
+- ce36410: Upgraded Next.js to v15.5.26
+- Updated dependencies [c12c623]
+  - @saleor/apps-shared@1.17.1
+
+## 1.1.4
+
+### Patch Changes
+
+- Updated dependencies [831f396]
+  - @saleor/apps-shared@1.17.0
+
+## 1.1.3
+
+### Patch Changes
+
+- @saleor/apps-shared@1.16.2
+
+## 1.1.2
+
+### Patch Changes
+
+- @saleor/apps-shared@1.16.1
+
+## 1.1.1
+
+### Patch Changes
+
+- 40321e5: Apps now identify themselves when they call the Saleor GraphQL API. Before, requests
+  went out with the runtime's default `User-Agent`, so it was impossible to tell from
+  Saleor's access logs which app produced them. Now every server-side request carries
+  `User-Agent: <app-package-name>/<app-version>`, e.g. `saleor-app-avatax/3.1.0`.
+- Updated dependencies [40321e5]
+  - @saleor/apps-shared@1.16.0
+
+## 1.1.0
+
+### Minor Changes
+
+- 4e0ce63: Added Dummy Shipping App, previously kept in its own repository. It answers Saleor's
+  `SHIPPING_LIST_METHODS_FOR_CHECKOUT` and `ORDER_FILTER_SHIPPING_METHODS` sync webhooks with a
+  hardcoded set of shipping methods, so an external carrier integration can be exercised end to end
+  without signing up for a real carrier. The bundled Bruno collection walks the full checkout flow.

@@ -1,4 +1,5 @@
 import { type SettingsManager } from "@saleor/app-sdk/settings-manager";
+import { AppTokenRejectedError } from "@saleor/apps-shared/metadata-manager";
 import { fromPromise, fromThrowable, ok, ResultAsync } from "neverthrow";
 
 import { BaseError } from "../../../errors";
@@ -25,6 +26,7 @@ export class SmtpMetadataManager {
   static SetConfigError = this.SmtpMetadataManagerError.subclass("SetConfigError");
   static FetchConfigError = this.SmtpMetadataManagerError.subclass("FetchConfigError");
   static TimeoutExceededError = this.SmtpMetadataManagerError.subclass("TimeoutExceededError");
+  static AppTokenRejectedError = this.SmtpMetadataManagerError.subclass("AppTokenRejectedError");
 
   constructor(
     private metadataManager: SettingsManager,
@@ -35,7 +37,9 @@ export class SmtpMetadataManager {
   getConfig(): ResultAsync<
     SmtpConfig | undefined,
     InstanceType<
-      typeof SmtpMetadataManager.ParseConfigError | typeof SmtpMetadataManager.FetchConfigError
+      | typeof SmtpMetadataManager.ParseConfigError
+      | typeof SmtpMetadataManager.FetchConfigError
+      | typeof SmtpMetadataManager.AppTokenRejectedError
     >
   > {
     this.logger.debug("Fetching SMTP config");
@@ -53,6 +57,12 @@ export class SmtpMetadataManager {
         return e;
       }
 
+      if (e instanceof AppTokenRejectedError) {
+        return new SmtpMetadataManager.AppTokenRejectedError("Saleor rejected the app token", {
+          cause: e,
+        });
+      }
+
       this.logger.debug("Failed to fetch config", { error: e });
 
       return new SmtpMetadataManager.FetchConfigError("Failed to fetch metadata", { errors: [e] });
@@ -65,7 +75,14 @@ export class SmtpMetadataManager {
 
       this.logger.debug("Config found, will parse JSON now");
 
-      return fromThrowable(JSON.parse, SmtpMetadataManager.ParseConfigError.normalize)(config);
+      return fromThrowable(
+        JSON.parse,
+        SmtpMetadataManager.ParseConfigError.normalize,
+      )(config).map((parsed) => ({
+        ...parsed,
+        // Configs saved before this field existed don't have it; default to disabled
+        useSaleorSmtpFallback: parsed.useSaleorSmtpFallback ?? false,
+      }));
     });
   }
 

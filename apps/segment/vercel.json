@@ -2,9 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/pages/api/webhooks/*": {
-      "memory": 256,
-      "maxDuration": 15
+      "memory": 1024,
+      "maxDuration": 25
     }
   },
-  "regions": ["dub1", "iad1"]
+  "regions": ["dub1", "iad1"],
+  "git": {
+    "deploymentEnabled": {
+      "oss-sync-staging": false,
+      "public-mirror": false
+    }
+  }
 }

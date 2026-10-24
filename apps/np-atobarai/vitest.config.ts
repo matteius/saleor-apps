@@ -8,7 +8,7 @@ export default defineConfig({
     css: false,
     mockReset: true,
     restoreMocks: true,
-    workspace: [
+    projects: [
       {
         extends: true,
         test: {

@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "catalog:",
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/apps-shared": "workspace:*",
     "@saleor/apps-trpc": "workspace:*",
     "@saleor/apps-ui": "workspace:*",
@@ -68,7 +68,7 @@
     "@testing-library/react": "16.2.0",
     "@total-typescript/ts-reset": "0.6.1",
     "@types/node": "catalog:",
-    "@types/react": "18.2.5",
+    "@types/react": "catalog:",
     "@types/react-dom": "18.2.5",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",

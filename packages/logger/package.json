@@ -1,6 +1,6 @@
 {
   "name": "@saleor/apps-logger",
-  "version": "1.6.4",
+  "version": "1.6.8",
   "type": "module",
   "exports": {
     ".": {
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "catalog:",
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",
     "@sentry/nextjs": "catalog:",

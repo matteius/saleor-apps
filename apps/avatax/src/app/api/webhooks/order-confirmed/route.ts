@@ -4,7 +4,6 @@ import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-att
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
 import { captureException, setTag } from "@sentry/nextjs";
-import { after } from "next/server";
 
 import { AppConfig } from "@/lib/app-config";
 import { AppConfigExtractor } from "@/lib/app-config-extractor";
@@ -12,6 +11,7 @@ import { AppConfigurationLogger } from "@/lib/app-configuration-logger";
 import { metadataCache, wrapWithMetadataCache } from "@/lib/app-metadata-cache";
 import { createInstrumentedGraphqlClient } from "@/lib/create-instrumented-graphql-client";
 import { SubscriptionPayloadErrorChecker } from "@/lib/error-utils";
+import { afterDetached } from "@/lib/otel/after-detached";
 import { appExternalTracer } from "@/lib/otel/tracing";
 import { withFlushOtelMetrics } from "@/lib/otel/with-flush-otel-metrics";
 import { createLogger } from "@/logger";
@@ -152,25 +152,26 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
           );
         }
 
-        if (confirmedOrderEvent.isStrategyFlatRates()) {
-          logger.info("Order has flat rates tax strategy, skipping...");
+        if (!confirmedOrderEvent.isStrategyTaxApp()) {
+          logger.info("Order channel is not configured to use the tax app, skipping...");
 
           OrderConfirmedLogRequest.createErrorLog({
             sourceId: payload.order?.id,
             channelId: payload.order?.channel.id,
-            errorReason: "Order has flat tax rates strategy",
+            errorReason: "Order channel does not use the tax app strategy",
           })
             .mapErr(captureException)
             .map(logWriter.writeLog);
 
           span.setStatus({
             code: SpanStatusCode.OK,
-            message: "Failed to commit transaction in AvaTax: order has flat tax rates strategy",
+            message:
+              "Failed to commit transaction in AvaTax: order channel does not use the tax app strategy",
           });
 
           return Response.json(
             {
-              message: `Order ${payload.order?.id} has flat rates tax strategy.`,
+              message: `Order ${payload.order?.id} channel does not use the tax app strategy.`,
             },
             { status: 202 },
           );
@@ -251,7 +252,7 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
                 ? "Channel references a provider configuration that no longer exists"
                 : "Channel is not configured in the AvaTax app";
 
-            after(() =>
+            afterDetached(() =>
               problemReporter.reportChannelConfigMissing(
                 confirmedOrderEvent.getChannelSlug(),
                 reason,
@@ -301,7 +302,7 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
             message: "AvaTax transaction committed successfully",
           });
 
-          after(async () => {
+          afterDetached(async () => {
             // We ignore promise because it's not critical and can fail
             OrderConfirmedLogRequest.createSuccessLog({
               sourceId: payload.order?.id,
@@ -335,7 +336,7 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
             const problemReporter = createAvataxProblemReporter(ctx.authData);
             const avataxConfig = providerConfig.value.avataxConfig;
 
-            after(() =>
+            afterDetached(() =>
               problemReporter.reportApiProblem(error, {
                 id: avataxConfig.id,
                 name: avataxConfig.config.name,
@@ -402,7 +403,7 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
                 const problemReporter = createAvataxProblemReporter(ctx.authData);
                 const avataxConfig = providerConfig.value.avataxConfig;
 
-                after(() =>
+                afterDetached(() =>
                   problemReporter.reportApiProblem(error, {
                     id: avataxConfig.id,
                     name: avataxConfig.config.name,
@@ -459,7 +460,7 @@ const handler = orderConfirmedAsyncWebhook.createHandler(async (_req, ctx) => {
                 const problemReporter = createAvataxProblemReporter(ctx.authData);
                 const avataxConfig = providerConfig.value.avataxConfig;
 
-                after(() =>
+                afterDetached(() =>
                   problemReporter.reportApiProblem(error, {
                     id: avataxConfig.id,
                     name: avataxConfig.config.name,

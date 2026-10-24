@@ -1,5 +1,5 @@
-import { withSentryConfig } from "@sentry/nextjs";
-import { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
+import { type NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -9,12 +9,19 @@ const nextConfig: NextConfig = {
     "@saleor/react-hook-form-macaw",
     "@saleor/apps-logger",
     "@saleor/apps-otel",
+    "@saleor/webhook-utils",
   ],
   experimental: {
     optimizePackageImports: ["@sentry/nextjs", "@sentry/node"],
   },
   bundlePagesRouterDependencies: true,
   serverExternalPackages: [
+    /*
+     * Share one @opentelemetry/api instance between instrumentation and routes. With a bundled
+     * copy, tracers created at module load (e.g. app-sdk DynamoAPL) stay no-op when a route
+     * loads before register(), which happens on Vercel since Next 16.
+     */
+    "@opentelemetry/api",
     "@aws-sdk/client-dynamodb",
     "@aws-sdk/lib-dynamodb",
     "@aws-sdk/util-dynamodb",
@@ -35,7 +42,13 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   silent: true,
-  disableLogger: true,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
+  webpack: {
+    // Sentry's API route wrapper stops @vercel/otel from recording spans when Sentry tracing is off. Errors are still captured via onRequestError (src/instrumentation.ts)
+    autoInstrumentServerFunctions: false,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

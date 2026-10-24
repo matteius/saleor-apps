@@ -161,6 +161,25 @@ const orderTotals = `<mj-section padding="16px 0 0">
   </mj-column>
 </mj-section>`;
 
+// —— Payment methods (lists transactions that captured or authorized funds; handles split payments) ——
+const paymentMethodsSection = `{{#if order.transactions}}
+<mj-section padding="24px 0 0">
+  <mj-column>
+    <mj-text font-size="12px" font-weight="600" color="${colors.muted}" letter-spacing="1px" padding="0 0 8px">PAYMENT</mj-text>
+    <mj-table padding="0" cellpadding="0" cellspacing="0" font-size="14px" color="${colors.text}">
+      {{#each order.transactions}}
+      {{#if (or (gt this.chargedAmount.amount 0) (gt this.authorizedAmount.amount 0))}}
+      <tr class="totals-row">
+        <td>{{#if this.paymentMethodDetails}}{{this.paymentMethodDetails.name}}{{#if this.paymentMethodDetails.brand}} · {{this.paymentMethodDetails.brand}}{{/if}}{{#if this.paymentMethodDetails.lastDigits}} ····{{this.paymentMethodDetails.lastDigits}}{{/if}}{{#if this.paymentMethodDetails.lastChars}} ····{{this.paymentMethodDetails.lastChars}}{{/if}}{{else}}Payment{{/if}}</td>
+        <td style="text-align: right;">{{#if (gt this.chargedAmount.amount 0)}}{{this.chargedAmount.amount}} {{this.chargedAmount.currency}}{{else}}{{this.authorizedAmount.amount}} {{this.authorizedAmount.currency}}{{/if}}</td>
+      </tr>
+      {{/if}}
+      {{/each}}
+    </mj-table>
+  </mj-column>
+</mj-section>
+{{/if}}`;
+
 // —— Address blocks (side by side on desktop, stacked on mobile) ——
 const addressBlocksBothColumns = `<mj-section padding="24px 0 0">
   <mj-column>
@@ -257,6 +276,7 @@ ${mjHead}
     <mj-section padding="16px 0"><mj-column><mj-divider border-color="${colors.border}" border-width="1px" padding="0" /></mj-column></mj-section>
     ${orderLinesWithImages}
     ${orderTotals}
+    ${paymentMethodsSection}
     ${addressBlocksBothColumns}
     ${orderFooterSection}
   </mj-wrapper>
@@ -453,7 +473,7 @@ ${mjHead}
     <mj-section padding="24px 0 0">
       <mj-column background-color="${colors.accent}" border-radius="8px" padding="24px">
         <mj-text font-size="12px" font-weight="600" color="${colors.muted}" letter-spacing="1px" padding="0 0 8px">YOUR GIFT CARD CODE</mj-text>
-        <mj-text font-size="28px" font-weight="700" color="${colors.primary}" letter-spacing="2px" padding="0 0 16px">{{giftCard.displayCode}}</mj-text>
+        <mj-text font-size="28px" font-weight="700" color="${colors.primary}" letter-spacing="2px" padding="0 0 16px">{{giftCard.code}}</mj-text>
         {{#if giftCard.currentBalance}}
         <mj-text font-size="18px" font-weight="600" color="${colors.primary}" padding="0 0 4px">
           {{giftCard.currentBalance.amount}} {{giftCard.currentBalance.currency}}
@@ -524,6 +544,33 @@ ${mjHead}
     <mj-section padding="16px 0 0">
       <mj-column>
         <mj-text font-size="14px" color="${colors.muted}">If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.</mj-text>
+      </mj-column>
+    </mj-section>
+    ${footerSection}
+  </mj-wrapper>
+</mj-body>
+</mjml>`;
+
+const defaultAccountSetCustomerPasswordMjmlTemplate = `<mjml>
+${mjHead}
+<mj-body>
+  <mj-wrapper>
+    ${headerSection}
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700" color="${colors.primary}" padding="0 0 16px">Set your password</mj-text>
+        <mj-text padding="0 0 8px">Hi{{#if user.first_name}} {{user.first_name}}{{/if}}! An account has been created for you{{#if site_name}} at {{site_name}}{{/if}}.</mj-text>
+        <mj-text padding="0">Click the button below to set your password and activate your account.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="24px 0 0">
+      <mj-column>
+        <mj-button href="{{password_set_url}}">Set password</mj-button>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="16px 0 0">
+      <mj-column>
+        <mj-text font-size="14px" color="${colors.muted}">If you weren't expecting this email, you can safely ignore it.</mj-text>
       </mj-column>
     </mj-section>
     ${footerSection}
@@ -621,6 +668,7 @@ export const defaultMjmlTemplates: Record<MessageEventTypes, string> = {
   ACCOUNT_CONFIRMATION: defaultAccountConfirmationMjmlTemplate,
   ACCOUNT_DELETE: defaultAccountDeleteMjmlTemplate,
   ACCOUNT_PASSWORD_RESET: defaultAccountPasswordResetMjmlTemplate,
+  ACCOUNT_SET_CUSTOMER_PASSWORD: defaultAccountSetCustomerPasswordMjmlTemplate,
   GIFT_CARD_SENT: defaultGiftCardSentMjmlTemplate,
   INVOICE_SENT: defaultInvoiceSentMjmlTemplate,
   ORDER_CANCELLED: defaultOrderCancelledMjmlTemplate,
@@ -638,6 +686,7 @@ export const defaultMjmlSubjectTemplates: Record<MessageEventTypes, string> = {
   ACCOUNT_CONFIRMATION: "Activate your account",
   ACCOUNT_DELETE: "Confirm account deletion",
   ACCOUNT_PASSWORD_RESET: "Reset your password",
+  ACCOUNT_SET_CUSTOMER_PASSWORD: "Set your password",
   GIFT_CARD_SENT: "You've received a gift card!",
   INVOICE_SENT: "Your invoice is ready",
   ORDER_CANCELLED: "Your order has been cancelled",

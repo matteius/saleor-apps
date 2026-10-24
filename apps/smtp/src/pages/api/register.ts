@@ -54,7 +54,7 @@ export default wrapWithLoggerContext(
           return true;
         },
       ],
-      async onRequestVerified(req, { authData: { token, saleorApiUrl }, respondWithError }) {
+      async onRequestVerified(_req, { authData: { token, saleorApiUrl }, respondWithError }) {
         const logger = createLogger("onRequestVerified");
 
         let saleorVersion: string;
@@ -70,7 +70,7 @@ export default wrapWithLoggerContext(
           const message = (e as Error)?.message ?? "Unknown error";
 
           logger.debug(
-            { message, saleorApiUrl },
+            { errorMessage: message, saleorApiUrl },
             "Error during fetching saleor version in onRequestVerified handler",
           );
 
@@ -126,7 +126,6 @@ export default wrapWithLoggerContext(
 
           const featureFlagService = new FeatureFlagService({ client });
           const smtpConfigurationService = new SmtpConfigurationService({
-            featureFlagService,
             metadataManager: new SmtpMetadataManager(
               createSettingsManager(client, authData.appId),
               authData.saleorApiUrl,

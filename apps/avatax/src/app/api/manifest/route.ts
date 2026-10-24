@@ -15,7 +15,7 @@ const handler = createManifestHandler({
     const iframeBaseUrl = env.APP_IFRAME_BASE_URL ?? appBaseUrl;
     const apiBaseURL = env.APP_API_BASE_URL ?? appBaseUrl;
 
-    const orderDetailsExtensions: AppExtension = {
+    const orderDetailsExtension: AppExtension = {
       target: "WIDGET",
       options: {
         widgetTarget: {
@@ -28,12 +28,25 @@ const handler = createManifestHandler({
       permissions: [],
     };
 
+    const productDetailsExtension: AppExtension = {
+      target: "WIDGET",
+      options: {
+        widgetTarget: {
+          method: "GET",
+        },
+      },
+      label: "AvaTax tax code",
+      mount: "PRODUCT_DETAILS_WIDGETS",
+      url: iframeBaseUrl + "/product-details",
+      permissions: ["MANAGE_PRODUCTS"],
+    };
+
     const extensions: AppExtension[] = [];
 
     const saleorMinor = schemaVersion && schemaVersion[1];
 
     if (saleorMinor && saleorMinor >= 22) {
-      extensions.push(orderDetailsExtensions);
+      extensions.push(orderDetailsExtension, productDetailsExtension);
     }
 
     const manifest: AppManifest = {
@@ -49,8 +62,8 @@ const handler = createManifestHandler({
       homepageUrl: "https://github.com/saleor/apps",
       id: env.MANIFEST_APP_ID,
       name: "AvaTax",
-      permissions: ["HANDLE_TAXES", "MANAGE_ORDERS"],
-      requiredSaleorVersion: ">=3.20 <4",
+      permissions: ["HANDLE_TAXES", "MANAGE_ORDERS", "MANAGE_PRODUCTS"],
+      requiredSaleorVersion: ">=3.22 <4",
       supportUrl: "https://github.com/saleor/apps/discussions",
       tokenTargetUrl: `${apiBaseURL}/api/register`,
       version: packageJson.version,

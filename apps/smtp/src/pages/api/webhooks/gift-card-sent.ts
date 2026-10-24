@@ -8,12 +8,13 @@ import { gql } from "urql";
 import { type GiftCardSentWebhookPayloadFragment } from "../../../../generated/graphql";
 import { createLogger } from "../../../logger";
 import { loggerContext } from "../../../logger-context";
+import { handleUseCaseErrors } from "../../../modules/event-handlers/send-event-messages-response-handler";
 import { SendEventMessagesUseCaseFactory } from "../../../modules/event-handlers/use-case/send-event-messages.use-case.factory";
 import { saleorApp } from "../../../saleor-app";
-import { handleUseCaseErrors } from "./send-event-messages-response-handler";
 
 const GiftCardSentWebhookPayload = gql`
   fragment GiftCardSentWebhookPayload on GiftCardSent {
+    version
     giftCard {
       id
       code
@@ -77,10 +78,12 @@ const logger = createLogger(giftCardSentWebhook.webhookPath);
 const useCaseFactory = new SendEventMessagesUseCaseFactory();
 
 const handler: NextJsWebhookHandler<GiftCardSentWebhookPayloadFragment> = async (
-  req,
+  _req,
   res,
   context,
 ) => {
+  loggerContext.setSaleorVersion(context.schemaVersion);
+
   logger.info("Webhook received");
 
   const { payload, authData } = context;
@@ -95,12 +98,13 @@ const handler: NextJsWebhookHandler<GiftCardSentWebhookPayloadFragment> = async 
   const recipientEmail = payload.sentToEmail;
 
   if (!recipientEmail?.length) {
-    logger.error(`The gift card had no email recipient set. Aborting.`, {
+    logger.warn(`The gift card had no email recipient set. Aborting.`, {
       giftCardId: giftCard.id,
     });
 
+    // 202, not 4xx: the payload is valid, there is just no one to email, so Saleor must not treat it as rejected
     return res
-      .status(200)
+      .status(202)
       .json({ error: "Email recipient has not been specified in the event payload." });
   }
 
@@ -127,7 +131,7 @@ const handler: NextJsWebhookHandler<GiftCardSentWebhookPayloadFragment> = async 
       })
       .then((result) =>
         result.match(
-          (r) => {
+          () => {
             logger.info("Successfully sent email(s)");
 
             return res.status(200).json({ message: "The event has been handled" });

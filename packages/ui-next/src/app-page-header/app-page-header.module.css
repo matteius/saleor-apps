@@ -1,0 +1,78 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mu-spacing-3);
+  padding: var(--mu-spacing-4) var(--mu-spacing-6);
+  min-height: 3.5rem;
+  border-bottom: 1px solid var(--mu-colors-border-default1);
+  background-color: var(--mu-colors-background-default1);
+}
+
+.start {
+  display: flex;
+  align-items: center;
+  gap: var(--mu-spacing-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mu-spacing-1);
+  color: var(--mu-colors-text-default2);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.backLink:hover {
+  color: var(--mu-colors-text-default1);
+  text-decoration: underline;
+}
+
+.backLink:focus-visible {
+  outline: 2px solid var(--mu-colors-border-accent1);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.title {
+  margin: 0;
+  min-width: 0;
+}
+
+/*
+ * The heading is still owed to assistive technology and to the document outline when a control
+ * takes its place on screen. Standard clip-rect recipe rather than `display: none`, which would
+ * take it out of the accessibility tree along with the pixels.
+ */
+.titleVisuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.titleControl {
+  min-width: 0;
+  /*
+   * Takes the width the title would have had, up to a cap: wide enough for two record pickers,
+   * a compact toggle, and prev/next, short of stretching across a maximised window.
+   */
+  flex: 1;
+  max-width: 48rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--mu-spacing-3);
+  flex-shrink: 0;
+}

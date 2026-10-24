@@ -1,4 +1,4 @@
-FROM node:24.22.1-alpine AS base
+FROM node:24.22.1-alpine3.24 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -15,11 +15,12 @@ COPY packages/ ./packages/
 COPY apps/ ./apps/
 
 # Get PNPM version from package.json
-RUN export PNPM_VERSION=$(cat package.json | jq -r '.packageManager' | sed -E 's/pnpm@([0-9.]+)/\1/')
-RUN corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
+# packageManager pins Corepack to the reviewed pnpm release.
+# RUN export PNPM_VERSION=$(cat package.json | jq -r '.packageManager' | sed -E 's/pnpm@([0-9.]+)/\1/')
+RUN corepack enable
 
-# Install ALL dependencies, including devDependencies (use --no-frozen-lockfile for CI)
-RUN pnpm install --no-frozen-lockfile
+# Build dependencies come from the reviewed lockfile.
+RUN HUSKY=0 pnpm install --frozen-lockfile
 
 # Build the app
 FROM deps AS builder
@@ -32,12 +33,6 @@ COPY . .
 ARG APP_NAME
 ARG APP_LOG_LEVEL
 ENV APP_LOG_LEVEL=${APP_LOG_LEVEL}
-ARG FIEF_PLUGIN_HMAC_SECRET
-ENV FIEF_PLUGIN_HMAC_SECRET=${FIEF_PLUGIN_HMAC_SECRET}
-ARG REDIS_URL
-ENV REDIS_URL=${REDIS_URL}
-ARG SECRET_KEY
-ENV SECRET_KEY=${SECRET_KEY}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_OUTPUT=standalone
 ARG SALEOR_API_URL
@@ -52,6 +47,10 @@ ENV NEXT_PUBLIC_STOREFRONT_URL=${NEXT_PUBLIC_STOREFRONT_URL:-https://www.opensen
 ARG APL
 ENV APL=${APL:-file}
 
+# Build validation uses inert placeholders; real credentials are runtime-only.
+ENV SECRET_KEY=ci-build-placeholder-not-a-runtime-key
+ENV FIEF_PLUGIN_HMAC_SECRET=ci-build-placeholder-not-a-runtime-key
+
 # Build the specified app - map directory names to package names
 RUN if [ "$APP_NAME" = "stripe" ]; then \
       pnpm --filter=saleor-app-payment-stripe build; \
@@ -65,43 +64,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install jq for getting PNPM version
-RUN apk add --no-cache jq
-
-# Copy package.json to get PNPM version
-COPY package.json ./
-
-# Get PNPM version from package.json and install
-RUN export PNPM_VERSION=$(cat package.json | jq -r '.packageManager' | sed -E 's/pnpm@([0-9.]+)/\1/')
-RUN corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Set APP_NAME for runtime
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
-
-# Copy workspace configuration
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder /app/.npmrc ./.npmrc
-
-# Copy all packages (needed for workspace dependencies)
-COPY --from=builder /app/packages ./packages
-
-# Copy the specific app
-COPY --from=builder /app/apps/${APP_NAME} ./apps/${APP_NAME}
-
-# Copy the entire node_modules to ensure all dependencies are available
-COPY --from=builder /app/node_modules ./node_modules
-
-# Set the correct permission for prerender cache
-RUN chown -R nextjs:nodejs apps/${APP_NAME}/.next
-
+ENV PORT=3010
+ENV HOSTNAME=0.0.0.0
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/.next/static ./apps/${APP_NAME}/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP_NAME}/public ./apps/${APP_NAME}/public
 USER nextjs
-
-WORKDIR /app/apps/${APP_NAME}
-
-CMD ["sh", "-c", "PORT=3010 pnpm run start"]
+CMD ["sh", "-c", "exec node apps/${APP_NAME}/server.js"]

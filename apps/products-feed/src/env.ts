@@ -1,8 +1,10 @@
 import { booleanEnv } from "@saleor/apps-shared/boolean-env";
+import { headerSecretEnv } from "@saleor/apps-shared/header-secret-env";
 import {
   newSecretKeyRuntimeEnv,
   newSecretKeyServerSchema,
 } from "@saleor/apps-shared/secret-key-resolution";
+import { formatEnvValidationError } from "@saleor/errors";
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
@@ -12,25 +14,36 @@ export const env = createEnv({
   },
   server: {
     ALLOWED_DOMAIN_PATTERN: z.string().optional(),
-    APL: z.enum(["saleor-cloud", "file", "dynamodb", "upstash"]).default("file"),
+    APL: z.enum(["file", "dynamodb", "upstash"]).default("file"),
     APP_API_BASE_URL: z.string().optional(),
     APP_IFRAME_BASE_URL: z.string().optional(),
     APP_LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
     FILE_APL_PATH: z.string().optional(),
     MANIFEST_APP_ID: z.string().default("saleor.app.product-feed"),
-    REST_APL_ENDPOINT: z.string().optional(),
-    REST_APL_TOKEN: z.string().optional(),
     OTEL_ENABLED: booleanEnv.defaultFalse,
     OTEL_SERVICE_NAME: z.string().optional(),
     PORT: z.coerce.number().default(3000),
     SECRET_KEY: z.string(),
     VERCEL_URL: z.string().optional(),
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
-    OTEL_ACCESS_TOKEN: z.string().optional(),
+    OTEL_ACCESS_TOKEN: headerSecretEnv.optional(),
     VERCEL_ENV: z.string().optional(),
     REPOSITORY_URL: z.string().optional(),
     NEXT_RUNTIME: z.string().optional(),
-    REQUEST_SECRET: z.string(),
+    REQUEST_SECRET: headerSecretEnv,
+    /*
+     * Shared secret Vercel Cron sends as `Authorization: Bearer <value>`, used by the
+     * deprecation-notice tick. Optional so existing deployments keep booting without it;
+     * the cron route refuses every request while it is unset.
+     */
+    CRON_SECRET: headerSecretEnv.optional(),
+    /*
+     * Installations the deprecation cron handles concurrently. The whole sweep over the APL must
+     * finish within the cron's maxDuration (vercel.json), so raise it as installations grow.
+     */
+    DEPRECATION_CRON_PARALLEL_CALLS: z.coerce.number().int().positive().default(25),
+    // Max time in milliseconds the deprecation cron waits for a single installation's Saleor.
+    DEPRECATION_CRON_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
     FEED_CACHE_MAX_AGE: z.coerce.number().default(300),
     MAX_PARALLEL_CALLS: z.coerce.number().default(5),
     VARIANTS_PER_PAGE: z.coerce.number().default(50),
@@ -54,8 +67,6 @@ export const env = createEnv({
     OTEL_ENABLED: process.env.OTEL_ENABLED,
     OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
     PORT: process.env.PORT,
-    REST_APL_ENDPOINT: process.env.REST_APL_ENDPOINT,
-    REST_APL_TOKEN: process.env.REST_APL_TOKEN,
     SECRET_KEY: process.env.SECRET_KEY,
     VERCEL_URL: process.env.VERCEL_URL,
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
@@ -64,10 +75,14 @@ export const env = createEnv({
     REPOSITORY_URL: process.env.REPOSITORY_URL,
     NEXT_RUNTIME: process.env.NEXT_RUNTIME,
     REQUEST_SECRET: process.env.REQUEST_SECRET,
+    CRON_SECRET: process.env.CRON_SECRET,
+    DEPRECATION_CRON_PARALLEL_CALLS: process.env.DEPRECATION_CRON_PARALLEL_CALLS,
+    DEPRECATION_CRON_REQUEST_TIMEOUT_MS: process.env.DEPRECATION_CRON_REQUEST_TIMEOUT_MS,
     FEED_CACHE_MAX_AGE: process.env.FEED_CACHE_MAX_AGE,
     MAX_PARALLEL_CALLS: process.env.MAX_PARALLEL_CALLS,
     VARIANTS_PER_PAGE: process.env.VARIANTS_PER_PAGE,
     ...newSecretKeyRuntimeEnv,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
+  onValidationError: formatEnvValidationError,
 });

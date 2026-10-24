@@ -71,10 +71,7 @@ runs:
         docker build ${{ inputs.docker_build_context }} \
           -f ${{ inputs.dockerfile }} \
           --build-arg APP_NAME=${{ inputs.app_name }} \
-          --build-arg SECRET_KEY=${{ inputs.SECRET_KEY }} \
-          --build-arg REDIS_URL=${{ inputs.REDIS_URL }} \
           --build-arg APP_LOG_LEVEL=${{ inputs.APP_LOG_LEVEL }} \
-          --build-arg FIEF_PLUGIN_HMAC_SECRET=${{ inputs.FIEF_PLUGIN_HMAC_SECRET }} \
           -t ${{ steps.image_tags.outputs.sha }} \
           -t ${{ steps.image_tags.outputs.latest }}
 

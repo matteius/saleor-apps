@@ -1,5 +1,6 @@
 fragment TransactionRefundRequestedEvent on TransactionRefundRequested {
   ...EventMetadata
+  idempotencyKey
   action {
     amount
     currency
@@ -15,6 +16,8 @@ fragment TransactionRefundRequestedEvent on TransactionRefundRequested {
     }
     order {
       id
+      number
+      checkoutId
       channel {
         ...Channel
       }

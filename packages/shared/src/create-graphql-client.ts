@@ -1,9 +1,25 @@
 import { authExchange } from "@urql/exchange-auth";
-import { cacheExchange, createClient as urqlCreateClient, Exchange, fetchExchange } from "urql";
+import {
+  cacheExchange,
+  createClient as urqlCreateClient,
+  type Exchange,
+  fetchExchange,
+} from "urql";
 
 export interface CreateGraphQLClientArgs {
   saleorApiUrl: string;
-  token?: string;
+  /**
+   * Pass a getter when the token can change during the client's lifetime (e.g. AppBridge token refresh),
+   * so the client (and its cache) can be kept.
+   */
+  token?: string | (() => string | undefined);
+  /**
+   * Identifies the calling app in Saleor's access logs. Apps should pass
+   * `${packageJson.name}/${packageJson.version}`.
+   *
+   * Sent only server-side: Chrome ignores it and Firefox would add it to the CORS preflight.
+   */
+  userAgent?: string;
   opts?: {
     prependingFetchExchanges?: Exchange[];
   };
@@ -20,23 +36,32 @@ export interface CreateGraphQLClientArgs {
  *
  * In the context of developing Apps, the two first options are recommended.
  */
-export const createGraphQLClient = ({ saleorApiUrl, token, opts }: CreateGraphQLClientArgs) => {
+export const createGraphQLClient = ({
+  saleorApiUrl,
+  token,
+  userAgent,
+  opts,
+}: CreateGraphQLClientArgs) => {
   const beforeFetch = [];
 
   if (opts?.prependingFetchExchanges) {
     beforeFetch.push(...opts?.prependingFetchExchanges);
   }
 
+  const sendUserAgent = userAgent && typeof window === "undefined";
+
   return urqlCreateClient({
     url: saleorApiUrl,
+    fetchOptions: sendUserAgent ? { headers: { "User-Agent": userAgent } } : undefined,
     exchanges: [
       cacheExchange,
       authExchange(async (utils) => {
         return {
           addAuthToOperation(operation) {
-            const headers: Record<string, string> = token
+            const currentToken = typeof token === "function" ? token() : token;
+            const headers: Record<string, string> = currentToken
               ? {
-                  "Authorization-Bearer": token,
+                  "Authorization-Bearer": currentToken,
                 }
               : {};
 

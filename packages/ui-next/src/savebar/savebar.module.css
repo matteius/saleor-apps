@@ -1,0 +1,42 @@
+.savebar {
+  /*
+   * Fixed to the iframe viewport — sticky would only pin while scrolling and otherwise sit
+   * under the form. Dashboard portals into an AppLayout footer; apps have no such chrome.
+   */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--mu-spacing-3);
+  /*
+   * Minus the border. 64px is the Dashboard's savebar height measured to the outside of its own 1px
+   * top border, which it then pulls over the content with `margin-top: -1px` so the line meets the
+   * sidebar hairline. An app has no margin to give — it is fixed to the bottom of a frame that is
+   * itself inset — so declaring the full 64px here lands the border a pixel above that hairline.
+   */
+  height: calc(var(--app-savebar-height, 64px) - 1px);
+  padding-inline: var(--mu-spacing-6);
+  background-color: var(--mu-colors-background-default1);
+  border-top: 1px solid var(--mu-colors-border-default1);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.changes {
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .changes {
+    display: none;
+  }
+}

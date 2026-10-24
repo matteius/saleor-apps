@@ -18,8 +18,10 @@ import { resolveSaleorMoneyFromStripePaymentIntent } from "@/modules/saleor/reso
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import {
   getChannelIdFromRequestedEventPayload,
+  getIdempotencyKeyFromRequestedEventPayload,
   getTransactionFromRequestedEventPayload,
 } from "@/modules/saleor/transaction-requested-event-helpers";
+import { getSaleorOrderStripeMetadata } from "@/modules/stripe/saleor-order-stripe-metadata";
 import { mapStripeErrorToApiError } from "@/modules/stripe/stripe-api-error";
 import { createStripePaymentIntentId } from "@/modules/stripe/stripe-payment-intent-id";
 import { type IStripePaymentIntentsApiFactory } from "@/modules/stripe/types";
@@ -112,6 +114,8 @@ export class TransactionChargeRequestedUseCase {
 
     const capturePaymentIntentResult = await stripePaymentIntentsApi.capturePaymentIntent({
       id: paymentIntentIdResult,
+      idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
+      metadata: getSaleorOrderStripeMetadata(transaction),
     });
 
     if (capturePaymentIntentResult.isErr()) {

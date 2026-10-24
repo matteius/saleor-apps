@@ -19,6 +19,7 @@ import {
   smtpGetEventConfigurationInputSchema,
   smtpUpdateBasicInformationSchema,
   smtpUpdateBrandingSchema,
+  smtpUpdateCustomVariablesSchema,
   smtpUpdateEventArraySchema,
   smtpUpdateEventSchema,
   smtpUpdateSenderSchema,
@@ -63,13 +64,6 @@ export const throwTrpcErrorFromConfigurationServiceError = (
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Can't fetch configuration.",
-          cause: error,
-        });
-
-      case SmtpConfigurationService.WrongSaleorVersionError:
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Feature you are trying to use is not supported in this version of Saleor.",
           cause: error,
         });
 
@@ -307,6 +301,21 @@ export const smtpConfigurationRouter = router({
         (v) => v,
         (e) => throwTrpcErrorFromConfigurationServiceError(e),
       );
+    }),
+
+  updateCustomVariables: protectedWithConfigurationServices
+    .input(smtpUpdateCustomVariablesSchema)
+    .mutation(async ({ ctx, input }) => {
+      const logger = createLogger("smtpConfigurationRouter", { saleorApiUrl: ctx.saleorApiUrl });
+
+      logger.debug("smtpConfigurationRouter.updateCustomVariables called");
+
+      return await ctx.smtpConfigurationService
+        .updateCustomVariables({ id: input.id, variables: input.variables })
+        .match(
+          (v) => v,
+          (e) => throwTrpcErrorFromConfigurationServiceError(e),
+        );
     }),
 
   updateChannels: protectedWithConfigurationServices
