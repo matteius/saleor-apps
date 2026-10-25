@@ -99,7 +99,23 @@ export class MongodbPriceVariantMapRepo implements PriceVariantMapRepo {
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
-    await this.connectionPromise;
+    const connection = this.connectionPromise;
+
+    try {
+      await connection;
+    } catch (error) {
+      if (this.connectionPromise === connection) {
+        this.connectionPromise = null;
+
+        const failedClient = this.client;
+
+        this.client = null;
+        this.db = null;
+        this.collection = null;
+        await failedClient?.close().catch(() => undefined);
+      }
+      throw error;
+    }
     if (!this.collection) {
       throw new MongodbPriceVariantMapRepo.ConnectionError("MongoDB connection not established");
     }
@@ -238,12 +254,12 @@ export class MongodbPriceVariantMapRepo implements PriceVariantMapRepo {
   }
 
   async close(): Promise<void> {
+    this.connectionPromise = null;
     if (this.client) {
       await this.client.close();
       this.client = null;
       this.db = null;
       this.collection = null;
-      this.connectionPromise = null;
     }
   }
 }

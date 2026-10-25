@@ -60,7 +60,23 @@ export class MongoAPL implements APL {
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
-    await this.connectionPromise;
+    const connection = this.connectionPromise;
+
+    try {
+      await connection;
+    } catch (error) {
+      if (this.connectionPromise === connection) {
+        this.connectionPromise = null;
+
+        const failedClient = this.client;
+
+        this.client = null;
+        this.db = null;
+        this.collection = null;
+        await failedClient?.close().catch(() => undefined);
+      }
+      throw error;
+    }
     if (!this.collection) {
       throw new MongoAPL.ConnectionError("MongoDB connection not established");
     }
@@ -200,6 +216,7 @@ export class MongoAPL implements APL {
   }
 
   async close(): Promise<void> {
+    this.connectionPromise = null;
     if (this.client) {
       await this.client.close();
       this.client = null;

@@ -88,7 +88,24 @@ export class MongodbAppConfigRepo implements AppConfigRepo {
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
-    await this.connectionPromise;
+    const connection = this.connectionPromise;
+
+    try {
+      await connection;
+    } catch (error) {
+      if (this.connectionPromise === connection) {
+        this.connectionPromise = null;
+
+        const failedClient = this.client;
+
+        this.client = null;
+        this.db = null;
+        this.stripeConfigCollection = null;
+        this.channelMappingCollection = null;
+        await failedClient?.close().catch(() => undefined);
+      }
+      throw error;
+    }
     if (!this.stripeConfigCollection || !this.channelMappingCollection) {
       throw new MongodbAppConfigRepo.ConnectionError("MongoDB connection not established");
     }
@@ -352,6 +369,7 @@ export class MongodbAppConfigRepo implements AppConfigRepo {
   }
 
   async close(): Promise<void> {
+    this.connectionPromise = null;
     if (this.client) {
       await this.client.close();
       this.client = null;

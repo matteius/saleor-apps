@@ -77,7 +77,23 @@ export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
-    await this.connectionPromise;
+    const connection = this.connectionPromise;
+
+    try {
+      await connection;
+    } catch (error) {
+      if (this.connectionPromise === connection) {
+        this.connectionPromise = null;
+
+        const failedClient = this.client;
+
+        this.client = null;
+        this.db = null;
+        this.collection = null;
+        await failedClient?.close().catch(() => undefined);
+      }
+      throw error;
+    }
     if (!this.collection) {
       throw new MongodbTransactionRecorderRepo.ConnectionError(
         "MongoDB connection not established",
@@ -191,6 +207,7 @@ export class MongodbTransactionRecorderRepo implements TransactionRecorderRepo {
   }
 
   async close(): Promise<void> {
+    this.connectionPromise = null;
     if (this.client) {
       await this.client.close();
       this.client = null;

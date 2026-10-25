@@ -115,6 +115,22 @@ describe("MongodbPriceVariantMapRepo", () => {
     repo = new MongodbPriceVariantMapRepo();
   });
 
+  it("reconnects after MongoDB is temporarily unavailable", async () => {
+    clientMock.connect.mockRejectedValueOnce(new Error("temporary MongoDB outage"));
+
+    expect((await repo.set(ACCESS, buildMapping())).isErr()).toBe(true);
+    expect((await repo.set(ACCESS, buildMapping())).isOk()).toBe(true);
+    expect(clientMock.connect).toHaveBeenCalledTimes(2);
+    expect(clientMock.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reconnects after the repository is closed", async () => {
+    expect((await repo.set(ACCESS, buildMapping())).isOk()).toBe(true);
+    await repo.close();
+    expect((await repo.set(ACCESS, buildMapping())).isOk()).toBe(true);
+    expect(clientMock.connect).toHaveBeenCalledTimes(2);
+  });
+
   describe("set", () => {
     it("upserts mapping and returns ok(null) on success", async () => {
       const result = await repo.set(ACCESS, buildMapping());
