@@ -248,11 +248,12 @@ export class MongoAPL implements APL {
   }
 
   async close(): Promise<void> {
-    if (this.client) {
-      await this.client.close();
-      this.client = null;
-      this.db = null;
-      this.collection = null;
-    }
+    const client = this.client;
+
+    this.connectionPromise = null;
+    this.client = null;
+    this.db = null;
+    this.collection = null;
+    await client?.close();
   }
 }

@@ -1,0 +1,40 @@
+name: Publish SMTP app
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: DigitalOcean-PROD
+    env:
+      HUSKY: 0
+      APL: file
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          run_install: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter saleor-app-smtp check-types
+      - run: pnpm --filter saleor-app-smtp test --run
+      - run: pnpm --filter saleor-app-smtp lint
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Build and publish only SMTP
+        uses: ./.github/workflows/build_saleor_app
+        with:
+          app_name: smtp
+          dockerfile: Dockerfile
+          image_path: whitewhale/saleor-smtp-app
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          APP_LOG_LEVEL: debug
