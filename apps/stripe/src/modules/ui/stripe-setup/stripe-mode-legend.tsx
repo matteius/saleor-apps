@@ -120,8 +120,9 @@ export const StripeModeLegend = () => (
             </Text>
           </Box>
           <Text size={1} color="default2" className={styles.modeDescription}>
-            Keys start with <KeyPrefix>pk_test</KeyPrefix> / <KeyPrefix>rk_test</KeyPrefix>. Use for
-            development and staging — no real charges.
+            Keys start with <KeyPrefix>pk_test</KeyPrefix> / <KeyPrefix>rk_test</KeyPrefix>. A
+            <KeyPrefix>sk_test</KeyPrefix> key also works for sandbox testing. Use for development
+            and staging — no real charges.
           </Text>
         </Box>
         <Box as="li" className={styles.mode}>

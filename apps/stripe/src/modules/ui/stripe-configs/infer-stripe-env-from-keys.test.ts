@@ -19,6 +19,12 @@ describe("inferStripeEnvFromKeys", () => {
     );
   });
 
+  it("reads sandbox from a test secret key", () => {
+    expect(
+      inferStripeEnvFromKeys({ publishableKey: "pk_test_abc", restrictedKey: "sk_test_abc" }),
+    ).toBe("TEST");
+  });
+
   it("ignores incomplete prefixes so typing pk_t does not flash a pill", () => {
     expect(inferStripeEnvFromKeys({ publishableKey: "pk_test", restrictedKey: "" })).toBeNull();
   });

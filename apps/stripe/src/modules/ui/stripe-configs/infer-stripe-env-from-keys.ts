@@ -3,7 +3,7 @@ import { type StripeEnv } from "@/modules/stripe/stripe-env";
 export const stripeEnvFromKeyPrefix = (raw: string | undefined): StripeEnv | null => {
   const key = raw?.trim() ?? "";
 
-  if (key.startsWith("pk_test_") || key.startsWith("rk_test_")) {
+  if (key.startsWith("pk_test_") || key.startsWith("rk_test_") || key.startsWith("sk_test_")) {
     return "TEST";
   }
 

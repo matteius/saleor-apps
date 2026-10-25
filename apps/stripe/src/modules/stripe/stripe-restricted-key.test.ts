@@ -15,6 +15,12 @@ describe("StripeRestrictedKey", () => {
       expect(result._unsafeUnwrap()).toBe("rk_test_valid123");
     });
 
+    it("should create instance for a sandbox secret key", () => {
+      const result = createStripeRestrictedKey("sk_test_valid123");
+
+      expect(result.isOk()).toBe(true);
+    });
+
     it("should create instance for valid live key", () => {
       const result = createStripeRestrictedKey("rk_live_valid456");
 

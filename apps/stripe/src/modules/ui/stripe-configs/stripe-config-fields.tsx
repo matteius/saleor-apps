@@ -81,7 +81,7 @@ export const StripeConfigFields = ({
       error={!!errors.publishableKey}
     />
     <Input
-      label={<FieldLabel labelText="Restricted key" optional={restrictedKey.optional} />}
+      label={<FieldLabel labelText="Stripe server key" optional={restrictedKey.optional} />}
       name="restrictedKey"
       control={control}
       type="password"
@@ -89,9 +89,10 @@ export const StripeConfigFields = ({
       helperText={
         errors.restrictedKey?.message ??
         restrictedKey.helperText ?? (
-          <FieldHint term="Restricted key">
+          <FieldHint term="Stripe server key">
             generated in Stripe Dashboard (starting with <KeyPrefix size={2}>rk_live</KeyPrefix> or{" "}
-            <KeyPrefix size={2}>rk_test</KeyPrefix>). Not the secret key.
+            <KeyPrefix size={2}>rk_test</KeyPrefix>). A <KeyPrefix size={2}>sk_test</KeyPrefix>
+            secret key is accepted for sandbox testing only.
           </FieldHint>
         )
       }

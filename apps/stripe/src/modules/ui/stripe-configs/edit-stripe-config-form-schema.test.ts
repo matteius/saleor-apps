@@ -27,7 +27,7 @@ describe("editStripeConfigFormSchema", () => {
 
   it("Rejects a restricted key with a wrong prefix", () => {
     expect(parseIssues({ ...validValues, restrictedKey: "sk_live_123" })[0].message).toBe(
-      "Invalid Restricted Key format. Must start with 'rk_test_' or 'rk_live_'.",
+      "Invalid Stripe server key format. Must start with 'rk_test_', 'sk_test_', or 'rk_live_'.",
     );
   });
 

@@ -18,13 +18,13 @@ export const PUBLISHABLE_KEY_FORMAT_MESSAGE =
   "Invalid Publishable Key format. Must start with 'pk_test_' or 'pk_live_'.";
 
 export const RESTRICTED_KEY_FORMAT_MESSAGE =
-  "Invalid Restricted Key format. Must start with 'rk_test_' or 'rk_live_'.";
+  "Invalid Stripe server key format. Must start with 'rk_test_', 'sk_test_', or 'rk_live_'.";
 
 export const hasPublishableKeyPrefix = (value: string) =>
   value.startsWith("pk_test_") || value.startsWith("pk_live_");
 
 export const hasRestrictedKeyPrefix = (value: string) =>
-  value.startsWith("rk_test_") || value.startsWith("rk_live_");
+  value.startsWith("rk_test_") || value.startsWith("sk_test_") || value.startsWith("rk_live_");
 
 export const stripePublishableKeyInputSchema = z
   .string()
@@ -90,7 +90,9 @@ export const MIXED_KEY_ENVIRONMENTS_MESSAGE =
   "Both Publishable and Restricted Keys must be live or test";
 
 export const stripeKeyEnv = (key: string): "TEST" | "LIVE" =>
-  key.startsWith("pk_test") || key.startsWith("rk_test") ? "TEST" : "LIVE";
+  key.startsWith("pk_test") || key.startsWith("rk_test") || key.startsWith("sk_test")
+    ? "TEST"
+    : "LIVE";
 
 export const keysShareEnvironment = (keys: {
   publishableKey: string;

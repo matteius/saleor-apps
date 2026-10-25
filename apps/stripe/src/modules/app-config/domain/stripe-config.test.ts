@@ -11,6 +11,7 @@ import {
   mockedStripeRestrictedKeyTest,
 } from "@/__tests__/mocks/mocked-stripe-restricted-key";
 import { mockStripeWebhookSecret } from "@/__tests__/mocks/stripe-webhook-secret";
+import { createStripeRestrictedKey } from "@/modules/stripe/stripe-restricted-key";
 
 import { StripeConfig, StripeFrontendConfig } from "./stripe-config";
 
@@ -30,6 +31,24 @@ describe("StripeConfig", () => {
     expect(result._unsafeUnwrap().id).toBe("test-config-1");
     expect(result._unsafeUnwrap().publishableKey).toBe(mockedStripePublishableKey);
     expect(result._unsafeUnwrap().restrictedKey).toBe(mockedStripeRestrictedKey);
+  });
+
+  it("allows a sandbox secret key only with a test publishable key", () => {
+    const key = createStripeRestrictedKey("sk_test_example")._unsafeUnwrap();
+    const args = {
+      name: "Sandbox",
+      id: "sandbox-config",
+      restrictedKey: key,
+      webhookSecret: mockStripeWebhookSecret,
+      webhookId: mockStripeWebhookSecret,
+    };
+
+    expect(
+      StripeConfig.create({ ...args, publishableKey: mockedStripePublishableKeyTest }).isOk(),
+    ).toBe(true);
+    expect(
+      StripeConfig.create({ ...args, publishableKey: mockedStripePublishableKey }).isErr(),
+    ).toBe(true);
   });
 
   it("should return error for empty name", () => {

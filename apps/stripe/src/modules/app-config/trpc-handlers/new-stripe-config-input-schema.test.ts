@@ -19,6 +19,23 @@ describe("newStripeConfigInputSchema", () => {
     });
   });
 
+  it("accepts a test secret key only with a test publishable key", () => {
+    expect(
+      newStripeConfigInputSchema.safeParse({
+        name: "sandbox",
+        publishableKey: "pk_test_example",
+        restrictedKey: "sk_test_example",
+      }).success,
+    ).toBe(true);
+    expect(
+      newStripeConfigInputSchema.safeParse({
+        name: "sandbox",
+        publishableKey: "pk_live_example",
+        restrictedKey: "sk_test_example",
+      }).success,
+    ).toBe(false);
+  });
+
   it("Returns list of errors for invalid input", () => {
     expect(() =>
       newStripeConfigInputSchema.parse({
@@ -47,7 +64,7 @@ describe("newStripeConfigInputSchema", () => {
           ]
         },
         {
-          "message": "Invalid Restricted Key format. Must start with 'rk_test_' or 'rk_live_'.",
+          "message": "Invalid Stripe server key format. Must start with 'rk_test_', 'sk_test_', or 'rk_live_'.",
           "code": "custom",
           "fatal": true,
           "path": [
