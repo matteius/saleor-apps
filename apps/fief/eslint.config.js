@@ -16,7 +16,14 @@ export default [
   },
   {
     name: "saleor-app-fief/override-no-process-env",
-    files: ["next.config.ts", "src/lib/env.ts", "src/__tests__/**/setup.*.ts"],
+    files: [
+      "sentry.options.ts",
+      "src/instrumentation.ts",
+      "src/instrumentations/sentry-node.ts",
+      "next.config.ts",
+      "src/lib/env.ts",
+      "src/__tests__/**/setup.*.ts",
+    ],
     rules: {
       "n/no-process-env": "off",
     },

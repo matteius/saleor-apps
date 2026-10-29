@@ -24,6 +24,8 @@ export default [
       "e2e/subscriptions/helpers/env-guard.ts",
       "src/__tests__/integration/env.ts",
       "src/instrumentation.ts",
+      "sentry.options.ts",
+      "src/instrumentations/sentry-node.ts",
       "src/__tests__/**/*setup.*.ts",
     ],
     rules: {

@@ -31,6 +31,7 @@ export default {
     },
   ],
   words: [
+    "decryptor",
     "anonymization",
     "pathspecs",
     "unbuildable",

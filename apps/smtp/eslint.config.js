@@ -16,7 +16,13 @@ export default [
   },
   {
     name: "saleor-app-smtp/override-no-process-env",
-    files: ["next.config.ts", "src/env*.ts", "src/instrumentation.ts", "src/instrumentations/*"],
+    files: [
+      "sentry.options.ts",
+      "next.config.ts",
+      "src/env*.ts",
+      "src/instrumentation.ts",
+      "src/instrumentations/*",
+    ],
     rules: {
       "n/no-process-env": "off",
     },

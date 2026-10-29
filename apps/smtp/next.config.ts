@@ -46,7 +46,6 @@ const nextConfig: NextConfig = {
       config.ignoreWarnings = [{ module: /require-in-the-middle/ }, { module: /mjml/ }];
     }
 
-
     /*
      *When the flag "bundlePagesExternals" is enabled, handlebars cannot be properly loaded,
      *so we must explicitly declare what file we load.
@@ -59,9 +58,12 @@ const nextConfig: NextConfig = {
 
 // Make sure to export sentry config as the last one - https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#apply-instrumentation-to-your-app
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: true,
+  org: "opensensor-engineering",
+  project: "saleor-smtp",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  release: { name: process.env.SENTRY_RELEASE },
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  silent: !process.env.CI,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
   webpack: {
