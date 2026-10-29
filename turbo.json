@@ -28,7 +28,14 @@
     "VERCEL_ENV",
     "VERCEL_URL",
     "VERCEL",
-    "NEXT_OUTPUT"
+    "NEXT_OUTPUT",
+    "SENTRY_DSN",
+    "SENTRY_ENABLED",
+    "SENTRY_ENVIRONMENT",
+    "SENTRY_RELEASE",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "NEXT_PUBLIC_SENTRY_ENABLED",
+    "NEXT_PUBLIC_SENTRY_ENVIRONMENT"
   ],
   "tasks": {
     "topo": {
@@ -123,5 +130,8 @@
         "coverage/**"
       ]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "SENTRY_AUTH_TOKEN"
+  ]
 }

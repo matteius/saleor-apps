@@ -34,6 +34,7 @@
     "@saleor/macaw-ui": "catalog:",
     "@saleor/react-hook-form-macaw": "workspace:*",
     "@saleor/webhook-utils": "workspace:*",
+    "@sentry/nextjs": "catalog:",
     "@t3-oss/env-nextjs": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/next": "catalog:",

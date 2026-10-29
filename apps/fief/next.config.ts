@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import { type NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -11,4 +12,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["mongodb"],
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "opensensor-engineering",
+  project: "saleor-fief",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  release: { name: process.env.SENTRY_RELEASE },
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+});

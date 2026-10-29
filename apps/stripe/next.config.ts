@@ -41,9 +41,12 @@ const nextConfig: NextConfig = {
 
 // Make sure to export sentry config as the last one - https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#apply-instrumentation-to-your-app
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: true,
+  org: "opensensor-engineering",
+  project: "saleor-stripe",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  release: { name: process.env.SENTRY_RELEASE },
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  silent: !process.env.CI,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
   webpack: {

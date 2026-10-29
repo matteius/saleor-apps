@@ -806,7 +806,7 @@ importers:
         version: link:../../packages/app-problems
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -1023,7 +1023,7 @@ importers:
         version: 1.30.0
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -1186,7 +1186,7 @@ importers:
     dependencies:
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -1265,7 +1265,7 @@ importers:
     dependencies:
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -1350,7 +1350,7 @@ importers:
         version: 5.9.2(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.43.9(react@18.2.0))(valibot@1.5.0(typescript@5.8.2))(zod@4.6.7)
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -1369,6 +1369,9 @@ importers:
       '@saleor/webhook-utils':
         specifier: workspace:*
         version: link:../../packages/webhook-utils
+      '@sentry/nextjs':
+        specifier: 'catalog:'
+        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)
       '@t3-oss/env-nextjs':
         specifier: 'catalog:'
         version: 0.11.1(typescript@5.8.2)(zod@4.6.7)
@@ -1504,7 +1507,7 @@ importers:
         version: 2.10.2(@types/node@24.1.0)(typescript@5.8.2)
       next-test-api-route-handler:
         specifier: 'catalog:'
-        version: 5.0.7(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
+        version: 5.0.7(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -1558,7 +1561,7 @@ importers:
         version: 1.30.0
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -1588,7 +1591,7 @@ importers:
         version: 1.77.3
       '@sentry/nextjs':
         specifier: 'catalog:'
-        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(postcss@8.5.31))
+        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(postcss@8.5.31))
       '@t3-oss/env-nextjs':
         specifier: 'catalog:'
         version: 0.11.1(typescript@5.8.2)(zod@4.6.7)
@@ -1706,7 +1709,7 @@ importers:
         version: 8.5.31
       pretty-quick:
         specifier: 3.1.3
-        version: 3.1.3(prettier@3.0.3)
+        version: 3.1.3(prettier@3.9.9)
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -1751,7 +1754,7 @@ importers:
         version: 1.30.0
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -1929,7 +1932,7 @@ importers:
         version: 15.0.4
       next-test-api-route-handler:
         specifier: 'catalog:'
-        version: 5.0.7(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
+        version: 5.0.7(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@24.1.0)(typescript@5.8.2)
@@ -1953,7 +1956,7 @@ importers:
     dependencies:
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -2264,7 +2267,7 @@ importers:
         version: link:../../packages/app-problems
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -2502,7 +2505,7 @@ importers:
         version: link:../../packages/app-problems
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -2725,7 +2728,7 @@ importers:
         version: link:../../packages/app-problems
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -2963,7 +2966,7 @@ importers:
         version: link:../../packages/app-deprecation
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -3002,7 +3005,7 @@ importers:
         version: 1.77.3
       '@sentry/nextjs':
         specifier: 'catalog:'
-        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))
+        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))
       '@t3-oss/env-nextjs':
         specifier: 'catalog:'
         version: 0.11.1(typescript@5.8.2)(zod@4.6.7)
@@ -3228,7 +3231,7 @@ importers:
         version: link:../../packages/app-problems
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -3424,7 +3427,7 @@ importers:
         version: 2.10.2(@types/node@24.1.0)(typescript@5.8.2)
       next-test-api-route-handler:
         specifier: 'catalog:'
-        version: 5.0.7(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
+        version: 5.0.7(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       tsx:
         specifier: 'catalog:'
         version: 4.19.3
@@ -3829,7 +3832,7 @@ importers:
         version: 1.9.1
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/eslint-config-apps':
         specifier: workspace:*
         version: link:../eslint-config
@@ -3838,7 +3841,7 @@ importers:
         version: link:../typescript-config
       '@sentry/nextjs':
         specifier: 'catalog:'
-        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)
+        version: 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.12(vitest@4.1.12)
@@ -3896,7 +3899,7 @@ importers:
         version: 2.12.0(@opentelemetry/api@1.9.1)
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/eslint-config-apps':
         specifier: workspace:*
         version: link:../eslint-config
@@ -4084,7 +4087,7 @@ importers:
     devDependencies:
       '@saleor/app-sdk':
         specifier: 'catalog:'
-        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@saleor/apps-shared':
         specifier: workspace:*
         version: link:../shared
@@ -18678,6 +18681,25 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@saleor/app-sdk@1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/semantic-conventions': 1.30.0
+      debug: 4.4.0
+      jose: 5.10.0
+      raw-body: 3.0.0
+    optionalDependencies:
+      '@aws-sdk/client-dynamodb': 3.1004.0
+      '@aws-sdk/lib-dynamodb': 3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)
+      '@aws-sdk/util-dynamodb': 3.996.2(@aws-sdk/client-dynamodb@3.1004.0)
+      dynamodb-toolbox: 2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))
+      graphql: 16.11.0
+      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    transitivePeerDependencies:
+      - supports-color
+
   '@saleor/app-sdk@1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(dynamodb-toolbox@2.8.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
@@ -18710,24 +18732,6 @@ snapshots:
       '@aws-sdk/util-dynamodb': 3.996.2(@aws-sdk/client-dynamodb@3.1004.0)
       graphql: 16.11.0
       next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@saleor/app-sdk@1.16.0(@aws-sdk/client-dynamodb@3.1004.0)(@aws-sdk/lib-dynamodb@3.1004.0(@aws-sdk/client-dynamodb@3.1004.0))(@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1004.0))(graphql@16.11.0)(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/semantic-conventions': 1.30.0
-      debug: 4.4.0
-      jose: 5.10.0
-      raw-body: 3.0.0
-    optionalDependencies:
-      '@aws-sdk/client-dynamodb': 3.1004.0
-      '@aws-sdk/lib-dynamodb': 3.1004.0(@aws-sdk/client-dynamodb@3.1004.0)
-      '@aws-sdk/util-dynamodb': 3.996.2(@aws-sdk/client-dynamodb@3.1004.0)
-      graphql: 16.11.0
-      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     transitivePeerDependencies:
@@ -18943,58 +18947,6 @@ snapshots:
     dependencies:
       '@sentry/core': 10.75.2
 
-  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
-      '@sentry/browser-utils': 10.75.2
-      '@sentry/bundler-plugin-core': 5.3.0
-      '@sentry/conventions': 0.16.0
-      '@sentry/core': 10.75.2
-      '@sentry/node': 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))
-      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))
-      '@sentry/react': 10.75.2(react@18.2.0)
-      '@sentry/server-utils': 10.75.2
-      '@sentry/vercel-edge': 10.75.2
-      '@sentry/webpack-plugin': 5.4.0(rollup@4.64.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))
-      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      rollup: 4.64.0
-      stacktrace-parser: 0.1.11
-    transitivePeerDependencies:
-      - '@opentelemetry/core'
-      - '@opentelemetry/exporter-trace-otlp-http'
-      - '@opentelemetry/sdk-trace-base'
-      - encoding
-      - react
-      - supports-color
-      - webpack
-
-  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(postcss@8.5.31))':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
-      '@sentry/browser-utils': 10.75.2
-      '@sentry/bundler-plugin-core': 5.3.0
-      '@sentry/conventions': 0.16.0
-      '@sentry/core': 10.75.2
-      '@sentry/node': 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))
-      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))
-      '@sentry/react': 10.75.2(react@18.2.0)
-      '@sentry/server-utils': 10.75.2
-      '@sentry/vercel-edge': 10.75.2
-      '@sentry/webpack-plugin': 5.4.0(rollup@4.64.0)(webpack@5.104.1(postcss@8.5.31))
-      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      rollup: 4.64.0
-      stacktrace-parser: 0.1.11
-    transitivePeerDependencies:
-      - '@opentelemetry/core'
-      - '@opentelemetry/exporter-trace-otlp-http'
-      - '@opentelemetry/sdk-trace-base'
-      - encoding
-      - react
-      - supports-color
-      - webpack
-
   '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -19021,7 +18973,59 @@ snapshots:
       - supports-color
       - webpack
 
-  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)':
+  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
+      '@sentry/browser-utils': 10.75.2
+      '@sentry/bundler-plugin-core': 5.3.0
+      '@sentry/conventions': 0.16.0
+      '@sentry/core': 10.75.2
+      '@sentry/node': 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))
+      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))
+      '@sentry/react': 10.75.2(react@18.2.0)
+      '@sentry/server-utils': 10.75.2
+      '@sentry/vercel-edge': 10.75.2
+      '@sentry/webpack-plugin': 5.4.0(rollup@4.64.0)(webpack@5.104.1(cssnano@7.1.9(postcss@8.5.31))(postcss@8.5.31))
+      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      rollup: 4.64.0
+      stacktrace-parser: 0.1.11
+    transitivePeerDependencies:
+      - '@opentelemetry/core'
+      - '@opentelemetry/exporter-trace-otlp-http'
+      - '@opentelemetry/sdk-trace-base'
+      - encoding
+      - react
+      - supports-color
+      - webpack
+
+  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1(postcss@8.5.31))':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
+      '@sentry/browser-utils': 10.75.2
+      '@sentry/bundler-plugin-core': 5.3.0
+      '@sentry/conventions': 0.16.0
+      '@sentry/core': 10.75.2
+      '@sentry/node': 10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))
+      '@sentry/opentelemetry': 10.75.2(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))
+      '@sentry/react': 10.75.2(react@18.2.0)
+      '@sentry/server-utils': 10.75.2
+      '@sentry/vercel-edge': 10.75.2
+      '@sentry/webpack-plugin': 5.4.0(rollup@4.64.0)(webpack@5.104.1(postcss@8.5.31))
+      next: 16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      rollup: 4.64.0
+      stacktrace-parser: 0.1.11
+    transitivePeerDependencies:
+      - '@opentelemetry/core'
+      - '@opentelemetry/exporter-trace-otlp-http'
+      - '@opentelemetry/sdk-trace-base'
+      - encoding
+      - react
+      - supports-color
+      - webpack
+
+  '@sentry/nextjs@10.75.2(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.1))(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.6.4)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)(webpack@5.104.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.64.0)
@@ -24142,7 +24146,7 @@ snapshots:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
 
-  next-test-api-route-handler@5.0.7(next@16.4.1(@babel/core@7.29.6)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)):
+  next-test-api-route-handler@5.0.7(next@16.4.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@24.1.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)):
     dependencies:
       '@whatwg-node/server': 0.11.0
       cookie~1: cookie@1.1.1
@@ -24853,7 +24857,7 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 17.0.2
 
-  pretty-quick@3.1.3(prettier@3.0.3):
+  pretty-quick@3.1.3(prettier@3.9.9):
     dependencies:
       chalk: 3.0.0
       execa: 4.1.0
@@ -24861,7 +24865,7 @@ snapshots:
       ignore: 5.3.2
       mri: 1.2.0
       multimatch: 4.0.0
-      prettier: 3.0.3
+      prettier: 3.9.9
 
   prismjs@1.30.0: {}
 

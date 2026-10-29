@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:24.22.1-alpine3.24 AS base
 
 # Install dependencies only when needed
@@ -30,6 +31,8 @@ WORKDIR /app
 COPY . .
 
 # Set build arguments and environment variables
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=${SENTRY_RELEASE}
 ARG APP_NAME
 ARG APP_LOG_LEVEL
 ENV APP_LOG_LEVEL=${APP_LOG_LEVEL}
@@ -52,7 +55,7 @@ ENV SECRET_KEY=ci-build-placeholder-not-a-runtime-key
 ENV FIEF_PLUGIN_HMAC_SECRET=ci-build-placeholder-not-a-runtime-key
 
 # Build the specified app - map directory names to package names
-RUN if [ "$APP_NAME" = "stripe" ]; then \
+RUN --mount=type=secret,id=sentry_auth_token,env=SENTRY_AUTH_TOKEN if [ "$APP_NAME" = "stripe" ]; then \
       pnpm --filter=saleor-app-payment-stripe build; \
     else \
       pnpm --filter=saleor-app-${APP_NAME} build; \
@@ -65,6 +68,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=${SENTRY_RELEASE}
 ARG APP_NAME
 ENV SALEOR_APP_DIRECTORY=${APP_NAME}
 ENV PORT=3010
