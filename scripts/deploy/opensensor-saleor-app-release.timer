@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for successful main Saleor app images
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=1min
+AccuracySec=5s
+Unit=opensensor-saleor-app-release.service
+[Install]
+WantedBy=timers.target
