@@ -22,6 +22,7 @@
     "@trpc/react-query": "catalog:",
     "@trpc/server": "catalog:",
     "@types/node": "catalog:",
+    "eslint": "catalog:",
     "next": "catalog:",
     "typescript": "5.8.2"
   },
@@ -31,7 +32,6 @@
     "@trpc/next": "catalog:",
     "@trpc/react-query": "catalog:",
     "@trpc/server": "catalog:",
-    "eslint": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
