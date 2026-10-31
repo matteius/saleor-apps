@@ -1,6 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import { type NextConfig } from "next";
 
+import { appBridgePaths } from "./app-bridge-paths";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
@@ -30,6 +32,12 @@ const nextConfig: NextConfig = {
     "dynamodb-toolbox",
   ],
   webpack: (config, { isServer }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@saleor/app-sdk/app-bridge$": appBridgePaths.appBridge,
+      "@saleor/app-sdk/app-bridge/next$": appBridgePaths.appBridgeNext,
+    };
+
     if (isServer) {
       // Ignore opentelemetry warnings - https://github.com/open-telemetry/opentelemetry-js/issues/4173
       config.ignoreWarnings = [{ module: /require-in-the-middle/ }];

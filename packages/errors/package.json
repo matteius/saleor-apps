@@ -11,13 +11,13 @@
     "test:ci": "vitest run --coverage"
   },
   "dependencies": {
-    "eslint": "catalog:",
     "zod-validation-error": "catalog:"
   },
   "devDependencies": {
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
     "typescript": "catalog:",

@@ -16,14 +16,14 @@
     "test:ci": "vitest run --coverage"
   },
   "dependencies": {
-    "@saleor/errors": "workspace:*",
-    "eslint": "catalog:"
+    "@saleor/errors": "workspace:*"
   },
   "devDependencies": {
     "@saleor/app-sdk": "catalog:",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/typescript-config-apps": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
     "modern-errors": "catalog:",
     "modern-errors-serialize": "catalog:",
     "typescript": "catalog:",
