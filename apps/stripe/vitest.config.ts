@@ -3,7 +3,15 @@ import { loadEnv } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
+import { appBridgePaths } from "./app-bridge-paths";
+
 export default defineConfig({
+  resolve: {
+    alias: [
+      { find: /^@saleor\/app-sdk\/app-bridge$/, replacement: appBridgePaths.appBridge },
+      { find: /^@saleor\/app-sdk\/app-bridge\/next$/, replacement: appBridgePaths.appBridgeNext },
+    ],
+  },
   plugins: [react(), tsconfigPaths()],
   test: {
     css: false,
